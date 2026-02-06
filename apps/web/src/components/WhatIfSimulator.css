@@ -1,0 +1,325 @@
+.what-if-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: var(--spacing-lg);
+  backdrop-filter: blur(4px);
+}
+
+.what-if-container {
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2xl);
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+}
+
+.what-if-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-primary);
+}
+
+.what-if-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.what-if-close {
+  background: transparent;
+  border: none;
+  font-size: 2rem;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-base);
+}
+
+.what-if-close:hover {
+  background: var(--gray-100);
+  color: var(--text-primary);
+}
+
+.what-if-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-xl);
+}
+
+.what-if-info {
+  margin-bottom: var(--spacing-lg);
+}
+
+.what-if-info p {
+  margin: var(--spacing-sm) 0;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.document-name {
+  font-weight: 600;
+  color: var(--text-primary) !important;
+}
+
+.what-if-input-section {
+  margin-bottom: var(--spacing-xl);
+}
+
+.what-if-input-section label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+}
+
+.scenario-input {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: var(--spacing-md);
+  transition: all var(--transition-base);
+}
+
+.scenario-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.analyze-button {
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.analyze-button:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.analyze-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.what-if-error {
+  padding: var(--spacing-md);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  color: #dc2626;
+  margin-bottom: var(--spacing-lg);
+}
+
+.what-if-results {
+  margin-top: var(--spacing-xl);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.results-header {
+  margin-bottom: var(--spacing-lg);
+}
+
+.results-header h3 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.overall-severity {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.severity-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.severity-badge {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-full);
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+}
+
+.risk-score {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+}
+
+.severity-meter {
+  margin: var(--spacing-lg) 0;
+}
+
+.meter-bar {
+  width: 100%;
+  height: 24px;
+  background: var(--gray-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.meter-fill {
+  height: 100%;
+  transition: width 0.5s ease;
+  border-radius: var(--radius-full);
+}
+
+.meter-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--spacing-xs);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.consequences-list {
+  margin: var(--spacing-xl) 0;
+}
+
+.consequences-list h4 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.consequence-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  transition: all var(--transition-base);
+}
+
+.consequence-card:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-medium);
+}
+
+.consequence-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.category-icon {
+  font-size: 1.25rem;
+}
+
+.consequence-category {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.severity-tag,
+.likelihood-tag {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.consequence-description {
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin-bottom: var(--spacing-sm);
+}
+
+.consequence-impact {
+  padding: var(--spacing-sm);
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.consequence-impact strong {
+  color: var(--text-primary);
+}
+
+.recommendations {
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-lg);
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: var(--radius-md);
+}
+
+.recommendations h4 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.recommendations ul {
+  margin: 0;
+  padding-left: var(--spacing-lg);
+  color: var(--text-primary);
+}
+
+.recommendations li {
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.6;
+}

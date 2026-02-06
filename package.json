@@ -1,0 +1,17 @@
+{
+  "name": "aegis-ai",
+  "version": "1.0.0",
+  "description": "Aegis AI – Offline-First Intelligent Document & Ops Assistant",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=apps/backend\" \"npm run dev --workspace=apps/web\"",
+    "build": "npm run build --workspace=apps/backend && npm run build --workspace=apps/web",
+    "install:all": "npm install && npm install --workspace=apps/backend && npm install --workspace=apps/web"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

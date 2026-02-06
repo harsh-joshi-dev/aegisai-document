@@ -1,0 +1,80 @@
+.compliance-dashboard {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.compliance-dashboard h2 {
+  color: #333;
+  margin-bottom: 2rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid;
+}
+
+.metric-card.gdpr {
+  border-left-color: #1890ff;
+}
+
+.metric-card.soc2 {
+  border-left-color: #52c41a;
+}
+
+.metric-card.retention {
+  border-left-color: #faad14;
+}
+
+.metric-card h3 {
+  color: #333;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.metric-item:last-child {
+  border-bottom: none;
+}
+
+.metric-item .label {
+  color: #666;
+  font-weight: 500;
+}
+
+.metric-item .value {
+  color: #333;
+  font-weight: 600;
+}
+
+.metric-item .value.warning {
+  color: #faad14;
+}
+
+.metric-item .value.critical {
+  color: #ff4d4f;
+}
+
+.metric-item .value.enabled {
+  color: #52c41a;
+}
+
+.metric-item .value.disabled {
+  color: #999;
+}

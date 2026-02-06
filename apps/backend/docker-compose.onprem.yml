@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: aegis
+      POSTGRES_PASSWORD: aegis_password
+      POSTGRES_DB: aegis_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Ollama for local LLM
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API (on-premise mode)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.onprem
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://aegis:aegis_password@postgres:5432/aegis_ai
+      - OLLAMA_URL=http://ollama:11434
+      - USE_LOCAL_LLM=true
+      - OPENAI_API_KEY=  # Optional, for fallback
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ./models:/app/models  # Local model storage
+
+  # Frontend
+  frontend:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:3001
+
+volumes:
+  postgres_data:
+  ollama_data:

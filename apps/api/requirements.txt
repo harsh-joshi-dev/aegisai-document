@@ -1,0 +1,15 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+redis==5.0.1
+# bullmq==0.19.0  # Optional: Install separately if needed
+# For now using simple in-memory queue, can upgrade to BullMQ later
+httpx==0.25.2
+python-dotenv==1.0.0
+psycopg2-binary==2.9.9
+aiofiles==23.2.1
+email-validator==2.1.0

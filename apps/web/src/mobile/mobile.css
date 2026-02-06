@@ -1,0 +1,496 @@
+/* Aegis AI Mobile Premium Theme */
+.m-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main);
+  color: var(--text-main);
+}
+
+.m-content {
+  flex: 1;
+  padding: 16px 16px 100px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile Bottom Navigation */
+.m-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 84px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-subtle);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 12px 8px env(safe-area-inset-bottom);
+  z-index: 2000;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.m-tab {
+  text-decoration: none;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: all 0.2s;
+  border-radius: 12px;
+  position: relative;
+}
+
+.m-tab svg {
+  width: 24px;
+  height: 24px;
+  transition: all 0.2s;
+  stroke-width: 2;
+}
+
+.m-tab.active {
+  color: var(--primary);
+}
+
+.m-tab.active svg {
+  fill: var(--primary);
+  stroke: var(--primary);
+  filter: drop-shadow(0 0 8px var(--primary-glow));
+}
+
+.m-tab:active {
+  transform: scale(0.95);
+}
+
+/* Page Headers */
+.m-page-title {
+  margin-bottom: 20px;
+}
+
+.m-page-title h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
+/* Cards */
+.m-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.m-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.m-card-description {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+}
+
+/* Quick Actions */
+.m-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.m-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+}
+
+.m-action-btn.primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.m-action-btn:not(.primary) {
+  background: var(--bg-subtle);
+}
+
+.m-action-btn:active {
+  transform: scale(0.98);
+}
+
+.m-action-btn span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Status Badges */
+.m-status-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.m-status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.m-status-badge.online {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.m-status-badge.pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Search Card */
+.m-search-card {
+  margin-bottom: 12px;
+}
+
+.m-search-label {
+  font-weight: 800;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: var(--text-main);
+}
+
+.m-search-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.m-search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.m-search-input::placeholder {
+  color: var(--text-dim);
+}
+
+/* Mobile Buttons */
+.m-btn {
+  appearance: none;
+  border: 1px solid var(--border-light);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 15px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.m-btn:active {
+  transform: scale(0.98);
+  background: var(--bg-elevated);
+}
+
+.m-btn.primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.m-btn.primary:active {
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+.m-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.m-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Utilities */
+.m-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.m-badge.risk {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.m-badge.safe {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Chat Wrapper */
+.m-chat-wrapper {
+  margin-top: 0;
+}
+
+.m-chat-wrapper .chat-ui {
+  height: auto;
+  min-height: calc(100vh - 200px);
+  max-height: none;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.m-chat-wrapper .chat-header {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  margin-bottom: 16px;
+  padding: 20px;
+}
+
+.m-chat-wrapper .header-title-section {
+  margin-bottom: 16px;
+}
+
+.m-chat-wrapper .chat-header h2 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.m-chat-wrapper .header-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.m-chat-wrapper .header-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.m-chat-wrapper .document-selector,
+.m-chat-wrapper .language-selector {
+  width: 100%;
+}
+
+.m-chat-wrapper .document-dropdown-button,
+.m-chat-wrapper .language-select {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.m-chat-wrapper .chat-messages {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  min-height: 300px;
+  max-height: calc(100vh - 400px);
+  overflow-y: auto;
+}
+
+.m-chat-wrapper .chat-input-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.m-chat-wrapper .chat-input {
+  font-size: 14px;
+  padding: 12px;
+}
+
+.m-chat-wrapper .send-button {
+  padding: 12px 20px;
+  font-size: 14px;
+}
+
+/* Mobile Document List Overrides */
+@media (max-width: 768px) {
+  .document-list {
+    margin-top: 0;
+  }
+
+  .document-list-header {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border-bottom: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .document-list-header::after {
+    display: none;
+  }
+
+  .document-list-header .header-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .document-list-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .header-icon {
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+
+  .refresh-button {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-light);
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .documents-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .document-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 16px;
+    margin: 0;
+  }
+
+  .document-card-header {
+    margin-bottom: 12px;
+  }
+
+  .document-filename {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .risk-badge {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
+  .document-card-body {
+    margin-bottom: 12px;
+  }
+
+  .document-meta {
+    gap: 8px;
+  }
+
+  .meta-item {
+    font-size: 13px;
+  }
+
+  .meta-label {
+    font-size: 12px;
+  }
+
+  .document-card-actions {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .chat-button,
+  .explain-button,
+  .share-button,
+  .what-if-button,
+  .voice-button,
+  .trust-score-button,
+  .agent-swarm-button,
+  .provider-button {
+    padding: 10px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+
+  .button-icon {
+    width: 16px;
+    height: 16px;
+  }
+}
