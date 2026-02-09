@@ -35,7 +35,7 @@ function ChartBlock({ chart }: { chart: FinanceToolChart }) {
     ? chart.labels.map((label, i) => ({ name: label, value: chart.values![i] ?? 0 }))
     : chart.labels.map((_, i) => {
         const point: Record<string, string | number> = { name: chart.labels[i] ?? `Item ${i}` };
-        chart.datasets?.forEach((ds, di) => {
+        chart.datasets?.forEach((ds) => {
           point[ds.label] = ds.values[i] ?? 0;
         });
         return point;
