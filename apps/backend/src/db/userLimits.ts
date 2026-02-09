@@ -18,7 +18,7 @@ export async function checkDocumentLimit(userId: string): Promise<{
       [userId]
     );
 
-    const currentCount = parseInt(result.rows[0].count, 10);
+    const currentCount = parseInt(String((result.rows[0] as Record<string, unknown>).count), 10);
     const allowed = currentCount < MAX_DOCUMENTS_PER_USER;
     const remaining = Math.max(0, MAX_DOCUMENTS_PER_USER - currentCount);
 
@@ -43,7 +43,7 @@ export async function getUserDocumentCount(userId: string): Promise<number> {
       `SELECT COUNT(*) as count FROM documents WHERE user_id = $1`,
       [userId]
     );
-    return parseInt(result.rows[0].count, 10);
+    return parseInt(String((result.rows[0] as Record<string, unknown>).count), 10);
   } finally {
     client.release();
   }

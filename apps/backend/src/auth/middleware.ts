@@ -7,10 +7,11 @@ declare global {
       isAuthenticated?: () => boolean;
       user?: {
         id: string;
-        email: string;
-        name: string;
+        email?: string;
+        name?: string;
         picture?: string;
         googleId?: string;
+        role?: string;
       };
     }
   }
@@ -19,8 +20,8 @@ declare global {
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    email: string;
-    name: string;
+    email?: string;
+    name?: string;
     picture?: string;
     googleId?: string;
   };

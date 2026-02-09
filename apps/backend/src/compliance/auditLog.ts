@@ -157,7 +157,7 @@ export async function getAuditLogs(filters: {
     // Get total count
     const countQuery = query.replace('SELECT *', 'SELECT COUNT(*) as total');
     const countResult = await client.query(countQuery, params);
-    const total = parseInt(countResult.rows[0].total);
+    const total = parseInt(String((countResult.rows[0] as Record<string, unknown>).total));
 
     // Get paginated results
     query += ` ORDER BY timestamp DESC`;
@@ -174,18 +174,21 @@ export async function getAuditLogs(filters: {
 
     const result = await client.query(query, params);
 
-    const logs: AuditLog[] = result.rows.map(row => ({
-      id: row.id,
-      userId: row.user_id,
-      action: row.action,
-      resourceType: row.resource_type,
-      resourceId: row.resource_id,
-      details: row.details,
-      ipAddress: row.ip_address,
-      userAgent: row.user_agent,
-      timestamp: row.timestamp,
-      complianceFlags: row.compliance_flags || [],
-    }));
+    const logs: AuditLog[] = result.rows.map((row) => {
+      const r = row as Record<string, unknown>;
+      return {
+      id: r.id as string,
+      userId: r.user_id as string,
+      action: r.action as string,
+      resourceType: r.resource_type as string,
+      resourceId: r.resource_id as string,
+      details: r.details as Record<string, unknown>,
+      ipAddress: r.ip_address as string,
+      userAgent: r.user_agent as string,
+      timestamp: r.timestamp as Date,
+      complianceFlags: (r.compliance_flags as string[]) || [],
+    };
+    });
 
     return { logs, total };
   } finally {
@@ -203,7 +206,7 @@ export async function deleteUserData(userId: string): Promise<{ deleted: number 
 
     // Delete documents
     const docResult = await client.query('DELETE FROM documents WHERE metadata->>\'userId\' = $1', [userId]);
-    const docCount = docResult.rowCount || 0;
+    const docCount = (docResult as { rowCount?: number | null }).rowCount ?? 0;
 
     // Delete audit logs (anonymize instead of delete for compliance)
     await client.query(
@@ -269,7 +272,7 @@ export async function enforceDataRetention(retentionDays: number): Promise<{ del
       [cutoffDate]
     );
 
-    return { deleted: result.rowCount || 0 };
+    return { deleted: (result as { rowCount?: number | null }).rowCount ?? 0 };
   } finally {
     client.release();
   }

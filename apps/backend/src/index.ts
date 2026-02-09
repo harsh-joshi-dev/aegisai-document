@@ -70,13 +70,13 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req: express.Request, res: express.Response) => {
   console.log('Health check requested');
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Debug middleware
-app.use((req, res, next) => {
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.log(`${req.method} ${req.path}`);
   next();
 });

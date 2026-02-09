@@ -75,15 +75,15 @@ export async function getTenant(tenantId: string): Promise<Tenant | null> {
     return null;
   }
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    name: row.name,
-    domain: row.domain,
-    branding: row.branding || {},
-    settings: row.settings || {},
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: row.id as string,
+    name: row.name as string,
+    domain: row.domain as string | undefined,
+    branding: (row.branding as Record<string, unknown>) || {},
+    settings: (row.settings as Tenant['settings']) || { allowCustomBranding: true, features: ['all'] },
+    createdAt: row.created_at as Date,
+    updatedAt: row.updated_at as Date,
   };
 }
 
@@ -100,15 +100,15 @@ export async function getTenantByDomain(domain: string): Promise<Tenant | null> 
     return null;
   }
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    name: row.name,
-    domain: row.domain,
-    branding: row.branding || {},
-    settings: row.settings || {},
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: row.id as string,
+    name: row.name as string,
+    domain: row.domain as string | undefined,
+    branding: (row.branding as Record<string, unknown>) || {},
+    settings: (row.settings as Tenant['settings']) || { allowCustomBranding: true, features: ['all'] },
+    createdAt: row.created_at as Date,
+    updatedAt: row.updated_at as Date,
   };
 }
 
@@ -128,15 +128,15 @@ export async function createTenant(tenantData: Omit<Tenant, 'id' | 'createdAt' |
     ]
   );
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    name: row.name,
-    domain: row.domain,
-    branding: row.branding,
-    settings: row.settings,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: row.id as string,
+    name: row.name as string,
+    domain: row.domain as string | undefined,
+    branding: row.branding as Record<string, unknown>,
+    settings: (row.settings as Tenant['settings']) || { allowCustomBranding: true, features: ['all'] },
+    createdAt: row.created_at as Date,
+    updatedAt: row.updated_at as Date,
   };
 }
 
@@ -162,15 +162,15 @@ export async function updateTenantBranding(
     [JSON.stringify(updatedBranding), tenantId]
   );
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    name: row.name,
-    domain: row.domain,
-    branding: row.branding,
-    settings: row.settings,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: row.id as string,
+    name: row.name as string,
+    domain: row.domain as string | undefined,
+    branding: row.branding as Record<string, unknown>,
+    settings: (row.settings as Tenant['settings']) || { allowCustomBranding: true, features: ['all'] },
+    createdAt: row.created_at as Date,
+    updatedAt: row.updated_at as Date,
   };
 }
 
@@ -181,15 +181,15 @@ export async function getDefaultTenant(): Promise<Tenant> {
   const result = await pool.query('SELECT * FROM tenants LIMIT 1');
   
   if (result.rows.length > 0) {
-    const row = result.rows[0];
+    const row = result.rows[0] as Record<string, unknown>;
     return {
-      id: row.id,
-      name: row.name,
-      domain: row.domain,
-      branding: row.branding || {},
-      settings: row.settings || {},
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      id: row.id as string,
+      name: row.name as string,
+      domain: row.domain as string | undefined,
+      branding: (row.branding as Record<string, unknown>) || {},
+      settings: (row.settings as Tenant['settings']) || { allowCustomBranding: true, features: ['all'] },
+      createdAt: row.created_at as Date,
+      updatedAt: row.updated_at as Date,
     };
   }
 

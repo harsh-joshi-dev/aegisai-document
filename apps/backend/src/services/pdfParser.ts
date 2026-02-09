@@ -29,14 +29,14 @@ async function tryRepairPDF(buffer: Buffer): Promise<any> {
   } catch (e1) {
     // Strategy 2: Try with version option
     try {
-      return await pdfParse(buffer, { version: '1.4.0' });
+      return await pdfParse(buffer, { version: '1.4.0' } as unknown as Parameters<typeof pdfParse>[1]);
     } catch (e2) {
       // Strategy 3: Try with different options
       try {
         return await pdfParse(buffer, { 
           max: 0,
           version: '1.4.0',
-        });
+        } as unknown as Parameters<typeof pdfParse>[1]);
       } catch (e3) {
         throw new Error(`All PDF parsing strategies failed. Last error: ${e3 instanceof Error ? e3.message : 'Unknown'}`);
       }

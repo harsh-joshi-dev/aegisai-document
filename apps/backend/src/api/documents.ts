@@ -27,7 +27,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     
     res.json({
       success: true,
-      documents: documents.map(doc => ({
+      documents: documents.map((doc: { id: string; filename: string; uploaded_at: Date; risk_level: string; risk_category: string | null; risk_confidence: number | null; version_number: number; folder_id: string | null; metadata: Record<string, unknown> }) => ({
         id: doc.id,
         filename: doc.filename,
         uploadedAt: doc.uploaded_at,
@@ -117,7 +117,7 @@ router.put('/:documentId/rename', requireAuth, async (req: Request, res: Respons
       'document',
       documentId,
       {
-        oldFilename: oldDoc.rows[0].filename,
+        oldFilename: (oldDoc.rows[0] as Record<string, unknown>).filename as string,
         newFilename: filename.trim(),
       },
       req.ip,
@@ -129,8 +129,8 @@ router.put('/:documentId/rename', requireAuth, async (req: Request, res: Respons
       success: true,
       message: 'Document renamed successfully',
       document: {
-        id: updated.id,
-        filename: updated.filename,
+        id: (updated as { id: string; filename: string }).id,
+        filename: (updated as { id: string; filename: string }).filename,
       },
     });
   } catch (error) {

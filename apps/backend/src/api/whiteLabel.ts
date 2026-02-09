@@ -113,9 +113,10 @@ router.post('/tenants', /* requireRole('admin'), */ async (req: Request, res: Re
       name: tenantData.name,
       domain: tenantData.domain,
       branding: tenantData.branding || {},
-      settings: tenantData.settings || {
-        allowCustomBranding: true,
-        features: ['all'],
+      settings: {
+        allowCustomBranding: tenantData.settings?.allowCustomBranding ?? true,
+        maxUsers: tenantData.settings?.maxUsers,
+        features: tenantData.settings?.features ?? ['all'],
       },
     });
 

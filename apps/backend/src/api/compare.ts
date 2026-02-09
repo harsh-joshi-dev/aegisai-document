@@ -3,17 +3,22 @@ import multer from 'multer';
 import { parsePDF } from '../services/pdfParser.js';
 import { classifyDocumentRisk } from '../services/classifier.js';
 import { insertDocument, getDocument } from '../db/pgvector.js';
+import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
 import { z } from 'zod';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Compare two documents (v1 and v2)
+// Compare two documents (v1 and v2) — requires auth so the new document is tied to the user
 router.post('/', upload.fields([
   { name: 'v1', maxCount: 1 },
   { name: 'v2', maxCount: 1 },
   { name: 'documentId', maxCount: 1 }, // Optional: if comparing with existing document
-]), async (req: Request, res: Response) => {
+]) as unknown as import('express').RequestHandler, async (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
+  if (!authReq.user?.id) {
+    return res.status(401).json({ error: 'Authentication required to compare documents' });
+  }
   try {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     
@@ -67,9 +72,10 @@ router.post('/', upload.fields([
     }
 
     // Insert v2 as new document with version tracking
-    const parentDocId = documentId || null;
+    const parentDocId = documentId || undefined;
     const v2Document = await insertDocument(
       v2File.originalname,
+      authReq.user.id,
       {
         numPages: v2Parsed.numPages,
         ...v2Parsed.metadata,
@@ -81,6 +87,9 @@ router.post('/', upload.fields([
       2, // version number
       parentDocId
     );
+    if (!v2Document) {
+      return res.status(500).json({ error: 'Failed to create document' });
+    }
 
     res.json({
       success: true,

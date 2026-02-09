@@ -20,6 +20,17 @@ export interface DocumentChunk {
   };
 }
 
+/** Row returned from INSERT/SELECT on documents table */
+export interface DocumentRow {
+  id: string;
+  filename: string;
+  uploaded_at: Date;
+  risk_level?: string;
+  risk_category?: string | null;
+  risk_confidence?: number | null;
+  version_number?: number;
+}
+
 export async function initializeDatabase() {
   const client = await pool.connect();
   try {
@@ -201,7 +212,7 @@ export async function initializeDatabase() {
             AND column_name = 'embedding';
           `);
           
-          if (colCheck.rows.length > 0 && colCheck.rows[0].data_type === 'jsonb') {
+          if (colCheck.rows.length > 0 && (colCheck.rows[0] as Record<string, unknown>).data_type === 'jsonb') {
             console.log('🔄 Migrating embeddings from JSONB to vector type...');
             // Drop old index if it exists (might be on wrong type)
             try {
@@ -370,7 +381,7 @@ export async function insertDocument(
        RETURNING id, filename, uploaded_at, risk_level, risk_category, risk_confidence, version_number;`,
       params
     );
-    return result.rows[0];
+    return result.rows[0] as unknown as DocumentRow | undefined;
   } finally {
     client.release();
   }
@@ -383,7 +394,7 @@ async function checkPgvectorAvailable(): Promise<boolean> {
   if (pgvectorAvailable !== null) {
     return pgvectorAvailable;
   }
-  
+
   const client = await pool.connect();
   try {
     // Check if vector type exists
@@ -392,7 +403,7 @@ async function checkPgvectorAvailable(): Promise<boolean> {
         SELECT 1 FROM pg_type WHERE typname = 'vector'
       ) as exists;
     `);
-    pgvectorAvailable = result.rows[0].exists;
+    pgvectorAvailable = !!(result.rows[0] as Record<string, unknown>).exists;
     return pgvectorAvailable;
   } catch (error) {
     pgvectorAvailable = false;
@@ -502,16 +513,19 @@ export async function searchSimilarChunks(
       // If we got results from vector search, return them
       if (result.rows.length > 0) {
         console.log(`✅ Found ${result.rows.length} chunks using vector search`);
-        return result.rows.map(row => ({
-          id: row.id,
-          documentId: row.document_id,
-          content: row.content,
-          metadata: row.metadata,
-          filename: row.filename,
-          riskLevel: row.risk_level,
-          riskCategory: row.risk_category,
-          similarity: parseFloat(row.similarity),
-        }));
+        return result.rows.map((row) => {
+          const r = row as Record<string, unknown>;
+          return {
+            id: r.id as string,
+            documentId: r.document_id as string,
+            content: r.content as string,
+            metadata: r.metadata as Record<string, unknown>,
+            filename: r.filename as string,
+            riskLevel: r.risk_level as string,
+            riskCategory: r.risk_category as string,
+            similarity: parseFloat(String(r.similarity)),
+          };
+        });
       }
     } catch (error) {
       console.warn('Vector search failed, falling back to text search:', error);
@@ -572,16 +586,19 @@ async function searchByTextFallback(
     console.warn('⚠️  No chunks found in database. Document may not have been processed correctly.');
   }
   
-  return result.rows.map(row => ({
-    id: row.id,
-    documentId: row.document_id,
-    content: row.content,
-    metadata: row.metadata,
-    filename: row.filename,
-    riskLevel: row.risk_level,
-    riskCategory: row.risk_category,
-    similarity: parseFloat(row.similarity),
-  }));
+  return result.rows.map((row) => {
+    const r = row as Record<string, unknown>;
+    return {
+      id: r.id as string,
+      documentId: r.document_id as string,
+      content: r.content as string,
+      metadata: r.metadata as Record<string, unknown>,
+      filename: r.filename as string,
+      riskLevel: r.risk_level as string,
+      riskCategory: r.risk_category as string,
+      similarity: parseFloat(String(r.similarity)),
+    };
+  });
 }
 
 export async function updateDocumentRiskLevel(
@@ -613,6 +630,7 @@ export async function getDocuments(filters?: {
   riskLevel?: string;
   riskCategory?: string;
   documentIds?: string[];
+  userId?: string;
 }) {
   // Check if columns exist first
   const client = await pool.connect();

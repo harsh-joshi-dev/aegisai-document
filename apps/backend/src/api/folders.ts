@@ -143,7 +143,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
         [userId, folderName]
       );
 
-      const folder = result.rows[0];
+      const folder = result.rows[0] as { id: string; name: string; created_at: Date; updated_at: Date };
 
       // Log audit event
       await logAuditEvent(
@@ -247,7 +247,7 @@ router.put('/:folderId', requireAuth, async (req: Request, res: Response) => {
         'folder',
         folderId,
         {
-          oldName: folder.rows[0].name,
+          oldName: (folder.rows[0] as Record<string, unknown>).name as string,
           newName: folderName,
         },
         req.ip,
@@ -314,7 +314,7 @@ router.delete('/:folderId', requireAuth, async (req: Request, res: Response) => 
         'folder',
         folderId,
         {
-          folderName: folder.rows[0].name,
+          folderName: (folder.rows[0] as Record<string, unknown>).name as string,
         },
         req.ip,
         req.get('user-agent'),
@@ -393,7 +393,7 @@ router.post('/:folderId/documents/:documentId', requireAuth, async (req: Request
         'document',
         documentId,
         {
-          filename: document.rows[0].filename,
+          filename: (document.rows[0] as Record<string, unknown>).filename as string,
           folderId: folderId,
         },
         req.ip,
@@ -473,7 +473,7 @@ router.delete('/:folderId/documents/:documentId', requireAuth, async (req: Reque
         'document',
         documentId,
         {
-          filename: document.rows[0].filename,
+          filename: (document.rows[0] as Record<string, unknown>).filename as string,
           folderId: folderId,
         },
         req.ip,

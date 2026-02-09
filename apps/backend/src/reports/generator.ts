@@ -72,7 +72,7 @@ export async function generateReportData(options: ReportOptions): Promise<Report
     }
 
     const summaryResult = await client.query(query, params);
-    const summary = summaryResult.rows[0];
+    const summary = (summaryResult.rows[0] || {}) as Record<string, unknown>;
 
     // Get top risks
     let topRisksQuery = `
@@ -106,11 +106,11 @@ export async function generateReportData(options: ReportOptions): Promise<Report
         end: options.period.end.toISOString().split('T')[0],
       },
       summary: {
-        totalDocuments: parseInt(summary.total || '0'),
-        averageRiskScore: Math.round(parseFloat(summary.avg_risk || '0') * 100) / 100,
-        criticalCount: parseInt(summary.critical || '0'),
-        warningCount: parseInt(summary.warning || '0'),
-        normalCount: parseInt(summary.normal || '0'),
+        totalDocuments: parseInt(String(summary.total || '0')),
+        averageRiskScore: Math.round(parseFloat(String(summary.avg_risk || '0')) * 100) / 100,
+        criticalCount: parseInt(String(summary.critical || '0')),
+        warningCount: parseInt(String(summary.warning || '0')),
+        normalCount: parseInt(String(summary.normal || '0')),
       },
       topRisks: topRisksResult.rows.map((row: any) => ({
         document: row.filename,

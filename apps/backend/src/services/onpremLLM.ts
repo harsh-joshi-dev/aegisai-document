@@ -45,7 +45,7 @@ export async function callLocalLLM(
       throw new Error(`Ollama API error: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as { response?: string };
     return data.response || '';
   } catch (error) {
     console.error('Local LLM error:', error);
@@ -73,8 +73,8 @@ export async function checkOllamaAvailable(): Promise<boolean> {
 export async function listAvailableModels(): Promise<string[]> {
   try {
     const response = await fetch(`${OLLAMA_URL}/api/tags`);
-    const data = await response.json();
-    return data.models?.map((m: any) => m.name) || [];
+    const data = await response.json() as { models?: Array<{ name: string }> };
+    return data.models?.map((m) => m.name) || [];
   } catch {
     return [];
   }

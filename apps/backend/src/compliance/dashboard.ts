@@ -78,23 +78,26 @@ export async function getComplianceMetrics(): Promise<ComplianceMetrics> {
       lastAccessAudit: null as Date | null,
     };
 
+    const gdprRow = gdprMetrics.rows[0] as Record<string, unknown> | undefined;
+    const soc2Row = soc2Metrics.rows[0] as Record<string, unknown> | undefined;
+    const retentionRow = retentionMetrics.rows[0] as Record<string, unknown> | undefined;
     return {
       gdpr: {
         dataRetentionDays: 90, // Configurable
-        pendingDeletionRequests: parseInt(gdprMetrics.rows[0]?.pending_requests || '0'),
-        dataExportsCompleted: parseInt(gdprMetrics.rows[0]?.exports || '0'),
-        userDataDeleted: parseInt(gdprMetrics.rows[0]?.deletions || '0'),
+        pendingDeletionRequests: parseInt(String(gdprRow?.pending_requests || '0')),
+        dataExportsCompleted: parseInt(String(gdprRow?.exports || '0')),
+        userDataDeleted: parseInt(String(gdprRow?.deletions || '0')),
       },
       soc2: {
-        totalAuditLogs: parseInt(soc2Metrics.rows[0]?.total_logs || '0'),
-        failedAccessAttempts: parseInt(soc2Metrics.rows[0]?.failed_attempts || '0'),
-        dataAccessEvents: parseInt(soc2Metrics.rows[0]?.access_events || '0'),
-        systemChanges: parseInt(soc2Metrics.rows[0]?.system_changes || '0'),
+        totalAuditLogs: parseInt(String(soc2Row?.total_logs || '0')),
+        failedAccessAttempts: parseInt(String(soc2Row?.failed_attempts || '0')),
+        dataAccessEvents: parseInt(String(soc2Row?.access_events || '0')),
+        systemChanges: parseInt(String(soc2Row?.system_changes || '0')),
       },
       dataRetention: {
-        documentsOlderThan30Days: parseInt(retentionMetrics.rows[0]?.older_30d || '0'),
-        documentsOlderThan90Days: parseInt(retentionMetrics.rows[0]?.older_90d || '0'),
-        documentsOlderThan1Year: parseInt(retentionMetrics.rows[0]?.older_1y || '0'),
+        documentsOlderThan30Days: parseInt(String(retentionRow?.older_30d || '0')),
+        documentsOlderThan90Days: parseInt(String(retentionRow?.older_90d || '0')),
+        documentsOlderThan1Year: parseInt(String(retentionRow?.older_1y || '0')),
         autoDeleteEnabled: true, // Configurable
       },
       accessControl: accessMetrics,

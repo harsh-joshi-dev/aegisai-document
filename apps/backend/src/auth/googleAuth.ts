@@ -1,5 +1,5 @@
 import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as GoogleStrategy, VerifyCallback } from 'passport-google-oauth20';
 import { config } from '../config/env.js';
 import { pool } from '../db/pgvector.js';
 
@@ -26,7 +26,7 @@ passport.use(
       clientSecret: config.google.clientSecret,
       callbackURL: `${config.backendUrl}/api/auth/google/callback`,
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (accessToken: string, refreshToken: string, profile: import('passport-google-oauth20').Profile, done: VerifyCallback) => {
       try {
         const client = await pool.connect();
         try {
@@ -65,7 +65,7 @@ passport.use(
           // Mark welcome email as sent
           await client.query(
             `UPDATE users SET welcome_email_sent = true WHERE id = $1`,
-            [newUser.rows[0].id]
+            [(newUser.rows[0] as { id: string }).id]
           );
 
           return done(null, newUser.rows[0]);
@@ -81,16 +81,16 @@ passport.use(
 );
 
 // Serialize user for session
-passport.serializeUser((user: any, done) => {
+passport.serializeUser((user: any, done: (err: any, id?: string) => void) => {
   done(null, user.id);
 });
 
 // Deserialize user from session
-passport.deserializeUser(async (id: string, done) => {
+passport.deserializeUser(async (id: unknown, done: (err: unknown, user?: unknown) => void) => {
   try {
     const client = await pool.connect();
     try {
-      const result = await client.query('SELECT * FROM users WHERE id = $1', [id]);
+      const result = await client.query('SELECT * FROM users WHERE id = $1', [String(id)]);
       if (result.rows.length > 0) {
         done(null, result.rows[0]);
       } else {

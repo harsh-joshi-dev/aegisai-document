@@ -336,7 +336,7 @@ export interface Location {
 }
 
 export async function getServiceProviders(
-  category: 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'None',
+  category: 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' | 'None',
   userLocation: Location,
   limit: number = 5
 ): Promise<ServiceProvider[]> {
@@ -345,7 +345,7 @@ export async function getServiceProviders(
   }
 
   // Try to get real data from Google Places API first
-  const realProviders = await getProvidersFromGooglePlaces(category, userLocation);
+  const realProviders = await getProvidersFromGooglePlaces(category as 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical', userLocation);
   
   if (realProviders.length > 0) {
     console.log(`✅ Found ${realProviders.length} real providers from Google Places API`);

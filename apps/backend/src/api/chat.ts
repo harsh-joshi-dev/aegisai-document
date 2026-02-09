@@ -28,7 +28,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     let userDocumentIds = validated.documentIds;
     if (userDocumentIds && userDocumentIds.length > 0) {
       const userDocs = await getDocuments({ userId: authReq.user!.id });
-      const userDocIds = new Set(userDocs.map(d => d.id));
+      const userDocIds = new Set(userDocs.map((d: { id: string }) => d.id));
       userDocumentIds = userDocumentIds.filter(id => userDocIds.has(id));
     }
     

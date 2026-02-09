@@ -3,7 +3,7 @@
  * Cron jobs for checking and sending alerts
  */
 import { pool } from '../db/pgvector.js';
-import { extractDates, generateAlerts } from './extractor.js';
+import { extractDates, generateAlerts, type ContractAlert } from './extractor.js';
 import { getDocumentContent } from '../db/pgvector.js';
 
 export interface AlertJob {
@@ -32,7 +32,8 @@ export async function checkAllAlerts(): Promise<AlertJob[]> {
 
     const alerts: AlertJob[] = [];
 
-    for (const doc of result.rows) {
+    interface DocRow { id: string; filename: string }
+    for (const doc of result.rows as unknown as DocRow[]) {
       try {
         // Get document content
         const content = await getDocumentContent(doc.id);

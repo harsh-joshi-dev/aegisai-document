@@ -139,7 +139,7 @@ export async function exchangeCodeForTokens(
     }),
   });
 
-  const tokens = await response.json();
+  const tokens = await response.json() as { access_token: string; id_token: string; refresh_token: string };
   return {
     accessToken: tokens.access_token,
     idToken: tokens.id_token,

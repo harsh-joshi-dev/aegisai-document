@@ -3,7 +3,7 @@ import multer from 'multer';
 import { parseDocument, isSupportedFileType } from '../services/documentParser.js';
 import { chunkText } from '../services/chunker.js';
 import { generateEmbeddings } from '../services/embeddings.js';
-import { insertDocument, insertChunks, updateDocumentRiskLevel } from '../db/pgvector.js';
+import { insertDocument, insertChunks, updateDocumentRiskLevel, type DocumentRow } from '../db/pgvector.js';
 import { classifyDocumentRisk } from '../services/classifier.js';
 import { sanitizeForAnalysis } from '../redaction/sanitizer.js';
 import { evaluateRules } from '../rules/ruleEngine.js';
@@ -30,7 +30,7 @@ async function ensureDocumentLimit(userId: string, res: Response) {
   return true;
 }
 
-router.post('/', requireAuth, upload.single('file'), async (req: Request, res: Response) => {
+router.post('/', requireAuth, upload.single('file') as unknown as import('express').RequestHandler, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   
   if (!authReq.user) {
@@ -147,7 +147,7 @@ router.post('/', requireAuth, upload.single('file'), async (req: Request, res: R
     }
     
     // Evaluate custom rules (if any)
-    let customRuleMatches = [];
+    let customRuleMatches: import('../rules/ruleEngine.js').RuleMatch[] = [];
     try {
       const enabledRules = await getEnabledRules();
       if (enabledRules.length > 0) {
@@ -175,7 +175,7 @@ router.post('/', requireAuth, upload.single('file'), async (req: Request, res: R
     }
     
     // Insert document with user_id and file data
-    let document;
+    let document: DocumentRow | undefined;
     try {
       document = await insertDocument(
         req.file.originalname,
@@ -195,7 +195,10 @@ router.post('/', requireAuth, upload.single('file'), async (req: Request, res: R
       console.error('Error inserting document:', error);
       throw new Error(`Failed to insert document: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
+    if (!document) {
+      return res.status(500).json({ error: 'Failed to insert document' });
+    }
+
     // Update risk level
     try {
       await updateDocumentRiskLevel(
@@ -260,7 +263,7 @@ router.post('/', requireAuth, upload.single('file'), async (req: Request, res: R
       const userName = authReq.user.name || 'User';
       
       sendDocumentUploadEmail(
-        userEmail,
+        userEmail ?? '',
         userName,
         req.file.originalname,
         document.id,
@@ -418,6 +421,9 @@ router.post('/text', requireAuth, async (req: Request, res: Response) => {
       riskAnalysis.confidence || 0.5,
       1
     );
+    if (!document) {
+      return res.status(500).json({ error: 'Failed to insert document' });
+    }
 
     // Update risk level
     try {
@@ -591,6 +597,9 @@ router.post('/email', requireAuth, async (req: Request, res: Response) => {
       riskAnalysis.confidence || 0.5,
       1
     );
+    if (!document) {
+      return res.status(500).json({ error: 'Failed to insert document' });
+    }
 
     try {
       await updateDocumentRiskLevel(

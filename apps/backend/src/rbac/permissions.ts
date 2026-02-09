@@ -109,7 +109,7 @@ export function canAccess(
       return true;
     }
     // Reviewers and admins can access all resources
-    if (userRole === 'reviewer' || userRole === 'admin') {
+    if (userRole === 'reviewer' || (userRole as Role) === 'admin') {
       return true;
     }
   }

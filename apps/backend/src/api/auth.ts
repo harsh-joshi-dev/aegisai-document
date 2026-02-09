@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import passport from '../auth/googleAuth.js';
 import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
 import { config } from '../config/env.js';
@@ -21,7 +21,7 @@ const frontendUrl = config.frontendUrl;
  */
 router.get(
   '/google',
-  (req: Request, res: Response, next) => {
+  (req: Request, res: Response, next: NextFunction) => {
     if (!config.google.clientId || !config.google.clientSecret) {
       return res.redirect(
         `${frontendUrl}/login?error=google_not_configured`
@@ -40,8 +40,8 @@ router.get(
  */
 router.get(
   '/google/callback',
-  (req: Request, res: Response) => {
-    passport.authenticate('google', { session: true }, (err: any, user: AuthenticatedRequest['user']) => {
+  (req: Request, res: Response, next: NextFunction) => {
+    (passport.authenticate as (a: string, b: object, c: (err: unknown, user?: AuthenticatedRequest['user']) => void) => (req: Request, res: Response, next: NextFunction) => void)('google', { session: true }, (err: unknown, user: AuthenticatedRequest['user']) => {
       if (err) {
         console.error('[Auth] Google callback error:', err);
         return res.redirect(`${frontendUrl}/login?error=auth_failed`);
@@ -49,14 +49,14 @@ router.get(
       if (!user) {
         return res.redirect(`${frontendUrl}/login?error=auth_failed`);
       }
-      req.login(user, (loginErr: any) => {
+      req.login(user, (loginErr: unknown) => {
         if (loginErr) {
           console.error('[Auth] Session login error:', loginErr);
           return res.redirect(`${frontendUrl}/login?error=auth_failed`);
         }
         res.redirect(`${frontendUrl}/?auth=success`);
       });
-    })(req, res);
+    })(req, res, next);
   }
 );
 
@@ -79,11 +79,11 @@ router.get('/me', requireAuth, (req: AuthenticatedRequest, res: Response) => {
  * Logout
  */
 router.post('/logout', (req: Request, res: Response) => {
-  req.logout((err) => {
+  req.logout((err: unknown) => {
     if (err) {
       return res.status(500).json({
         error: 'Logout failed',
-        message: err.message,
+        message: err instanceof Error ? err.message : 'Unknown error',
       });
     }
     res.json({

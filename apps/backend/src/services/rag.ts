@@ -112,12 +112,12 @@ export async function queryRAG(
     }
     
     // Calculate overall confidence based on similarity scores
-    const avgSimilarity = similarChunks.reduce((sum, chunk) => sum + chunk.similarity, 0) / similarChunks.length;
+    const avgSimilarity = similarChunks.reduce((sum: number, chunk: { similarity: number }) => sum + chunk.similarity, 0) / similarChunks.length;
     const overallConfidence = Math.round(avgSimilarity * 100); // Convert to percentage
-    
+
     // Combine context from similar chunks
     const context = similarChunks
-      .map((chunk, index) => `[Source ${index + 1}: ${chunk.filename}]\n${chunk.content}`)
+      .map((chunk: { filename: string; content: string }, index: number) => `[Source ${index + 1}: ${chunk.filename}]\n${chunk.content}`)
       .join('\n\n---\n\n');
     
     // Create prompt
@@ -132,7 +132,7 @@ export async function queryRAG(
       : JSON.stringify(response.content);
     
     // Format citations with confidence scores
-    const citations = similarChunks.map(chunk => ({
+    const citations = similarChunks.map((chunk: { documentId: string; filename: string; content: string; similarity: number; metadata?: Record<string, unknown> }) => ({
       documentId: chunk.documentId,
       filename: chunk.filename,
       content: chunk.content.substring(0, 200) + '...', // Truncate for display
@@ -140,8 +140,8 @@ export async function queryRAG(
       confidence: Math.round(chunk.similarity * 100), // Convert similarity to confidence percentage
       metadata: chunk.metadata,
     }));
-    
-    const sources = [...new Set(similarChunks.map(chunk => chunk.filename))];
+
+    const sources = [...new Set(similarChunks.map((chunk: { filename: string }) => chunk.filename))] as string[];
     
     // Check if user is asking for next steps and fetch service providers
     let serviceProvidersInfo = undefined;
