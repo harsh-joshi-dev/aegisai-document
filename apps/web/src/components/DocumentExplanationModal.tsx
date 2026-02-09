@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supportedLanguages, getLanguageName } from '../utils/language';
+import { API_BASE_URL } from '../api/client';
 import './DocumentExplanationModal.css';
 
 interface DocumentExplanationModalProps {
@@ -65,7 +66,7 @@ export default function DocumentExplanationModal({
   const translateExplanation = async (text: string, targetLang: string) => {
     setIsTranslating(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/translate`, {
+      const response = await fetch(`${API_BASE_URL}/api/translate`.replace(/([^:])\/+/g, '$1/'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

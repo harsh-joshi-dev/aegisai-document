@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Location as APILocation } from '../api/client';
+import { Location as APILocation, API_BASE_URL } from '../api/client';
 
 interface LocationContextType {
   location: APILocation | null;
@@ -32,9 +32,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         // Try to get city/state from reverse geocoding via backend proxy
         try {
           // Use backend API to avoid CORS issues
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
           const response = await fetch(
-            `${apiUrl}/api/geocode/reverse?lat=${latitude}&lon=${longitude}`,
+            `${API_BASE_URL}/api/geocode/reverse?lat=${latitude}&lon=${longitude}`.replace(/([^:])\/+/g, '$1/'),
             {
               method: 'GET',
               credentials: 'include',

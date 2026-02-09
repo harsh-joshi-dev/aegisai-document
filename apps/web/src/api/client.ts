@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Use backend origin so the session cookie (set by backend) is sent with requests.
+// With the proxy, requests go to 5173 and the cookie for 3001 isn't sent, so login appears to fail.
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

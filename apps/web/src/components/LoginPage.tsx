@@ -1,12 +1,33 @@
 import { useAuth } from '../contexts/AuthContext';
 import './LoginPage.css';
 
+const AUTH_ERROR_MESSAGES: Record<string, { title: string; body: string }> = {
+  google_not_configured: {
+    title: 'Google sign-in is not set up',
+    body: 'Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to the backend .env file (in apps/backend). In Google Cloud Console, create OAuth credentials and set the authorized redirect URI to: http://localhost:3001/api/auth/google/callback',
+  },
+  auth_failed: {
+    title: 'Sign-in failed',
+    body: 'Google sign-in was cancelled or failed. Please try again.',
+  },
+};
+
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, authError, clearAuthError } = useAuth();
+  const errorInfo = authError ? AUTH_ERROR_MESSAGES[authError] : null;
 
   return (
     <div className="login-page">
       <div className="login-container">
+        {errorInfo && (
+          <div className="login-error-banner" role="alert">
+            <strong>{errorInfo.title}</strong>
+            <p>{errorInfo.body}</p>
+            <button type="button" onClick={clearAuthError} className="login-error-dismiss">
+              Dismiss
+            </button>
+          </div>
+        )}
         <div className="login-card">
           <div className="login-header">
             <div className="logo-container">

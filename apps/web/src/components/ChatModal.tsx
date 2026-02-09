@@ -225,14 +225,14 @@ export default function ChatModal({ isOpen, onClose, document }: ChatModalProps)
             ) : (
               <div className="document-pdf-viewer">
                 <object
-                  data={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/documents/${document.id}/file#toolbar=0&navpanes=0`}
+                  data={`${import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? '' : 'http://localhost:3001')}/api/documents/${document.id}/file#toolbar=0&navpanes=0`}
                   type="application/pdf"
                   className="pdf-object"
                   title={document.filename}
                   onError={handlePdfError}
                 >
                   <iframe
-                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/documents/${document.id}/file#toolbar=0&navpanes=0&scrollbar=1`}
+                    src={`${import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? '' : 'http://localhost:3001')}/api/documents/${document.id}/file#toolbar=0&navpanes=0&scrollbar=1`}
                     className="pdf-iframe"
                     title={document.filename}
                     onError={handlePdfError}

@@ -1,17 +1,20 @@
 import { Router, Request, Response } from 'express';
 import passport from '../auth/googleAuth.js';
 import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { config } from '../config/env.js';
 
-// Extend Express Request type for logout
+// Extend Express Request for Passport
 declare global {
   namespace Express {
     interface Request {
       logout: (callback: (err?: any) => void) => void;
+      login: (user: any, callback: (err?: any) => void) => void;
     }
   }
 }
 
 const router = Router();
+const frontendUrl = config.frontendUrl;
 
 /**
  * Initiate Google OAuth login
@@ -19,34 +22,41 @@ const router = Router();
 router.get(
   '/google',
   (req: Request, res: Response, next) => {
-    // Check if Google OAuth is configured
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-      return res.status(500).json({
-        error: 'Google OAuth not configured',
-        message: 'Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your .env file',
-      });
+    if (!config.google.clientId || !config.google.clientSecret) {
+      return res.redirect(
+        `${frontendUrl}/login?error=google_not_configured`
+      );
+    }
+    if (config.server.nodeEnv === 'development') {
+      console.log('[Auth] Google OAuth: ensure redirect URI in Google Console is exactly:', `${config.backendUrl}/api/auth/google/callback`);
     }
     next();
   },
-  passport.authenticate('google', {
-    scope: ['profile', 'email'],
-  })
+  passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
 /**
- * Google OAuth callback
+ * Google OAuth callback — always redirect to frontend so user never sees a blank page
  */
 router.get(
   '/google/callback',
-  passport.authenticate('google', { 
-    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/?error=auth_failed`,
-    session: true,
-  }),
-  (req: AuthenticatedRequest, res: Response) => {
-    // Successful authentication
-    // Redirect directly to upload page (root)
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    res.redirect(`${frontendUrl}/?auth=success`);
+  (req: Request, res: Response) => {
+    passport.authenticate('google', { session: true }, (err: any, user: AuthenticatedRequest['user']) => {
+      if (err) {
+        console.error('[Auth] Google callback error:', err);
+        return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+      }
+      if (!user) {
+        return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+      }
+      req.login(user, (loginErr: any) => {
+        if (loginErr) {
+          console.error('[Auth] Session login error:', loginErr);
+          return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+        }
+        res.redirect(`${frontendUrl}/?auth=success`);
+      });
+    })(req, res);
   }
 );
 

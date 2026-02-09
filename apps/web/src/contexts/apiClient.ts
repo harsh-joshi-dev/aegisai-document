@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../api/client';
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  baseURL: API_BASE_URL,
   withCredentials: true, // Important for session cookies
 });

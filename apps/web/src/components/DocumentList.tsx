@@ -440,97 +440,99 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="document-filters">
-        <div className="search-box">
-          <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M21 21l-4.35-4.35" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <input
-            type="text"
-            placeholder="Search documents..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-          {searchQuery && (
-            <button
-              className="clear-search"
-              onClick={() => setSearchQuery('')}
-              title="Clear search"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18" strokeLinecap="round"/>
-                <line x1="6" y1="6" x2="18" y2="18" strokeLinecap="round"/>
-              </svg>
-            </button>
-          )}
+      {/* Search and Filters — only show when there are documents */}
+      {documents.length > 0 && (
+        <div className="document-filters">
+          <div className="search-box">
+            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M21 21l-4.35-4.35" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Search documents..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+            {searchQuery && (
+              <button
+                className="clear-search"
+                onClick={() => setSearchQuery('')}
+                title="Clear search"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" strokeLinecap="round"/>
+                  <line x1="6" y1="6" x2="18" y2="18" strokeLinecap="round"/>
+                </svg>
+              </button>
+            )}
+          </div>
+          <div className="filter-group">
+            <div className="filter-item">
+              <label htmlFor="folder-filter" className="filter-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Folder
+              </label>
+              <select
+                id="folder-filter"
+                value={selectedFolderFilter}
+                onChange={(e) => setSelectedFolderFilter(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Folders</option>
+                <option value="none">Root (No Folder)</option>
+                {folders.map(folder => (
+                  <option key={folder.id} value={folder.id}>{folder.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-item">
+              <label htmlFor="category-filter" className="filter-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Category
+              </label>
+              <select
+                id="category-filter"
+                value={selectedCategoryFilter}
+                onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Categories</option>
+                <option value="none">No Category</option>
+                <option value="Legal">Legal</option>
+                <option value="Financial">Financial</option>
+                <option value="Compliance">Compliance</option>
+                <option value="Operational">Operational</option>
+                <option value="Medical">Medical</option>
+              </select>
+            </div>
+            <div className="filter-item">
+              <label htmlFor="risk-level-filter" className="filter-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Risk Level
+              </label>
+              <select
+                id="risk-level-filter"
+                value={selectedRiskLevelFilter}
+                onChange={(e) => setSelectedRiskLevelFilter(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Risk Levels</option>
+                <option value="Critical">Critical</option>
+                <option value="Warning">Warning</option>
+                <option value="Normal">Normal</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div className="filter-group">
-          <div className="filter-item">
-            <label htmlFor="folder-filter" className="filter-label">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Folder
-            </label>
-            <select
-              id="folder-filter"
-              value={selectedFolderFilter}
-              onChange={(e) => setSelectedFolderFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Folders</option>
-              <option value="none">Root (No Folder)</option>
-              {folders.map(folder => (
-                <option key={folder.id} value={folder.id}>{folder.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="filter-item">
-            <label htmlFor="category-filter" className="filter-label">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Category
-            </label>
-            <select
-              id="category-filter"
-              value={selectedCategoryFilter}
-              onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Categories</option>
-              <option value="none">No Category</option>
-              <option value="Legal">Legal</option>
-              <option value="Financial">Financial</option>
-              <option value="Compliance">Compliance</option>
-              <option value="Operational">Operational</option>
-              <option value="Medical">Medical</option>
-            </select>
-          </div>
-          <div className="filter-item">
-            <label htmlFor="risk-level-filter" className="filter-label">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Risk Level
-            </label>
-            <select
-              id="risk-level-filter"
-              value={selectedRiskLevelFilter}
-              onChange={(e) => setSelectedRiskLevelFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Risk Levels</option>
-              <option value="Critical">Critical</option>
-              <option value="Warning">Warning</option>
-              <option value="Normal">Normal</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      )}
 
       {visibleDocuments.length === 0 ? (
         <div className="empty-state">

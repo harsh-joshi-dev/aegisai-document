@@ -35,18 +35,6 @@ export async function initializeDatabase() {
       }
     }
     
-    // Initialize compliance tables
-    const { initializeAuditLogs } = await import('../compliance/auditLog.js');
-    await initializeAuditLogs();
-    
-    // Initialize white-label tables
-    const { initializeTenants } = await import('../whiteLabel/tenant.js');
-    await initializeTenants();
-    
-    // Initialize folders
-    const { initializeFolders } = await import('../api/folders.js');
-    await initializeFolders();
-    
     // Create session table for express-session (if not exists)
     // This matches the schema expected by connect-pg-simple
     try {
@@ -173,6 +161,18 @@ export async function initializeDatabase() {
     } catch (error: any) {
       console.log('Note: parent_document_id column check:', error.message);
     }
+    
+    // Initialize compliance tables (depends on users/documents existing)
+    const { initializeAuditLogs } = await import('../compliance/auditLog.js');
+    await initializeAuditLogs();
+    
+    // Initialize white-label tables (adds tenant_id to documents)
+    const { initializeTenants } = await import('../whiteLabel/tenant.js');
+    await initializeTenants();
+    
+    // Initialize folders (may depend on documents/users)
+    const { initializeFolders } = await import('../api/folders.js');
+    await initializeFolders();
     
     // Check if pgvector is available
     const hasPgvector = await checkPgvectorAvailable();

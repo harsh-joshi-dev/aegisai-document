@@ -54,7 +54,7 @@ function AppContent() {
   if (loading) {
     return (
       <div className="app">
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--text-main)' }}>
           <div>Loading...</div>
         </div>
       </div>

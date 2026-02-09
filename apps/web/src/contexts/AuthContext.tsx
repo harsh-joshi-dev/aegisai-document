@@ -11,6 +11,8 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  authError: string | null;
+  clearAuthError: () => void;
   login: () => void;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -21,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const checkAuth = async () => {
     try {
@@ -45,11 +48,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = () => {
     try {
-      // Redirect to Google OAuth - use full URL to bypass React Router
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      console.log('Initiating Google Login to:', `${apiUrl}/api/auth/google`);
-      // Use window.location.replace to ensure React Router doesn't intercept
-      window.location.replace(`${apiUrl}/api/auth/google`);
+      // Must redirect to the backend origin (e.g. localhost:3001), not the frontend.
+      // Otherwise the browser stays on the app and React Router shows "No routes matched /api/auth/google".
+      const backendOrigin =
+        import.meta.env.VITE_BACKEND_URL ||
+        import.meta.env.VITE_API_URL ||
+        (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
+      const authUrl = `${backendOrigin.replace(/\/$/, '')}/api/auth/google`;
+      console.log('Initiating Google Login to:', authUrl);
+      window.location.replace(authUrl);
     } catch (error) {
       console.error('Login error:', error);
       alert('Failed to initiate login. Please check your configuration.');
@@ -66,41 +73,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Handle OAuth callback
+  // Handle OAuth callback and error params
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
     const authSuccess = urlParams.get('auth') === 'success';
 
     if (error) {
-      console.error('Authentication error:', error);
-      alert('Authentication failed. Please try again.');
-      window.history.replaceState({}, '', '/');
+      setAuthError(error);
+      window.history.replaceState({}, '', window.location.pathname || '/');
       setLoading(false);
       return;
     }
 
     if (authSuccess) {
-      // Clean up URL first
       window.history.replaceState({}, '', '/');
-      // Check auth status
       checkAuth()
-        .then(() => {
-          // Auth check complete, user should be set
-          // App will automatically show upload page
-        })
+        .then(() => {})
         .catch((err) => {
           console.error('Auth check error:', err);
           setLoading(false);
         });
     } else {
-      // If not a callback, just finish loading
       setLoading(false);
     }
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, loading, authError, clearAuthError: () => setAuthError(null), login, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );
