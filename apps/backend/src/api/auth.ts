@@ -17,9 +17,8 @@ router.get(
         `${frontendUrl}/login?error=google_not_configured`
       );
     }
-    if (config.server.nodeEnv === 'development') {
-      console.log('[Auth] Google OAuth: ensure redirect URI in Google Console is exactly:', `${config.backendUrl}/api/auth/google/callback`);
-    }
+    const redirectUri = `${config.backendUrl}/api/auth/google/callback`;
+    console.log('[Auth] Google OAuth: ensure this redirect URI is in Google Console:', redirectUri);
     next();
   },
   passport.authenticate('google', { scope: ['profile', 'email'] })

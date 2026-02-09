@@ -4,7 +4,7 @@ import './LoginPage.css';
 const AUTH_ERROR_MESSAGES: Record<string, { title: string; body: string }> = {
   google_not_configured: {
     title: 'Google sign-in is not set up',
-    body: 'Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to the backend .env file (in apps/backend). In Google Cloud Console, create OAuth credentials and set the authorized redirect URI to: http://localhost:3001/api/auth/google/callback',
+    body: 'Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to the backend environment. In Google Cloud Console, set the authorized redirect URI to your backend URL + /api/auth/google/callback (e.g. https://your-app.onrender.com/api/auth/google/callback). See apps/backend/GOOGLE_OAUTH_PRODUCTION.md for production setup.',
   },
   auth_failed: {
     title: 'Sign-in failed',

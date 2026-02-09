@@ -15,7 +15,7 @@ export interface User {
 // Validate Google OAuth configuration
 if (!config.google.clientId || !config.google.clientSecret) {
   console.error('⚠️  WARNING: Google OAuth credentials not configured!');
-  console.error('   Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your .env file');
+  console.error('   Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET. In production also set BACKEND_URL and add this redirect URI in Google Console:', `${config.backendUrl}/api/auth/google/callback`);
 }
 
 // Configure Google OAuth Strategy
