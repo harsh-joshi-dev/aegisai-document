@@ -37,6 +37,9 @@ import verifyDocumentRouter from './api/verifyDocument.js';
 
 const app = express();
 
+// Required behind Render (or any reverse proxy): so req.secure is true and session cookie gets Secure flag
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
   origin: config.cors.origin,
