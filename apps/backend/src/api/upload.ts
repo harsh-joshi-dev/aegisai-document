@@ -3,8 +3,17 @@ import multer from 'multer';
 import { parseDocument, isSupportedFileType } from '../services/documentParser.js';
 import { chunkText } from '../services/chunker.js';
 import { generateEmbeddings } from '../services/embeddings.js';
-import { insertDocument, insertChunks, updateDocumentRiskLevel, type DocumentRow } from '../db/pgvector.js';
+import {
+  insertDocument,
+  insertChunks,
+  updateDocumentRiskLevel,
+  getOrCreateFolder,
+  setDocumentFolder,
+  updateDocumentMetadata,
+  type DocumentRow,
+} from '../db/pgvector.js';
 import { classifyDocumentRisk } from '../services/classifier.js';
+import { classifyDocumentType, getFinancialYearFromDate } from '../services/documentTypeClassifier.js';
 import { sanitizeForAnalysis } from '../redaction/sanitizer.js';
 import { evaluateRules } from '../rules/ruleEngine.js';
 import { getEnabledRules } from '../rules/rulesStorage.js';
@@ -258,6 +267,24 @@ router.post('/', requireAuth, upload.single('file') as unknown as import('expres
       throw new Error(`Failed to insert chunks: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 
+    // Auto smart folders: classify document type and move to matching folder
+    let autoFolderName: string | undefined;
+    try {
+      const typeResult = await classifyDocumentType(textForAnalysis, req.file.originalname);
+      const financialYear = typeResult.financialYear ?? getFinancialYearFromDate(new Date(document.uploaded_at || undefined));
+      await updateDocumentMetadata(document.id, userId, {
+        documentType: typeResult.documentType,
+        financialYear,
+      });
+      const folderId = await getOrCreateFolder(userId, typeResult.folderName);
+      if (folderId) {
+        await setDocumentFolder(document.id, userId, folderId);
+        autoFolderName = typeResult.folderName;
+      }
+    } catch (folderErr) {
+      console.warn('Auto smart folder failed (document still uploaded):', folderErr);
+    }
+
     // Send email to the Gmail account the user used to log in (from their session/profile)
     try {
       const userEmail = authReq.user?.email ?? '';
@@ -319,6 +346,7 @@ router.post('/', requireAuth, upload.single('file') as unknown as import('expres
         numChunks: chunksWithEmbeddings.length,
         customRuleMatches: customRuleMatches.length > 0 ? customRuleMatches : undefined,
         redactionSummary: redactionSummary,
+        autoFolderName,
       },
     });
   } catch (error) {

@@ -1,33 +1,57 @@
 /**
- * Risk Trends Dashboard API
+ * Financial Health Dashboard API
+ * GET /api/dashboard/health – aggregate document risk and compliance summary
  */
 import { Router, Request, Response } from 'express';
-import { getRiskTrendsDashboard } from '../analytics/dashboard.js';
+import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { getDocuments } from '../db/pgvector.js';
 
 const router = Router();
 
-router.get('/trends', async (req: Request, res: Response) => {
+export type RiskLevel = 'Green' | 'Yellow' | 'Red';
+
+router.get('/health', requireAuth, async (req: Request, res: Response) => {
   try {
-    const startDate = req.query.startDate 
-      ? new Date(req.query.startDate as string)
-      : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000); // 90 days ago
-    
-    const endDate = req.query.endDate 
-      ? new Date(req.query.endDate as string)
-      : new Date();
-    
-    const groupBy = (req.query.groupBy as 'day' | 'week' | 'month') || 'week';
-    
-    const dashboard = await getRiskTrendsDashboard(startDate, endDate, groupBy);
-    
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+
+    const docs = await getDocuments({ userId });
+    const criticalCount = docs.filter((d: { risk_level?: string }) => d.risk_level === 'Critical').length;
+    const warningCount = docs.filter((d: { risk_level?: string }) => d.risk_level === 'Warning').length;
+    const normalCount = docs.filter((d: { risk_level?: string }) => d.risk_level === 'Normal').length;
+
+    let riskLevel: RiskLevel = 'Green';
+    if (criticalCount > 0) riskLevel = 'Red';
+    else if (warningCount > 0) riskLevel = 'Yellow';
+
+    const suggestExpert = riskLevel === 'Red' || (riskLevel === 'Yellow' && warningCount >= 3);
+    const message =
+      riskLevel === 'Green'
+        ? 'No tax liability or critical issues identified. Next check suggested: end of quarter.'
+        : riskLevel === 'Yellow'
+          ? 'Some documents need attention. Review warning items and consider consulting a CA for tax matters.'
+          : 'Critical items require immediate attention. We recommend connecting with a CA or tax expert.';
+
     res.json({
       success: true,
-      ...dashboard,
+      summary: {
+        totalDocuments: docs.length,
+        criticalCount,
+        warningCount,
+        normalCount,
+        riskLevel,
+        message,
+        suggestExpert,
+        youAreSafe: riskLevel === 'Green' && docs.length > 0,
+      },
     });
   } catch (error) {
-    console.error('Dashboard trends error:', error);
+    console.error('Dashboard health error:', error);
     res.status(500).json({
-      error: 'Failed to get trends',
+      error: 'Failed to load dashboard',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }

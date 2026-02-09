@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getDocuments, Document, explainDocument, getFolders, Folder, renameDocument } from '../api/client';
+import { getDocuments, Document, explainDocument, getFolders, Folder, renameDocument, type FinanceToolId } from '../api/client';
 import { formatConfidence } from '../utils/confidence';
 import ServiceProviderModal from './ServiceProviderModal';
 import DocumentExplanationModal from './DocumentExplanationModal';
@@ -14,7 +14,15 @@ import FolderManager from './FolderManager';
 import FinanceToolsModal from './FinanceToolsModal';
 import './DocumentList.css';
 
-export default function DocumentList(props: { searchQuery?: string; compact?: boolean } = {}) {
+export interface DocumentListProps {
+  searchQuery?: string;
+  compact?: boolean;
+  /** When set, open Finance Tools modal with this tool and documents preselected (e.g. from Upload page). */
+  openFinanceTool?: { toolId: FinanceToolId; documentIds: string[] };
+  onFinanceToolsClose?: () => void;
+}
+
+export default function DocumentList(props: DocumentListProps = {}) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +64,12 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
   const [isFinanceToolsOpen, setIsFinanceToolsOpen] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (props.openFinanceTool?.documentIds?.length && props.openFinanceTool?.toolId) {
+      setIsFinanceToolsOpen(true);
+    }
+  }, [props.openFinanceTool?.toolId, props.openFinanceTool?.documentIds?.length]);
 
   useEffect(() => {
     loadDocuments();
@@ -1145,13 +1159,19 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
       {/* Finance & Tax Tools */}
       <FinanceToolsModal
         isOpen={isFinanceToolsOpen}
-        onClose={() => setIsFinanceToolsOpen(false)}
+        onClose={() => {
+          setIsFinanceToolsOpen(false);
+          props.onFinanceToolsClose?.();
+        }}
         documents={documents}
         preselectedDocumentIds={
-          selectedFolderFilter !== 'all' && selectedFolderFilter !== 'none' && visibleDocuments.length > 0
-            ? visibleDocuments.map((d) => d.id)
-            : []
+          props.openFinanceTool?.documentIds?.length
+            ? props.openFinanceTool.documentIds
+            : selectedFolderFilter !== 'all' && selectedFolderFilter !== 'none' && visibleDocuments.length > 0
+              ? visibleDocuments.map((d) => d.id)
+              : []
         }
+        initialToolId={props.openFinanceTool?.toolId}
       />
     </div>
   );

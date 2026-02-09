@@ -29,12 +29,28 @@ export interface DocumentInput {
   content: string | null;
 }
 
+export interface ChartDataset {
+  label: string;
+  values: number[];
+}
+
+export interface FinanceToolChart {
+  type: 'bar' | 'line' | 'pie' | 'area';
+  title: string;
+  labels: string[];
+  values?: number[];
+  datasets?: ChartDataset[];
+}
+
 export interface FinanceToolResult {
   success: boolean;
   toolId: FinanceToolId;
   title: string;
   summary: string;
   sections: Array<{ heading: string; content: string; items?: string[] }>;
+  charts?: FinanceToolChart[];
+  youAreSafe?: boolean;
+  nextCheckSuggested?: string;
   raw?: string;
   error?: string;
 }
@@ -135,5 +151,34 @@ function parseStructuredOutput(
     const items = (data.findings as string[]) || (data.items as string[]) || [];
     sections.push({ heading: 'Findings', content: '', items });
   }
-  return { title, summary, sections, raw: cleaned };
+
+  let charts: FinanceToolResult['charts'];
+  if (Array.isArray(data.charts)) {
+    charts = [];
+    for (const c of data.charts as Array<Record<string, unknown>>) {
+      const type = (c.type as string) || 'bar';
+      if (!['bar', 'line', 'pie', 'area'].includes(type)) continue;
+      const labels = Array.isArray(c.labels) ? (c.labels as string[]) : [];
+      const values = Array.isArray(c.values) ? (c.values as number[]) : [];
+      const datasets = Array.isArray(c.datasets)
+        ? (c.datasets as Array<{ label?: string; values?: number[] }>).map((d) => ({
+            label: (d.label as string) || 'Series',
+            values: Array.isArray(d.values) ? (d.values as number[]) : [],
+          }))
+        : undefined;
+      if (labels.length || datasets?.length) {
+        charts.push({
+          type: type as FinanceToolChart['type'],
+          title: (c.title as string) || 'Chart',
+          labels,
+          values: values.length ? values : undefined,
+          datasets,
+        });
+      }
+    }
+  }
+
+  const youAreSafe = data.youAreSafe === true;
+  const nextCheckSuggested = typeof data.nextCheckSuggested === 'string' ? data.nextCheckSuggested : undefined;
+  return { title, summary, sections, charts, youAreSafe, nextCheckSuggested, raw: cleaned };
 }

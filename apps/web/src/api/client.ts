@@ -24,7 +24,15 @@ apiClient.interceptors.request.use((config) => {
   const isMultipart =
     (config.headers as any)?.['Content-Type']?.includes('multipart/form-data') ||
     (config.headers as any)?.['content-type']?.includes('multipart/form-data');
-  if (isFormData || isMultipart) return config;
+  if (isFormData || isMultipart) {
+    // Let the browser set Content-Type with boundary for FormData (required for file upload)
+    if (isFormData && config.headers) {
+      const headers = config.headers as Record<string, unknown>;
+      delete headers['Content-Type'];
+      delete headers['content-type'];
+    }
+    return config;
+  }
 
   // Only queue JSON requests when offline.
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -561,6 +569,30 @@ export async function removeDocumentFromFolder(folderId: string, documentId: str
   return response.data;
 }
 
+export async function organizeFoldersByYear(): Promise<{ success: boolean; message: string; moved: number; total: number }> {
+  const response = await apiClient.post<{ success: boolean; message: string; moved: number; total: number }>('/api/folders/organize-by-year', {});
+  return response.data;
+}
+
+// Financial Health Dashboard
+export type DashboardRiskLevel = 'Green' | 'Yellow' | 'Red';
+
+export interface DashboardHealthSummary {
+  totalDocuments: number;
+  criticalCount: number;
+  warningCount: number;
+  normalCount: number;
+  riskLevel: DashboardRiskLevel;
+  message: string;
+  suggestExpert: boolean;
+  youAreSafe: boolean;
+}
+
+export async function getDashboardHealth(): Promise<{ success: boolean; summary: DashboardHealthSummary }> {
+  const response = await apiClient.get<{ success: boolean; summary: DashboardHealthSummary }>('/api/dashboard/health');
+  return response.data;
+}
+
 // Rename Document
 export interface RenameDocumentRequest {
   filename: string;
@@ -626,7 +658,13 @@ export async function verifyDocument(documentId: string): Promise<VerificationRe
 
 // Finance & Tax Tools
 export const FINANCE_TOOL_IDS = [
+  'bank-credit-card-statements',
+  'tax-threshold-monitor',
+  'real-time-tax-liability-estimator',
   'tax-liability-calculator',
+  'investment-suggestions',
+  'income-source-classification',
+  'gst-registration-eligibility',
   'expense-contract-mismatch',
   'vendor-payment-reconciliation',
   'subscription-recurring-tracker',
@@ -651,12 +689,30 @@ export interface FinanceToolSection {
   items?: string[];
 }
 
+export interface FinanceToolChartDataset {
+  label: string;
+  values: number[];
+}
+
+export interface FinanceToolChart {
+  type: 'bar' | 'line' | 'pie' | 'area';
+  title: string;
+  labels: string[];
+  values?: number[];
+  datasets?: FinanceToolChartDataset[];
+}
+
 export interface FinanceToolResult {
   success: boolean;
   toolId: FinanceToolId;
   title: string;
   summary: string;
   sections: FinanceToolSection[];
+  charts?: FinanceToolChart[];
+  /** When true, show "You Are Safe" confirmation (no liability / no action required). */
+  youAreSafe?: boolean;
+  /** Suggested next check date when safe. */
+  nextCheckSuggested?: string;
   raw?: string;
   error?: string;
 }

@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import FileUploader from '../components/FileUploader';
 import DocumentList from '../components/DocumentList';
+import FinancialHealthDashboard from '../components/FinancialHealthDashboard';
 import { UploadResponse } from '../api/client';
 import './upload.css';
 
 export default function UploadPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [lastUploadedDocumentIds, setLastUploadedDocumentIds] = useState<string[]>([]);
+  const [openStatementsAnalysis, setOpenStatementsAnalysis] = useState(false);
 
   const handleUploadSuccess = (_response: UploadResponse) => {
     setRefreshKey(prev => prev + 1);
@@ -37,6 +39,13 @@ export default function UploadPage() {
             <Link to={chatUrl} className="upload-universal-cta-btn primary">
               Chat with these {lastUploadedDocumentIds.length} document{lastUploadedDocumentIds.length !== 1 ? 's' : ''}
             </Link>
+            <button
+              type="button"
+              className="upload-universal-cta-btn secondary"
+              onClick={() => setOpenStatementsAnalysis(true)}
+            >
+              Analyze Bank &amp; Credit Card Statements
+            </button>
             <span className="upload-universal-cta-hint">
               Explain, Share, What If, Voice, Trust Score, and Agent Swarm work for each document below.
             </span>
@@ -51,7 +60,16 @@ export default function UploadPage() {
           </button>
         </div>
       )}
-      <DocumentList key={refreshKey} />
+      <FinancialHealthDashboard />
+      <DocumentList
+        key={refreshKey}
+        openFinanceTool={
+          openStatementsAnalysis && lastUploadedDocumentIds.length > 0
+            ? { toolId: 'bank-credit-card-statements', documentIds: lastUploadedDocumentIds }
+            : undefined
+        }
+        onFinanceToolsClose={() => setOpenStatementsAnalysis(false)}
+      />
     </div>
   );
 }

@@ -102,6 +102,15 @@ export default function WhatIfSimulator({ isOpen, onClose, documentId, documentN
             <p className="document-name">📄 {documentName}</p>
           </div>
 
+          <div className="what-if-presets">
+            <span className="what-if-presets-label">Quick scenarios:</span>
+            <button type="button" className="what-if-preset" onClick={() => setScenario('What happens if I ignore this notice or document? Show penalty growth, legal risk timeline, and worst-case outcome.')}>
+              Ignore this notice
+            </button>
+            <button type="button" className="what-if-preset" onClick={() => setScenario('What happens if I delay payment? Show penalty growth over time, interest accumulation, and worst-case outcome.')}>
+              Delay payment
+            </button>
+          </div>
           <div className="what-if-input-section">
             <label htmlFor="scenario-input">Enter your scenario:</label>
             <textarea

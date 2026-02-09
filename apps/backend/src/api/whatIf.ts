@@ -97,6 +97,8 @@ Analyze the potential consequences if this scenario occurs. Consider:
 4. Operational consequences (process disruptions, workflow impacts)
 5. Reputational consequences (public perception, trust, relationships)
 
+If the scenario is about IGNORING a notice or DELAYING payment: also include consequences that show penalty growth over time, legal risk timeline (short/medium/long term), and worst-case outcome (e.g. prosecution, attachment, interest compounding). Be specific about amounts and dates where possible.
+
 For each consequence, provide:
 - Category (Legal, Financial, Compliance, Operational, or Reputational)
 - Description (clear, specific explanation)

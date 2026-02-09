@@ -320,6 +320,33 @@
   letter-spacing: -0.25px;
 }
 
+.share-summary-only-hint {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.copy-summary-button {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: transparent;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.copy-summary-button:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.copy-summary-button.copied {
+  color: #10b981;
+  border-color: #10b981;
+}
+
 .link-copy-container {
   display: flex;
   gap: 0.75rem;

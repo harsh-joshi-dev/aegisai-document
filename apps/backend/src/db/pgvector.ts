@@ -626,6 +626,63 @@ export async function updateDocumentFilename(
   return result.rows[0];
 }
 
+/** Merge metadata patch into document's existing metadata. */
+export async function updateDocumentMetadata(
+  documentId: string,
+  userId: string,
+  metadataPatch: Record<string, unknown>
+): Promise<void> {
+  const client = await pool.connect();
+  try {
+    const existing = await client.query(
+      `SELECT metadata FROM documents WHERE id = $1 AND user_id = $2`,
+      [documentId, userId]
+    );
+    if (existing.rows.length === 0) return;
+    const current = (existing.rows[0] as { metadata: Record<string, unknown> }).metadata || {};
+    const merged = { ...current, ...metadataPatch };
+    await client.query(
+      `UPDATE documents SET metadata = $1 WHERE id = $2 AND user_id = $3`,
+      [JSON.stringify(merged), documentId, userId]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+/** Get folder id by name for user, or create folder if it doesn't exist. Returns folder id. */
+export async function getOrCreateFolder(userId: string, folderName: string): Promise<string | null> {
+  const client = await pool.connect();
+  try {
+    const existing = await client.query(
+      `SELECT id FROM folders WHERE user_id = $1 AND name = $2`,
+      [userId, folderName]
+    );
+    if (existing.rows.length > 0) {
+      return (existing.rows[0] as { id: string }).id;
+    }
+    const insert = await client.query(
+      `INSERT INTO folders (user_id, name) VALUES ($1, $2) ON CONFLICT (user_id, name) DO UPDATE SET updated_at = CURRENT_TIMESTAMP RETURNING id`,
+      [userId, folderName]
+    );
+    return insert.rows.length > 0 ? (insert.rows[0] as { id: string }).id : null;
+  } finally {
+    client.release();
+  }
+}
+
+/** Set document's folder (or null for root). */
+export async function setDocumentFolder(
+  documentId: string,
+  userId: string,
+  folderId: string | null
+): Promise<void> {
+  await pool.query(
+    `UPDATE documents SET folder_id = $1 WHERE id = $2 AND user_id = $3`,
+    [folderId, documentId, userId]
+  );
+}
+
 export async function getDocuments(filters?: {
   riskLevel?: string;
   riskCategory?: string;

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
-import { pool } from '../db/pgvector.js';
+import { pool, getDocuments, getOrCreateFolder, setDocumentFolder } from '../db/pgvector.js';
+import { getFinancialYearFromDate } from '../services/documentTypeClassifier.js';
 import { logAuditEvent } from '../compliance/auditLog.js';
 
 const router = Router();
@@ -47,6 +48,36 @@ export async function initializeFolders() {
     client.release();
   }
 }
+
+// Auto year-wise organization: move documents into FY YYYY-YY folders
+router.post('/organize-by-year', requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
+  if (!authReq.user) {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+  }
+  const userId = authReq.user.id;
+  try {
+    const docs = await getDocuments({ userId });
+    let moved = 0;
+    for (const doc of docs) {
+      const meta = (doc as { metadata?: { financialYear?: string } }).metadata || {};
+      const uploadedAt = (doc as { uploaded_at?: Date | string }).uploaded_at;
+      const fy = meta.financialYear || getFinancialYearFromDate(new Date(uploadedAt || Date.now()));
+      const folderId = await getOrCreateFolder(userId, fy);
+      if (folderId) {
+        await setDocumentFolder(doc.id, userId, folderId);
+        moved++;
+      }
+    }
+    res.json({ success: true, message: `Organized ${moved} documents by financial year.`, moved, total: docs.length });
+  } catch (error) {
+    console.error('Organize by year error:', error);
+    res.status(500).json({
+      error: 'Failed to organize by year',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
 
 // Get all folders for user
 router.get('/', requireAuth, async (req: Request, res: Response) => {

@@ -6,6 +6,7 @@ import {
   deleteFolder,
   moveDocumentToFolder,
   removeDocumentFromFolder,
+  organizeFoldersByYear,
   Folder,
 } from '../api/client';
 import './FolderManager.css';
@@ -27,6 +28,7 @@ export default function FolderManager({ documents, onDocumentMoved, onOpenFolder
   const [editFolderName, setEditFolderName] = useState('');
   const [_draggedDocument, _setDraggedDocument] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [organizingByYear, setOrganizingByYear] = useState(false);
 
   useEffect(() => {
     loadFolders();
@@ -191,20 +193,46 @@ export default function FolderManager({ documents, onDocumentMoved, onOpenFolder
     return documents.filter(doc => !doc.folderId);
   };
 
+  const handleOrganizeByYear = async () => {
+    setOrganizingByYear(true);
+    setError(null);
+    try {
+      const res = await organizeFoldersByYear();
+      await loadFolders();
+      if (onDocumentMoved) onDocumentMoved();
+      if (res.moved > 0) setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Failed to organize by year');
+    } finally {
+      setOrganizingByYear(false);
+    }
+  };
+
   return (
     <div className="folder-manager">
       <div className="folder-manager-header">
         <h3>Folders</h3>
-        <button
-          className="add-folder-button"
-          onClick={() => setShowCreateModal(true)}
-          title="Create New Folder"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          Add Folder
-        </button>
+        <div className="folder-manager-header-actions">
+          <button
+            type="button"
+            className="organize-by-year-button"
+            onClick={handleOrganizeByYear}
+            disabled={organizingByYear || documents.length === 0}
+            title="Sort all documents into FY folders (e.g. FY 2024-25)"
+          >
+            {organizingByYear ? 'Organizing…' : 'Organize by year'}
+          </button>
+          <button
+            className="add-folder-button"
+            onClick={() => setShowCreateModal(true)}
+            title="Create New Folder"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Add Folder
+          </button>
+        </div>
       </div>
 
       {error && (

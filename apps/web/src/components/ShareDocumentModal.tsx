@@ -18,6 +18,7 @@ export default function ShareDocumentModal({
 }: ShareDocumentModalProps) {
   const [shareUrl, setShareUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copiedSummary, setCopiedSummary] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -41,8 +42,8 @@ export default function ShareDocumentModal({
     }
   };
 
-  // Generate share text with summary
-  const generateShareText = () => {
+  // Generate share text with summary (optionally without link - privacy-safe for CA/Lawyer)
+  const generateShareText = (includeLink = true) => {
     const riskInfo = document.riskLevel !== 'Normal'
       ? `Risk Level: ${document.riskLevel}${document.riskCategory ? ` (${document.riskCategory})` : ''}`
       : 'Risk Level: Normal';
@@ -52,10 +53,12 @@ export default function ShareDocumentModal({
       ? `Confidence: ${formatConfidence(confidenceVal)}`
       : '';
 
-    return `📄 Document Analysis: ${document.filename}\n\n${riskInfo}${confidence ? `\n${confidence}` : ''}\n\nAnalyzed by ${companyName} - Intelligent Document Analysis Platform\n\nView details: ${shareUrl}`;
+    const base = `📄 Document Analysis: ${document.filename}\n\n${riskInfo}${confidence ? `\n${confidence}` : ''}\n\nAnalyzed by ${companyName} - Intelligent Document Analysis Platform`;
+    return includeLink ? `${base}\n\nView details: ${shareUrl}` : `${base}\n\n(Summary only – full document not shared. Share this with your CA/Lawyer for advice.)`;
   };
 
-  const shareText = generateShareText();
+  const shareText = generateShareText(true);
+  const summaryOnlyText = generateShareText(false);
 
   const handleCopyLink = async () => {
     try {
@@ -65,6 +68,17 @@ export default function ShareDocumentModal({
     } catch (err) {
       console.error('Failed to copy:', err);
       alert('Failed to copy link. Please copy manually.');
+    }
+  };
+
+  const handleCopySummaryOnly = async () => {
+    try {
+      await navigator.clipboard.writeText(summaryOnlyText);
+      setCopiedSummary(true);
+      setTimeout(() => setCopiedSummary(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy. Please copy manually.');
     }
   };
 
@@ -182,6 +196,18 @@ export default function ShareDocumentModal({
               <span>Email</span>
             </button>
           </div>
+        </div>
+
+        <div className="share-link-section share-summary-only-section">
+          <h4>Privacy-safe (for CA / Lawyer)</h4>
+          <p className="share-summary-only-hint">Share redacted summary only — not the full document. Recipient gets risk level and summary, no document link.</p>
+          <button
+            type="button"
+            className={`copy-link-button copy-summary-button ${copiedSummary ? 'copied' : ''}`}
+            onClick={handleCopySummaryOnly}
+          >
+            {copiedSummary ? '✓ Copied summary!' : 'Copy summary only'}
+          </button>
         </div>
 
         <div className="share-link-section">

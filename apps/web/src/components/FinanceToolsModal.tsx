@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   getFinanceToolsList,
   runFinanceTool,
@@ -7,12 +8,37 @@ import {
   type FinanceToolResult,
   type Document,
 } from '../api/client';
+import FinanceToolResultView from './FinanceToolResultView';
 import './FinanceToolsModal.css';
 
 const TOOL_DESCRIPTIONS: Record<string, { short: string; why: string }> = {
+  'bank-credit-card-statements': {
+    short: 'Upload bank + credit card statements → totals, income vs expense, categories, trends. Chat & more.',
+    why: 'Full end-to-end analysis with charts.',
+  },
+  'tax-threshold-monitor': {
+    short: 'Bank statements → total credits, income vs GST/IT limits. Flags when nearing or crossing.',
+    why: 'Avoid unknowingly crossing tax limits and penalties.',
+  },
+  'real-time-tax-liability-estimator': {
+    short: 'Bank credits + bills → current tax payable, expected at year end, remaining liability.',
+    why: 'Visibility into upcoming tax burden.',
+  },
   'tax-liability-calculator': {
     short: 'GST bills, tax notices, invoices → total payable, penalty risk, due dates.',
     why: 'Perfect for SMEs, accountants, founders.',
+  },
+  'investment-suggestions': {
+    short: 'Tax exposure → 80C/80D options, amount to invest, safe vs aggressive.',
+    why: 'Smart tax planning, not last-minute.',
+  },
+  'income-source-classification': {
+    short: 'Detect Salary, Business, Freelance, Rental, Other and tag transactions.',
+    why: 'Correct tax category and avoid misreporting.',
+  },
+  'gst-registration-eligibility': {
+    short: 'Income + invoices → GST required? Month to cross threshold. Alerts in advance.',
+    why: 'Avoid late GST registration penalties.',
   },
   'expense-contract-mismatch': {
     short: 'Contract + invoices → overbilling, unauthorized charges, rate mismatch.',
@@ -57,6 +83,8 @@ interface FinanceToolsModalProps {
   onClose: () => void;
   documents: Document[];
   preselectedDocumentIds?: string[];
+  /** When opening, preselect this tool (e.g. Bank & Credit Card Statements from Upload page). */
+  initialToolId?: FinanceToolId;
 }
 
 export default function FinanceToolsModal({
@@ -64,6 +92,7 @@ export default function FinanceToolsModal({
   onClose,
   documents,
   preselectedDocumentIds = [],
+  initialToolId,
 }: FinanceToolsModalProps) {
   const [tools, setTools] = useState<FinanceToolMeta[]>([]);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>(preselectedDocumentIds);
@@ -71,16 +100,18 @@ export default function FinanceToolsModal({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<FinanceToolResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showResultView, setShowResultView] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setSelectedDocumentIds((prev) =>
         preselectedDocumentIds.length > 0 ? preselectedDocumentIds : prev
       );
+      if (initialToolId) setSelectedToolId(initialToolId);
       setResult(null);
       setError(null);
     }
-  }, [isOpen, preselectedDocumentIds]);
+  }, [isOpen, preselectedDocumentIds, initialToolId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -183,21 +214,38 @@ export default function FinanceToolsModal({
             {tools.map((tool) => {
               const desc = TOOL_DESCRIPTIONS[tool.id];
               const isSelected = selectedToolId === tool.id;
+              const hasResultForThisTool = result?.toolId === tool.id;
               return (
-                <button
+                <div
                   key={tool.id}
-                  type="button"
-                  className={`finance-tool-card ${isSelected ? 'selected' : ''}`}
-                  onClick={() => setSelectedToolId(tool.id as FinanceToolId)}
+                  className={`finance-tool-card-wrap ${isSelected ? 'selected' : ''}`}
                 >
-                  <span className="finance-tool-title">{tool.title}</span>
-                  {desc && (
-                    <>
-                      <span className="finance-tool-short">{desc.short}</span>
-                      <span className="finance-tool-why">{desc.why}</span>
-                    </>
+                  <button
+                    type="button"
+                    className={`finance-tool-card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => setSelectedToolId(tool.id as FinanceToolId)}
+                  >
+                    <span className="finance-tool-title">{tool.title}</span>
+                    {desc && (
+                      <>
+                        <span className="finance-tool-short">{desc.short}</span>
+                        <span className="finance-tool-why">{desc.why}</span>
+                      </>
+                    )}
+                  </button>
+                  {hasResultForThisTool && (
+                    <button
+                      type="button"
+                      className="finance-tool-card-show-result"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowResultView(true);
+                      }}
+                    >
+                      Show Result
+                    </button>
                   )}
-                </button>
+                </div>
               );
             })}
             </div>
@@ -224,14 +272,43 @@ export default function FinanceToolsModal({
             <div className="finance-tools-result">
               <div className="finance-tools-result-header">
                 <h3>{result.title}</h3>
-                {(result.toolId === 'multi-bill-summary-report' || result.sections?.length) && (
-                  <button type="button" className="finance-tools-export-pdf" onClick={handleExportPdf}>
-                    Export PDF
+                <div className="finance-tools-result-header-btns">
+                  <button
+                    type="button"
+                    className="finance-tools-show-result-btn"
+                    onClick={() => setShowResultView(true)}
+                  >
+                    Show Result
                   </button>
-                )}
+                  {(result.toolId === 'multi-bill-summary-report' || result.sections?.length) && (
+                    <button type="button" className="finance-tools-export-pdf" onClick={handleExportPdf}>
+                      Export PDF
+                    </button>
+                  )}
+                </div>
               </div>
               {result.error && <p className="finance-tools-result-error">{result.error}</p>}
+              {result.youAreSafe && (
+                <div className="finance-tools-you-are-safe">
+                  <span className="finance-tools-you-are-safe-icon">✓</span>
+                  <strong>You are safe.</strong> No tax liability / no action required.
+                  {result.nextCheckSuggested && (
+                    <span className="finance-tools-next-check"> Next check suggested: {result.nextCheckSuggested}</span>
+                  )}
+                </div>
+              )}
               {result.summary && <p className="finance-tools-summary">{result.summary}</p>}
+              {result.toolId === 'bank-credit-card-statements' && selectedDocumentIds.length > 0 && (
+                <p className="finance-tools-chat-link-wrap">
+                  <Link
+                    to={`/chat?documents=${selectedDocumentIds.join(',')}`}
+                    className="finance-tools-chat-link"
+                  >
+                    Chat with these statements
+                  </Link>
+                  {' — Explain, Share, What If, Voice & more.'}
+                </p>
+              )}
               <div className="finance-tools-sections">
                 {result.sections?.map((s, i) => (
                   <div key={i} className="finance-tools-section">
@@ -248,6 +325,14 @@ export default function FinanceToolsModal({
                 ))}
               </div>
             </div>
+          )}
+
+          {showResultView && result && (
+            <FinanceToolResultView
+              result={result}
+              onClose={() => setShowResultView(false)}
+              onExportPdf={handleExportPdf}
+            />
           )}
         </div>
       </div>
