@@ -11,6 +11,7 @@ import VoiceMode from './VoiceMode';
 import TrustScore from './TrustScore';
 import AgentSwarm from './AgentSwarm';
 import FolderManager from './FolderManager';
+import FinanceToolsModal from './FinanceToolsModal';
 import './DocumentList.css';
 
 export default function DocumentList(props: { searchQuery?: string; compact?: boolean } = {}) {
@@ -52,6 +53,7 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [folderSummaryExpanded, setFolderSummaryExpanded] = useState(true);
   const documentsGridRef = useRef<HTMLDivElement>(null);
+  const [isFinanceToolsOpen, setIsFinanceToolsOpen] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -498,13 +500,27 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
             )}
           </div>
           {!props.compact && (
-            <button onClick={loadDocuments} className="refresh-button" title="Refresh list">
-              <svg className="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M3 12a9 9 0 0118 0M21 12a9 9 0 00-18 0" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M12 3v6m0 6v6" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              Refresh
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setIsFinanceToolsOpen(true)}
+                className="finance-tools-header-btn"
+                title="Tax, reconciliation, fraud detection & more"
+              >
+                <svg className="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                Finance & Tax Tools
+              </button>
+              <button onClick={loadDocuments} className="refresh-button" title="Refresh list">
+                <svg className="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M3 12a9 9 0 0118 0M21 12a9 9 0 00-18 0" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M12 3v6m0 6v6" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                Refresh
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -766,6 +782,15 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
                   }}
                 >
                   Voice with all {visibleDocuments.length} in folder
+                </button>
+                <button
+                  type="button"
+                  className="chat-folder-cta-link voice-folder-btn"
+                  onClick={() => {
+                    setIsFinanceToolsOpen(true);
+                  }}
+                >
+                  Finance & Tax Tools ({visibleDocuments.length} docs)
                 </button>
               </div>
             </div>
@@ -1116,6 +1141,18 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
           documentName={selectedDocumentForAgentSwarm.filename}
         />
       )}
+
+      {/* Finance & Tax Tools */}
+      <FinanceToolsModal
+        isOpen={isFinanceToolsOpen}
+        onClose={() => setIsFinanceToolsOpen(false)}
+        documents={documents}
+        preselectedDocumentIds={
+          selectedFolderFilter !== 'all' && selectedFolderFilter !== 'none' && visibleDocuments.length > 0
+            ? visibleDocuments.map((d) => d.id)
+            : []
+        }
+      />
     </div>
   );
 }

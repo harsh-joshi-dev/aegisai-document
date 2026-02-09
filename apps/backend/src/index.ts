@@ -34,6 +34,7 @@ import mobileRouter from './api/mobile.js';
 import completenessRouter from './api/completeness.js';
 import foldersRouter from './api/folders.js';
 import verifyDocumentRouter from './api/verifyDocument.js';
+import financeToolsRouter from './api/financeTools.js';
 
 const app = express();
 
@@ -118,6 +119,7 @@ app.use('/api/mobile', mobileRouter);
 app.use('/api/completeness', completenessRouter);
 app.use('/api/folders', foldersRouter);
 app.use('/api/verify', verifyDocumentRouter);
+app.use('/api/finance-tools', financeToolsRouter);
 
 // Debug: Log registered routes
 console.log('✅ Routes registered: /api/upload, /api/chat, /api/documents, /api/compare, /api/rules, /api/templates, /api/negotiation, /api/analytics, /api/redaction, /api/compliance, /api/sso, /api/white-label, /api/dashboard, /api/benchmarking, /api/alerts, /api/reports, /api/service-providers');

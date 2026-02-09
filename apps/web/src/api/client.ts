@@ -624,3 +624,56 @@ export async function verifyDocument(documentId: string): Promise<VerificationRe
   return response.data;
 }
 
+// Finance & Tax Tools
+export const FINANCE_TOOL_IDS = [
+  'tax-liability-calculator',
+  'expense-contract-mismatch',
+  'vendor-payment-reconciliation',
+  'subscription-recurring-tracker',
+  'penalty-late-fee-predictor',
+  'multi-bill-summary-report',
+  'fraud-duplicate-detection',
+  'cost-trend-anomaly',
+  'settlement-negotiation-suggestions',
+  'bill-accounting-entry-generator',
+] as const;
+
+export type FinanceToolId = (typeof FINANCE_TOOL_IDS)[number];
+
+export interface FinanceToolMeta {
+  id: FinanceToolId;
+  title: string;
+}
+
+export interface FinanceToolSection {
+  heading: string;
+  content: string;
+  items?: string[];
+}
+
+export interface FinanceToolResult {
+  success: boolean;
+  toolId: FinanceToolId;
+  title: string;
+  summary: string;
+  sections: FinanceToolSection[];
+  raw?: string;
+  error?: string;
+}
+
+export async function getFinanceToolsList(): Promise<{ success: boolean; tools: FinanceToolMeta[] }> {
+  const response = await apiClient.get<{ success: boolean; tools: FinanceToolMeta[] }>('/api/finance-tools/list');
+  return response.data;
+}
+
+export async function runFinanceTool(
+  toolId: FinanceToolId,
+  documentIds: string[]
+): Promise<{ success: boolean; result: FinanceToolResult }> {
+  const response = await apiClient.post<{ success: boolean; result: FinanceToolResult }>('/api/finance-tools/run', {
+    toolId,
+    documentIds,
+  });
+  return response.data;
+}
+
