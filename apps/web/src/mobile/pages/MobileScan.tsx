@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { uploadFile } from '../../api/client';
+import { uploadFile, getFolders, createFolder, moveDocumentToFolder } from '../../api/client';
 
 // Same as web FileUploader + backend documentParser
 const SUPPORTED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.png', '.jpg', '.jpeg', '.webp'];
@@ -31,32 +31,60 @@ export default function MobileScan() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<{ id: string; filename: string } | null>(null);
+  const [result, setResult] = useState<{ count: number; filename?: string; documentIds: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const onPick = async (file: File | null) => {
-    if (!file) return;
+  const uploadAll = async () => {
+    if (pendingFiles.length === 0) return;
     setError(null);
     setResult(null);
-    if (!isSupportedFile(file)) {
-      setError(`Unsupported file type. Supported: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, WEBP`);
+    const invalid = pendingFiles.filter(f => !isSupportedFile(f));
+    if (invalid.length > 0) {
+      setError(`Unsupported: ${invalid.map(f => f.name).join(', ')}. Supported: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, WEBP`);
       return;
     }
     setUploading(true);
-    // Fallback: ensure we never leave "Uploading" stuck if the request hangs (e.g. slow mobile network)
     const timeoutId = window.setTimeout(() => setUploading(false), 120000);
+    const uploadedIds: string[] = [];
     try {
-      const resp = await uploadFile(file);
-      if (!resp.success) throw new Error('Upload failed');
-      setUploading(false); // Clear immediately on success so UI updates before navigation
-      setResult({ id: resp.document.id, filename: resp.document.filename });
-      setPendingFile(null);
+      for (let i = 0; i < pendingFiles.length; i++) {
+        const resp = await uploadFile(pendingFiles[i]);
+        if (!resp.success) throw new Error('Upload failed');
+        uploadedIds.push(resp.document.id);
+        if (i < pendingFiles.length - 1) await new Promise(r => setTimeout(r, 400));
+      }
+      if (uploadedIds.length > 1) {
+        try {
+          const { folders } = await getFolders();
+          const folderName = 'Uploaded Documents';
+          let folderId = folders.find((f: { name: string }) => f.name === folderName)?.id;
+          if (!folderId) {
+            const created = await createFolder({ name: folderName });
+            folderId = created.folder.id;
+          }
+          for (const id of uploadedIds) {
+            await moveDocumentToFolder({ folderId, documentId: id });
+          }
+        } catch (_) { /* folder grouping best-effort */ }
+      }
+      setResult({
+        count: uploadedIds.length,
+        filename: pendingFiles.length === 1 ? pendingFiles[0].name : undefined,
+        documentIds: uploadedIds,
+      });
+      setPendingFiles([]);
       setPreviewDataUrl(null);
+      cameraInputRef.current && (cameraInputRef.current.value = '');
+      fileInputRef.current && (fileInputRef.current.value = '');
     } catch (e: unknown) {
-      const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : 'Failed to upload';
+      const err = e as { message?: string; code?: string; response?: { status?: number } };
+      let msg = err?.message ?? 'Failed to upload';
+      if (msg === 'Network Error' || err?.code === 'ERR_NETWORK' || !err?.response) {
+        msg = 'Cannot reach the server. On a phone: use the same Wi‑Fi as your computer and set the app\'s API URL to your computer\'s IP (e.g. http://192.168.1.x:3001) in your environment.';
+      }
       setError(msg);
     } finally {
       window.clearTimeout(timeoutId);
@@ -64,21 +92,44 @@ export default function MobileScan() {
     }
   };
 
-  const handleFileSelected = (file: File | null) => {
-    if (!file) return;
+  const handleFileSelected = (newFiles: File[]) => {
+    if (newFiles.length === 0) return;
     setError(null);
-    setPendingFile(file);
-    if (isImageFile(file)) {
+    setResult(null);
+    const valid = newFiles.filter(f => isSupportedFile(f));
+    const invalid = newFiles.filter(f => !isSupportedFile(f));
+    if (invalid.length > 0) {
+      setError(`Unsupported: ${invalid.map(f => f.name).join(', ')}`);
+    }
+    setPendingFiles(prev => [...prev, ...valid]);
+    const firstImage = valid.find(isImageFile);
+    if (firstImage && !previewDataUrl) {
       const reader = new FileReader();
       reader.onload = () => setPreviewDataUrl(typeof reader.result === 'string' ? reader.result : null);
-      reader.readAsDataURL(file);
-    } else {
-      setPreviewDataUrl(null);
-    }
+      reader.readAsDataURL(firstImage);
+    } else if (!firstImage) setPreviewDataUrl(null);
   };
 
-  const handleRetake = () => {
-    setPendingFile(null);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) handleFileSelected(files);
+    e.target.value = '';
+  };
+
+  const handleInputChangeLegacy = (e: React.FormEvent<HTMLInputElement>) => {
+    const target = e.target as HTMLInputElement;
+    const files = target.files ? Array.from(target.files) : [];
+    if (files.length) handleFileSelected(files);
+    target.value = '';
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+    setError(null);
+  };
+
+  const handleClearAll = () => {
+    setPendingFiles([]);
     setPreviewDataUrl(null);
     setError(null);
     cameraInputRef.current && (cameraInputRef.current.value = '');
@@ -103,22 +154,25 @@ export default function MobileScan() {
           Take a photo, choose an image, or pick a PDF/Office file. Same support as on web.
         </p>
 
-        {/* Camera: image only */}
+        {/* Camera: image only - onChange + onInput so selection shows reliably on mobile */}
         <input
           ref={cameraInputRef}
           type="file"
           accept="image/*"
           capture="environment"
           style={{ display: 'none' }}
-          onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
+          onChange={handleInputChange}
+          onInput={handleInputChangeLegacy}
         />
-        {/* File picker: all supported types (image, PDF, doc, xls, etc.) */}
+        {/* File picker: all supported types, multiple - dual handlers for better mobile support */}
         <input
           ref={fileInputRef}
           type="file"
           accept={ACCEPT_ALL}
+          multiple
           style={{ display: 'none' }}
-          onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
+          onChange={handleInputChange}
+          onInput={handleInputChangeLegacy}
         />
 
         <div className="m-scan-options">
@@ -138,41 +192,39 @@ export default function MobileScan() {
             disabled={uploading}
           >
             <span className="m-scan-opt-icon">📁</span>
-            <span>Choose image, PDF or document</span>
+            <span>Choose files</span>
           </button>
         </div>
         <p style={{ fontSize: 11, color: 'rgba(15,23,42,0.5)', marginTop: 10 }}>
-          Supported: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, WEBP
+          Supported: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, WEBP. Select any number of documents.
         </p>
       </div>
 
-      {pendingFile && !result && (
-        <div className="m-card" style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 800, marginBottom: 8 }}>Preview</div>
-          {previewDataUrl ? (
-            <>
-              <p style={{ fontSize: 12, color: 'rgba(15,23,42,0.6)', marginBottom: 10 }}>
-                Only upload document images. If this is not a document, tap Choose another.
-              </p>
-              <img
-                src={previewDataUrl}
-                alt="Preview"
-                style={{ width: '100%', borderRadius: 12, border: '1px solid rgba(15,23,42,0.08)', marginBottom: 12 }}
-              />
-            </>
-          ) : (
-            <p style={{ fontSize: 13, color: 'rgba(15,23,42,0.8)', marginBottom: 12 }}>
-              <strong>{pendingFile.name}</strong>
-              <br />
-              <span style={{ color: 'rgba(15,23,42,0.5)' }}>{(pendingFile.size / 1024).toFixed(1)} KB</span>
-            </p>
-          )}
-          <div className="m-row">
-            <button className="m-btn primary" onClick={() => onPick(pendingFile)} disabled={uploading}>
-              {uploading ? 'Uploading…' : 'Upload document'}
+      {pendingFiles.length > 0 && !result && (
+        <div className="m-card m-scan-selected-card" style={{ marginBottom: 12 }}>
+          <div style={{ fontWeight: 800, marginBottom: 8 }}>
+            {pendingFiles.length} document{pendingFiles.length !== 1 ? 's' : ''} selected
+          </div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 12px', fontSize: 13, color: 'var(--text-muted)' }}>
+            {pendingFiles.map((file, idx) => (
+              <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }} title={file.name}>{file.name}</span>
+                <button type="button" className="m-btn" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => removePendingFile(idx)} disabled={uploading}>Remove</button>
+              </li>
+            ))}
+          </ul>
+          {previewDataUrl && pendingFiles.some(isImageFile) ? (
+            <img src={previewDataUrl} alt="Preview" className="m-scan-preview-img" style={{ marginBottom: 12, maxHeight: 120 }} />
+          ) : null}
+          <div className="m-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+            <button type="button" className="m-scan-opt m-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              <span style={{ marginRight: 4 }}>+</span> Add more files
             </button>
-            <button className="m-btn" onClick={handleRetake} disabled={uploading}>
-              Choose another
+            <button className="m-btn primary" onClick={uploadAll} disabled={uploading}>
+              {uploading ? 'Uploading…' : `Upload ${pendingFiles.length} document${pendingFiles.length !== 1 ? 's' : ''}`}
+            </button>
+            <button className="m-btn" onClick={handleClearAll} disabled={uploading}>
+              Clear all
             </button>
           </div>
         </div>
@@ -187,16 +239,29 @@ export default function MobileScan() {
       {result && (
         <div className="m-card m-scan-success">
           <div className="m-scan-complete-badge">Scan complete</div>
-          <div style={{ fontWeight: 900, marginBottom: 6 }}>Document uploaded</div>
+          <div style={{ fontWeight: 900, marginBottom: 6 }}>
+            {result.count === 1 ? 'Document uploaded' : `${result.count} documents uploaded`}
+          </div>
           <div style={{ color: 'rgba(15,23,42,0.75)', fontSize: 13, marginBottom: 12 }}>
-            {result.filename}
+            {result.filename ?? (result.count > 1 ? 'Grouped in Uploaded Documents. Chat, Explain, and Share work for each.' : null)}
           </div>
           <p style={{ fontSize: 12, color: 'rgba(15,23,42,0.6)', marginBottom: 12 }}>
-            Taking you to Documents…
+            Ask anything from any document — answers come from all of them.
           </p>
-          <a className="m-btn primary" href="/m/docs" style={{ textDecoration: 'none' }}>
-            View in Documents
-          </a>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {result.documentIds.length > 0 && (
+              <a
+                className="m-btn primary"
+                href={`/m/chat?documents=${result.documentIds.join(',')}`}
+                style={{ textDecoration: 'none' }}
+              >
+                Chat with these {result.count} document{result.count !== 1 ? 's' : ''}
+              </a>
+            )}
+            <a className="m-btn" href="/m/docs" style={{ textDecoration: 'none' }}>
+              View in Documents
+            </a>
+          </div>
         </div>
       )}
     </div>

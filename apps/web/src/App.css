@@ -154,6 +154,19 @@
   animation: fadeIn 0.5s var(--ease-out);
 }
 
+/* Public routes (landing, login) - mobile containment so logout keeps mobile view */
+.public-routes {
+  min-height: 100vh;
+  width: 100%;
+}
+
+.public-routes--mobile {
+  max-width: 100vw;
+  overflow-x: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 /* Mobile Fixes */
 .navbar--hidden-on-mobile {
   display: block;

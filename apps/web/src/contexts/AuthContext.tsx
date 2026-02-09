@@ -67,9 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiClient.post('/api/auth/logout', {}, { withCredentials: true });
       setUser(null);
-      window.location.href = '/';
+      // Do not full-reload: let React re-render so mobile viewport is preserved.
+      // App will redirect /m -> / when unauthenticated via routes.
     } catch (error) {
       console.error('Logout error:', error);
+      setUser(null);
     }
   };
 

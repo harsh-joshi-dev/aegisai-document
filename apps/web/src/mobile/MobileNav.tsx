@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 
-function TabIcon({ name, isActive }: { name: 'home' | 'scan' | 'docs'; isActive?: boolean }) {
+function TabIcon({ name, isActive }: { name: 'home' | 'scan' | 'docs' | 'chat'; isActive?: boolean }) {
   switch (name) {
     case 'home':
       return (
@@ -21,6 +21,12 @@ function TabIcon({ name, isActive }: { name: 'home' | 'scan' | 'docs'; isActive?
         <svg viewBox="0 0 24 24" fill={isActive ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <path d="M14 2v6h6" />
+        </svg>
+      );
+    case 'chat':
+      return (
+        <svg viewBox="0 0 24 24" fill={isActive ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       );
   }
@@ -50,6 +56,14 @@ export default function MobileNav() {
           <>
             <TabIcon name="docs" isActive={isActive} />
             <span>Docs</span>
+          </>
+        )}
+      </NavLink>
+      <NavLink to="/m/chat" className={({ isActive }) => `m-tab ${isActive ? 'active' : ''}`}>
+        {({ isActive }) => (
+          <>
+            <TabIcon name="chat" isActive={isActive} />
+            <span>Chat</span>
           </>
         )}
       </NavLink>

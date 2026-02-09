@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Document } from '../api/client';
+import { formatConfidence } from '../utils/confidence';
 import './ShareDocumentModal.css';
 
 interface ShareDocumentModalProps {
@@ -48,7 +49,7 @@ export default function ShareDocumentModal({
 
     const confidenceVal = document.riskConfidence;
     const confidence = confidenceVal != null
-      ? `Confidence: ${typeof confidenceVal === 'number' && confidenceVal <= 1 ? Math.round(confidenceVal * 100) : confidenceVal}%`
+      ? `Confidence: ${formatConfidence(confidenceVal)}`
       : '';
 
     return `📄 Document Analysis: ${document.filename}\n\n${riskInfo}${confidence ? `\n${confidence}` : ''}\n\nAnalyzed by ${companyName} - Intelligent Document Analysis Platform\n\nView details: ${shareUrl}`;

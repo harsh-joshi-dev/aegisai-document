@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { verifyDocument, VerificationResponse } from '../api/client';
+import { formatConfidence } from '../utils/confidence';
 import './DocumentVerification.css';
 
 interface DocumentVerificationProps {
@@ -154,7 +155,7 @@ export default function DocumentVerification({
                   </div>
                   <div className="score-item">
                     <span className="score-label">Confidence</span>
-                    <span className="score-value">{verification.confidence}%</span>
+                    <span className="score-value">{formatConfidence(verification.confidence)}</span>
                   </div>
                 </div>
               </div>

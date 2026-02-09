@@ -159,6 +159,55 @@
   flex-wrap: wrap;
 }
 
+.folder-actions-bar {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.folder-actions-hint {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.folder-actions-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chat-folder-cta-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--primary-dim, rgba(59, 130, 246, 0.1));
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.chat-folder-cta-link:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.voice-folder-btn {
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+}
+
+.voice-folder-btn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
 .filter-item {
   display: flex;
   flex-direction: column;

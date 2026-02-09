@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation } from '../contexts/LocationContext';
 import { sendChatMessage, ChatResponse, Document, getDocumentContent, getQuickQuestions } from '../api/client';
 import { supportedLanguages, getLanguageName } from '../utils/language';
+import { formatConfidence } from '../utils/confidence';
 import './ChatModal.css';
 
 interface Message {
@@ -337,7 +338,7 @@ export default function ChatModal({ isOpen, onClose, document }: ChatModalProps)
 
                     {message.role === 'assistant' && message.confidence !== undefined && (
                       <div className="message-confidence">
-                        Confidence: {message.confidence}%
+                        Confidence: {formatConfidence(message.confidence)}
                       </div>
                     )}
                   </div>
@@ -352,7 +353,7 @@ export default function ChatModal({ isOpen, onClose, document }: ChatModalProps)
                               <span className="citation-filename">{citation.filename}</span>
                               <span className="citation-similarity">
                                 {citation.confidence !== undefined
-                                  ? `${citation.confidence}% confidence`
+                                  ? `${formatConfidence(citation.confidence)} confidence`
                                   : `${(citation.similarity * 100).toFixed(1)}% match`}
                               </span>
                             </div>

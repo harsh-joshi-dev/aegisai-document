@@ -18,6 +18,7 @@ import MobileHome from './mobile/pages/MobileHome';
 import MobileScan from './mobile/pages/MobileScan';
 import MobileDocs from './mobile/pages/MobileDocs';
 import MobileChat from './mobile/pages/MobileChat';
+import MobileSettings from './mobile/pages/MobileSettings';
 import { useIsMobile } from './mobile/useIsMobile';
 import './App.css';
 
@@ -69,16 +70,20 @@ function AppContent() {
 
   if (!user) {
     return (
-      <Routes>
-        <Route path="/document/:documentId" element={<SharedDocumentPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/" element={<LandingPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+      <div className={isMobile ? 'public-routes public-routes--mobile' : 'public-routes'}>
+        <Routes>
+          <Route path="/document/:documentId" element={<SharedDocumentPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/m" element={<Navigate to="/" replace />} />
+          <Route path="/m/*" element={<Navigate to="/" replace />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </div>
     );
   }
 
@@ -130,6 +135,7 @@ function AppContent() {
               <Route path="scan" element={<MobileScan />} />
               <Route path="docs" element={<MobileDocs />} />
               <Route path="chat" element={<MobileChat />} />
+              <Route path="settings" element={<MobileSettings />} />
             </Route>
             <Route path="/mobile" element={<Navigate to="/m" replace />} />
             <Route path="*" element={<NotFoundPage />} />

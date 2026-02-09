@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { getDocuments, Document, explainDocument, getFolders, Folder, renameDocument } from '../api/client';
+import { formatConfidence } from '../utils/confidence';
 import ServiceProviderModal from './ServiceProviderModal';
 import DocumentExplanationModal from './DocumentExplanationModal';
 import ShareDocumentModal from './ShareDocumentModal';
@@ -581,6 +583,31 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
             </div>
           </div>
           )}
+          {selectedFolderFilter !== 'all' && selectedFolderFilter !== 'none' && visibleDocuments.length > 0 && (
+            <div className="folder-actions-bar">
+              <p className="folder-actions-hint">
+                Use these with the whole folder, or use Chat / Explain / Share / What If / Voice / Trust Score / Agent Swarm on each document below.
+              </p>
+              <div className="folder-actions-buttons">
+                <Link
+                  to={`/chat?documents=${visibleDocuments.map((d) => d.id).join(',')}`}
+                  className="chat-folder-cta-link"
+                >
+                  Chat with all {visibleDocuments.length} in folder
+                </Link>
+                <button
+                  type="button"
+                  className="chat-folder-cta-link voice-folder-btn"
+                  onClick={() => {
+                    setSelectedDocumentsForVoice(visibleDocuments);
+                    setIsVoiceModeOpen(true);
+                  }}
+                >
+                  Voice with all {visibleDocuments.length} in folder
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -696,11 +723,7 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
                   {doc.riskConfidence !== undefined && (
                     <div className="meta-item">
                       <span className="meta-label">Confidence:</span>
-                      <span className="meta-value">
-                        {typeof doc.riskConfidence === 'number' && doc.riskConfidence <= 1
-                          ? `${Math.round(doc.riskConfidence * 100)}%`
-                          : `${doc.riskConfidence}%`}
-                      </span>
+                      <span className="meta-value">{formatConfidence(doc.riskConfidence)}</span>
                     </div>
                   )}
                 </div>

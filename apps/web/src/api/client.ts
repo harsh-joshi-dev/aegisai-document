@@ -19,6 +19,13 @@ export const apiClient = axios.create({
 import { enqueue } from '../mobile/offlineQueue';
 
 apiClient.interceptors.request.use((config) => {
+  // Never queue multipart/form-data (file uploads) - they must go through when online.
+  const isFormData = config.data != null && config.data instanceof FormData;
+  const isMultipart =
+    (config.headers as any)?.['Content-Type']?.includes('multipart/form-data') ||
+    (config.headers as any)?.['content-type']?.includes('multipart/form-data');
+  if (isFormData || isMultipart) return config;
+
   // Only queue JSON requests when offline.
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     const method = (config.method || 'get').toUpperCase();
@@ -28,7 +35,6 @@ apiClient.interceptors.request.use((config) => {
       config.data != null;
 
     if (isJson && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-      // Store and short-circuit by throwing a cancel-like error.
       enqueue({
         method: method as any,
         url: config.url || '',
@@ -142,10 +148,8 @@ export async function uploadFile(file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append('file', file);
 
+  // Do not set Content-Type so the browser sets it with boundary (required for multipart)
   const response = await apiClient.post<UploadResponse>('/api/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
     timeout: 300000, // 5 minutes timeout for large files
     onUploadProgress: (progressEvent) => {
       // Progress tracking can be added here if needed
@@ -294,9 +298,7 @@ export async function compareDocuments(
   if (documentId) formData.append('documentId', documentId);
 
   const response = await apiClient.post<ComparisonResponse>('/api/compare', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+    // Do not set Content-Type so browser sets multipart boundary
   });
 
   return response.data;

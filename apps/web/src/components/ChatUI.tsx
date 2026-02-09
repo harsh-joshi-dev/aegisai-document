@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation } from '../contexts/LocationContext';
 import { sendChatMessage, ChatResponse, getDocuments, Document } from '../api/client';
 import { supportedLanguages } from '../utils/language';
+import { formatConfidence } from '../utils/confidence';
 import './ChatUI.css';
 
 interface Message {
@@ -156,7 +157,7 @@ export default function ChatUI({ preselectedDocumentIds = [] }: ChatUIProps) {
       <div className="chat-header">
         <div className="header-title-section">
           <h2>💬 Chat with Documents</h2>
-          <p className="header-subtitle">Ask questions and get intelligent answers from your documents</p>
+          <p className="header-subtitle">Ask questions document-by-document or page-by-page; select one or multiple documents below.</p>
         </div>
         <div className="header-controls">
           <div className="document-selector" ref={documentDropdownRef}>
@@ -275,7 +276,7 @@ export default function ChatUI({ preselectedDocumentIds = [] }: ChatUIProps) {
 
             {message.role === 'assistant' && message.confidence !== undefined && (
               <div className="message-confidence">
-                <strong>Confidence:</strong> {message.confidence}%
+                <strong>Confidence:</strong> {formatConfidence(message.confidence)}
               </div>
             )}
 
@@ -355,7 +356,7 @@ export default function ChatUI({ preselectedDocumentIds = [] }: ChatUIProps) {
                         <span className="citation-filename">{citation.filename}</span>
                         <span className="citation-similarity">
                           {citation.confidence !== undefined
-                            ? `${citation.confidence}% confidence`
+                            ? `${formatConfidence(citation.confidence)} confidence`
                             : `${(citation.similarity * 100).toFixed(1)}% match`}
                         </span>
                       </div>

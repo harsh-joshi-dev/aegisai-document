@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { uploadFile, uploadTextDocument, UploadResponse } from '../api/client';
+import React, { useState, useRef } from 'react';
+import { uploadFile, uploadTextDocument, getFolders, createFolder, moveDocumentToFolder, UploadResponse } from '../api/client';
 import './FileUploader.css';
 
 interface FileUploaderProps {
   onUploadSuccess?: (response: UploadResponse) => void;
+  /** Called after a batch of files is uploaded successfully with all document IDs (for Chat/Explain/Share). */
+  onBatchUploadSuccess?: (documentIds: string[]) => void;
 }
 
 interface UploadProgress {
@@ -14,7 +16,7 @@ interface UploadProgress {
   error?: string;
 }
 
-export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
+export default function FileUploader({ onUploadSuccess, onBatchUploadSuccess }: FileUploaderProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -24,6 +26,7 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
   const [mode, setMode] = useState<'files' | 'text'>('files');
   const [textTitle, setTextTitle] = useState('');
   const [textContent, setTextContent] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Supported file types
   const supportedTypes = [
@@ -166,11 +169,37 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
         // Check if all uploads were successful after all files are processed
         const allSuccess = newProgress.every(p => p.status === 'success');
         const hasErrors = newProgress.some(p => p.status === 'error');
-        
+        const successDocs = newProgress.filter((p): p is UploadProgress & { result: UploadResponse } => p.status === 'success' && !!p.result);
+
         if (allSuccess && newProgress.length > 0 && !hasErrors) {
           const count = newProgress.length;
-          setSuccessMessage(`${count} document${count > 1 ? 's' : ''} successfully added!`);
-          setTimeout(() => setSuccessMessage(null), 5000);
+          const documentIds = successDocs.map((p) => p.result.document.id).filter(Boolean);
+          if (onBatchUploadSuccess && documentIds.length > 0) {
+            onBatchUploadSuccess(documentIds);
+          }
+          // When multiple documents: create "Uploaded Documents" folder and add all to it
+          if (successDocs.length > 1) {
+            try {
+              const { folders } = await getFolders();
+              const folderName = 'Uploaded Documents';
+              let folderId = folders.find((f: { name: string }) => f.name === folderName)?.id;
+              if (!folderId) {
+                const created = await createFolder({ name: folderName });
+                folderId = created.folder.id;
+              }
+              for (const p of successDocs) {
+                if (p.result?.document?.id) {
+                  await moveDocumentToFolder({ folderId, documentId: p.result.document.id });
+                }
+              }
+              setSuccessMessage(`${count} documents uploaded and grouped in "${folderName}". Chat, Explain, and Share work for every document.`);
+            } catch (_) {
+              setSuccessMessage(`${count} document${count > 1 ? 's' : ''} successfully added!`);
+            }
+          } else {
+            setSuccessMessage(`${count} document${count > 1 ? 's' : ''} successfully added!`);
+          }
+          setTimeout(() => setSuccessMessage(null), 7000);
         }
       } catch (err: any) {
         setError(err.response?.data?.message || err.message || 'Failed to upload files');
@@ -190,6 +219,7 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
       try {
         const response = await uploadTextDocument(textTitle.trim(), textContent);
         if (onUploadSuccess) onUploadSuccess(response);
+        if (onBatchUploadSuccess && response.document?.id) onBatchUploadSuccess([response.document.id]);
         setSuccessMessage('Document successfully added!');
         setTimeout(() => setSuccessMessage(null), 5000);
         setTextTitle('');
@@ -291,11 +321,12 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
             onDrop={handleDrop}
           >
             <input
+              ref={fileInputRef}
               type="file"
               id="file-input"
               className="file-input"
               multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp"
               onChange={handleFileChange}
             />
             <label htmlFor="file-input" className="file-label">
@@ -309,6 +340,18 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
                 </div>
               </div>
             </label>
+          </div>
+          <div className="add-more-files-row">
+            <button
+              type="button"
+              className="add-more-files-btn"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Add more files"
+            >
+              <span className="add-more-files-icon">+</span>
+              <span>Add more files</span>
+            </button>
+            <p className="add-more-files-hint">Select any number of documents; they will be grouped as one upload.</p>
           </div>
         </div>
         )}
