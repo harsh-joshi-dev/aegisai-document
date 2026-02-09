@@ -1,10 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 
-// Extend Express Request to include Passport.js methods
+// Extend Express Request user shape (passport provides login, logout, isAuthenticated)
 declare global {
   namespace Express {
     interface Request {
-      isAuthenticated?: () => boolean;
       user?: {
         id: string;
         email?: string;

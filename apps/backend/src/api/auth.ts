@@ -3,16 +3,6 @@ import passport from '../auth/googleAuth.js';
 import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
 import { config } from '../config/env.js';
 
-// Extend Express Request for Passport
-declare global {
-  namespace Express {
-    interface Request {
-      logout: (callback: (err?: any) => void) => void;
-      login: (user: any, callback: (err?: any) => void) => void;
-    }
-  }
-}
-
 const router = Router();
 const frontendUrl = config.frontendUrl;
 
