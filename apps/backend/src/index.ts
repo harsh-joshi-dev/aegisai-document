@@ -60,7 +60,8 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      sameSite: 'lax', // Required for OAuth redirects
+      // In production with frontend on Netlify and backend on Render, cookie must be SameSite=None so it's sent cross-origin
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     },
   })
