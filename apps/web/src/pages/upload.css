@@ -1,0 +1,20 @@
+/* Reserve space for fixed Folders panel (320px + 20px) so it doesn't overlap upload/content */
+.upload-page {
+  width: 65%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 1025px) {
+  .upload-page {
+    padding-right: 340px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .upload-page {
+    width: 100%;
+    max-width: none;
+    padding-right: 0;
+  }
+}
