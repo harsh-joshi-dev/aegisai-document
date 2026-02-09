@@ -4,244 +4,125 @@ import { config } from '../config/env.js';
 // Create reusable transporter
 let transporter: nodemailer.Transporter | null = null;
 
+/** Returns false if SMTP is not configured (no emails will be sent). Set SMTP_USER, SMTP_PASSWORD, FROM_EMAIL in production. */
+function isEmailConfigured(): boolean {
+  return !!(config.smtp.user && config.smtp.password && config.smtp.fromEmail);
+}
+
 function getTransporter(): nodemailer.Transporter {
   if (!transporter) {
     transporter = nodemailer.createTransport({
       host: config.smtp.host,
       port: config.smtp.port,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: config.smtp.user,
-        pass: config.smtp.password,
-      },
+      secure: config.smtp.port === 465,
+      auth: config.smtp.user && config.smtp.password
+        ? { user: config.smtp.user, pass: config.smtp.password }
+        : undefined,
     });
   }
   return transporter;
 }
 
+function formatConfidence(val: number | null): string {
+  if (val == null) return '—';
+  const pct = typeof val === 'number' && val <= 1 ? Math.round(val * 100) : val;
+  return `${pct}%`;
+}
+
 /**
- * Send welcome email to new users
+ * Send welcome email to new users (on sign up).
+ * Requires SMTP_USER, SMTP_PASSWORD, FROM_EMAIL to be set in env.
  */
 export async function sendWelcomeEmail(
   userEmail: string,
   userName: string
 ): Promise<void> {
+  if (!isEmailConfigured()) {
+    console.warn('⚠️ SMTP not configured (SMTP_USER, SMTP_PASSWORD, FROM_EMAIL). Skipping welcome email.');
+    return;
+  }
   try {
     const transporter = getTransporter();
     const frontendUrl = config.frontendUrl;
-    
+    const year = new Date().getFullYear();
+
     const mailOptions = {
       from: `"Aegis AI" <${config.smtp.fromEmail}>`,
       to: userEmail,
-      subject: 'Welcome to Aegis AI - Your Intelligent Document Assistant',
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-              background-color: #f5f5f5;
-            }
-            .container {
-              background-color: #ffffff;
-              border-radius: 8px;
-              padding: 40px;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 30px;
-            }
-            .logo {
-              font-size: 32px;
-              font-weight: bold;
-              color: #2563eb;
-              margin-bottom: 10px;
-            }
-            .title {
-              font-size: 24px;
-              font-weight: 600;
-              color: #1f2937;
-              margin-bottom: 20px;
-            }
-            .content {
-              color: #4b5563;
-              margin-bottom: 30px;
-            }
-            .feature {
-              background-color: #f9fafb;
-              padding: 15px;
-              border-radius: 6px;
-              margin-bottom: 15px;
-              border-left: 4px solid #2563eb;
-            }
-            .feature-title {
-              font-weight: 600;
-              color: #1f2937;
-              margin-bottom: 5px;
-            }
-            .feature-description {
-              color: #6b7280;
-              font-size: 14px;
-            }
-            .cta-button {
-              display: inline-block;
-              background-color: #2563eb;
-              color: #ffffff;
-              padding: 12px 24px;
-              text-decoration: none;
-              border-radius: 6px;
-              font-weight: 600;
-              margin: 20px 0;
-              text-align: center;
-            }
-            .mobile-app {
-              background-color: #f0fdf4;
-              border: 1px solid #10b981;
-              border-radius: 6px;
-              padding: 20px;
-              margin: 20px 0;
-            }
-        .mobile-app-title {
-          font-weight: 600;
-          color: #059669;
-          margin-bottom: 10px;
-        }
-        .footer {
-          margin-top: 40px;
-          padding-top: 20px;
-          border-top: 1px solid #e5e7eb;
-          text-align: center;
-          color: #9ca3af;
-          font-size: 12px;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <div class="logo">🛡️ Aegis AI</div>
-          <h1 class="title">Welcome, ${userName}!</h1>
-        </div>
-        
-        <div class="content">
-          <p>Thank you for joining Aegis AI! We're excited to help you manage and analyze your documents with the power of artificial intelligence.</p>
-          
-          <h2 style="color: #1f2937; font-size: 20px; margin-top: 30px;">What You Can Do:</h2>
-          
-          <div class="feature">
-            <div class="feature-title">📄 Document Upload & Analysis</div>
-            <div class="feature-description">Upload PDFs, Word documents, Excel files, and more. Our AI automatically analyzes your documents for risks, compliance issues, and important information.</div>
-          </div>
-          
-          <div class="feature">
-            <div class="feature-title">🤖 Intelligent Chat Assistant</div>
-            <div class="feature-description">Ask questions about your documents and get instant answers with citations. Our AI understands context and provides accurate information.</div>
-          </div>
-          
-          <div class="feature">
-            <div class="feature-title">⚠️ Risk Classification</div>
-            <div class="feature-description">Automatically identify critical, warning, or normal risk levels in your documents. Get detailed explanations and recommendations.</div>
-          </div>
-          
-          <div class="feature">
-            <div class="feature-title">🌍 Multi-Language Support</div>
-            <div class="feature-description">Get document explanations and chat responses in your preferred language, including English, Hindi, Gujarati, and more.</div>
-          </div>
-          
-          <div class="feature">
-            <div class="feature-title">🏢 Solution Providers</div>
-            <div class="feature-description">For critical documents, we help you find relevant professionals (lawyers, accountants, doctors, etc.) in your area.</div>
-          </div>
-          
-          <div class="mobile-app">
-            <div class="mobile-app-title">📱 Download Our Mobile App</div>
-            <p style="color: #047857; margin: 10px 0;">Take Aegis AI with you wherever you go! Our mobile app offers:</p>
-            <ul style="color: #047857; margin: 10px 0; padding-left: 20px;">
-              <li>📸 Scan documents with your camera</li>
-              <li>📴 Offline document analysis</li>
-              <li>🎤 Voice queries and responses</li>
-              <li>🔔 Push notifications for important updates</li>
-            </ul>
-            <p style="color: #047857; margin-top: 15px;">
-              <strong>Download now:</strong> <a href="${frontendUrl}/mobile" style="color: #059669; text-decoration: underline;">Get the Mobile App</a>
-            </p>
-          </div>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${frontendUrl}" class="cta-button">Get Started Now</a>
-          </div>
-          
-          <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-            If you have any questions or need help, feel free to reach out to our support team. We're here to help!
-          </p>
-        </div>
-        
-        <div class="footer">
-          <p>© ${new Date().getFullYear()} Aegis AI. All rights reserved.</p>
-          <p>You're receiving this email because you signed up for Aegis AI.</p>
-        </div>
-      </div>
-    </body>
-    </html>
-      `,
-      text: `
-Welcome to Aegis AI, ${userName}!
-
-Thank you for joining Aegis AI! We're excited to help you manage and analyze your documents with the power of artificial intelligence.
-
-What You Can Do:
-
-📄 Document Upload & Analysis
-Upload PDFs, Word documents, Excel files, and more. Our AI automatically analyzes your documents for risks, compliance issues, and important information.
-
-🤖 Intelligent Chat Assistant
-Ask questions about your documents and get instant answers with citations. Our AI understands context and provides accurate information.
-
-⚠️ Risk Classification
-Automatically identify critical, warning, or normal risk levels in your documents. Get detailed explanations and recommendations.
-
-🌍 Multi-Language Support
-Get document explanations and chat responses in your preferred language, including English, Hindi, Gujarati, and more.
-
-🏢 Solution Providers
-For critical documents, we help you find relevant professionals (lawyers, accountants, doctors, etc.) in your area.
-
-📱 Download Our Mobile App
-Take Aegis AI with you wherever you go! Our mobile app offers:
-- Scan documents with your camera
-- Offline document analysis
-- Voice queries and responses
-- Push notifications for important updates
-
-Download now: ${frontendUrl}/mobile
-
-Get started: ${frontendUrl}
-
-If you have any questions or need help, feel free to reach out to our support team.
-
-© ${new Date().getFullYear()} Aegis AI. All rights reserved.
-      `,
+      subject: 'Welcome to Aegis AI — Your Intelligent Document Assistant',
+      html: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Aegis AI</title>
+</head>
+<body style="margin:0; padding:0; background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    <tr>
+      <td style="text-align: center; padding-bottom: 32px;">
+        <table align="center" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); padding: 14px 20px; border-radius: 14px;">
+              <span style="font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.02em;">🛡️ Aegis AI</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="background: rgba(30, 41, 59, 0.8); border-radius: 20px; padding: 40px 36px; border: 1px solid rgba(255,255,255,0.08);">
+        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.03em;">Welcome, ${userName.replace(/</g, '&lt;')}!</h1>
+        <p style="margin: 0 0 28px 0; font-size: 16px; color: #94a3b8; line-height: 1.6;">Thank you for signing up. You're ready to analyze documents with AI — upload, chat, and get risk insights in one place.</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+          <tr><td style="height: 1px; background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.4), transparent);"></td></tr>
+        </table>
+        <p style="margin: 0 0 16px 0; font-size: 13px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">What you can do</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 12px;">
+          <tr><td style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; border-radius: 0 10px 10px 0; padding: 14px 18px;">
+            <strong style="color: #e2e8f0;">📄 Upload &amp; analyze</strong><br/>
+            <span style="color: #94a3b8; font-size: 14px;">PDFs, Word, Excel — automatic risk and compliance analysis.</span>
+          </td></tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 12px;">
+          <tr><td style="background: rgba(59, 130, 246, 0.08); border-left: 4px solid #8b5cf6; border-radius: 0 10px 10px 0; padding: 14px 18px;">
+            <strong style="color: #e2e8f0;">🤖 Chat with documents</strong><br/>
+            <span style="color: #94a3b8; font-size: 14px;">Ask questions and get answers with citations.</span>
+          </td></tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 12px;">
+          <tr><td style="background: rgba(59, 130, 246, 0.08); border-left: 4px solid #10b981; border-radius: 0 10px 10px 0; padding: 14px 18px;">
+            <strong style="color: #e2e8f0;">📱 Mobile</strong><br/>
+            <span style="color: #94a3b8; font-size: 14px;">Scan with camera, voice queries, offline support.</span>
+          </td></tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 32px;">
+          <tr>
+            <td align="center">
+              <a href="${frontendUrl}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: #fff; padding: 16px 32px; text-decoration: none; font-weight: 700; font-size: 15px; border-radius: 12px;">Get started</a>
+            </td>
+          </tr>
+        </table>
+        <p style="margin: 28px 0 0 0; font-size: 12px; color: #64748b; text-align: center;">You're receiving this because you signed up for Aegis AI.</p>
+      </td>
+    </tr>
+    <tr><td style="padding: 24px 0; text-align: center; color: #64748b; font-size: 12px;">© ${year} Aegis AI</td></tr>
+  </table>
+</body>
+</html>`,
+      text: `Welcome to Aegis AI, ${userName}!\n\nThank you for signing up. Get started: ${frontendUrl}\n\n© ${year} Aegis AI.`,
     };
 
     await transporter.sendMail(mailOptions);
     console.log(`✅ Welcome email sent to ${userEmail}`);
   } catch (error) {
     console.error('Error sending welcome email:', error);
-    // Don't throw - email failures shouldn't break the login flow
   }
 }
 
 /**
- * Send document upload confirmation email
+ * Send document upload confirmation email with shared link and full details.
+ * Requires SMTP_USER, SMTP_PASSWORD, FROM_EMAIL. Uses shared document URL so recipient can open without logging in.
  */
 export async function sendDocumentUploadEmail(
   userEmail: string,
@@ -256,250 +137,107 @@ export async function sendDocumentUploadEmail(
   numPages: number,
   numChunks: number
 ): Promise<void> {
+  if (!isEmailConfigured()) {
+    console.warn('⚠️ SMTP not configured (SMTP_USER, SMTP_PASSWORD, FROM_EMAIL). Skipping document upload email.');
+    return;
+  }
   try {
     const transporter = getTransporter();
     const frontendUrl = config.frontendUrl;
-    const documentUrl = `${frontendUrl}/?document=${documentId}`;
-    
-    const riskBadgeColor = 
-      riskLevel === 'Critical' ? '#dc2626' :
-      riskLevel === 'Warning' ? '#d97706' :
-      '#059669';
-    
-    const riskBadgeBg = 
-      riskLevel === 'Critical' ? '#fef2f2' :
-      riskLevel === 'Warning' ? '#fffbeb' :
-      '#f0fdf4';
+    const sharedDocumentUrl = `${frontendUrl}/document/${documentId}`;
+    const confidenceStr = formatConfidence(riskConfidence);
+    const year = new Date().getFullYear();
+
+    const riskColor = riskLevel === 'Critical' ? '#ef4444' : riskLevel === 'Warning' ? '#f59e0b' : '#10b981';
+    const riskBg = riskLevel === 'Critical' ? 'rgba(239, 68, 68, 0.15)' : riskLevel === 'Warning' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(34, 197, 94, 0.15)';
+
+    const safeName = (documentName || 'Document').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeExplanation = (riskExplanation || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const recList = (recommendations || []).map(r => `<li style="margin-bottom:6px; color:#94a3b8;">${(r || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</li>`).join('');
 
     const mailOptions = {
       from: `"Aegis AI" <${config.smtp.fromEmail}>`,
       to: userEmail,
-      subject: `Document Analysis Complete: ${documentName}`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-              background-color: #f5f5f5;
-            }
-            .container {
-              background-color: #ffffff;
-              border-radius: 8px;
-              padding: 40px;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 30px;
-            }
-            .logo {
-              font-size: 32px;
-              font-weight: bold;
-              color: #2563eb;
-              margin-bottom: 10px;
-            }
-            .title {
-              font-size: 24px;
-              font-weight: 600;
-              color: #1f2937;
-              margin-bottom: 20px;
-            }
-            .document-info {
-              background-color: #f9fafb;
-              padding: 20px;
-              border-radius: 6px;
-              margin-bottom: 20px;
-            }
-            .document-name {
-              font-weight: 600;
-              color: #1f2937;
-              font-size: 18px;
-              margin-bottom: 15px;
-            }
-            .info-row {
-              display: flex;
-              justify-content: space-between;
-              padding: 8px 0;
-              border-bottom: 1px solid #e5e7eb;
-            }
-            .info-row:last-child {
-              border-bottom: none;
-            }
-            .info-label {
-              color: #6b7280;
-              font-weight: 500;
-            }
-            .info-value {
-              color: #1f2937;
-              font-weight: 600;
-            }
-            .risk-section {
-              background-color: ${riskBadgeBg};
-              border-left: 4px solid ${riskBadgeColor};
-              padding: 20px;
-              border-radius: 6px;
-              margin: 20px 0;
-            }
-            .risk-level {
-              font-size: 20px;
-              font-weight: 700;
-              color: ${riskBadgeColor};
-              margin-bottom: 10px;
-            }
-            .risk-explanation {
-              color: #4b5563;
-              margin-top: 10px;
-            }
-            .recommendations {
-              background-color: #f9fafb;
-              padding: 20px;
-              border-radius: 6px;
-              margin: 20px 0;
-            }
-            .recommendations-title {
-              font-weight: 600;
-              color: #1f2937;
-              margin-bottom: 15px;
-            }
-            .recommendations ul {
-              margin: 0;
-              padding-left: 20px;
-            }
-            .recommendations li {
-              color: #4b5563;
-              margin-bottom: 8px;
-            }
-            .cta-button {
-              display: inline-block;
-              background-color: #2563eb;
-              color: #ffffff;
-              padding: 12px 24px;
-              text-decoration: none;
-              border-radius: 6px;
-              font-weight: 600;
-              margin: 20px 0;
-              text-align: center;
-            }
-            .footer {
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 1px solid #e5e7eb;
-              text-align: center;
-              color: #9ca3af;
-              font-size: 12px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="logo">🛡️ Aegis AI</div>
-              <h1 class="title">Document Analysis Complete</h1>
-            </div>
-            
-            <div class="content">
-              <p>Hi ${userName},</p>
-              
-              <p>Your document has been successfully uploaded and analyzed. Here's the complete report:</p>
-              
-              <div class="document-info">
-                <div class="document-name">📄 ${documentName}</div>
-                <div class="info-row">
-                  <span class="info-label">Pages/Sheets:</span>
-                  <span class="info-value">${numPages}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">Chunks:</span>
-                  <span class="info-value">${numChunks}</span>
-                </div>
-                ${riskCategory && riskCategory !== 'None' ? `
-                <div class="info-row">
-                  <span class="info-label">Category:</span>
-                  <span class="info-value">${riskCategory}</span>
-                </div>
-                ` : ''}
-                ${riskConfidence ? `
-                <div class="info-row">
-                  <span class="info-label">Confidence:</span>
-                  <span class="info-value">${Math.round(riskConfidence * 100)}%</span>
-                </div>
-                ` : ''}
-              </div>
-              
-              <div class="risk-section">
-                <div class="risk-level">Risk Level: ${riskLevel}</div>
-                ${riskExplanation ? `
-                <div class="risk-explanation">
-                  <strong>Analysis:</strong> ${riskExplanation}
-                </div>
-                ` : ''}
-              </div>
-              
-              ${recommendations && recommendations.length > 0 ? `
-              <div class="recommendations">
-                <div class="recommendations-title">💡 Recommendations:</div>
-                <ul>
-                  ${recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                </ul>
-              </div>
-              ` : ''}
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${documentUrl}" class="cta-button">View Document Details</a>
-              </div>
-              
-              <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-                You can also chat with your document, get explanations in different languages, and find solution providers if needed.
-              </p>
-            </div>
-            
-            <div class="footer">
-              <p>© ${new Date().getFullYear()} Aegis AI. All rights reserved.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
-      text: `
-Document Analysis Complete
+      subject: `Document analyzed: ${documentName}`,
+      html: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document analysis complete</title>
+</head>
+<body style="margin:0; padding:0; background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    <tr>
+      <td style="text-align: center; padding-bottom: 24px;">
+        <table align="center" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); padding: 12px 18px; border-radius: 12px;">
+              <span style="font-size: 18px; font-weight: 800; color: #fff;">🛡️ Aegis AI</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="background: rgba(30, 41, 59, 0.9); border-radius: 20px; padding: 36px 32px; border: 1px solid rgba(255,255,255,0.08);">
+        <h1 style="margin: 0 0 6px 0; font-size: 20px; font-weight: 800; color: #f1f5f9;">Document analysis complete</h1>
+        <p style="margin: 0 0 24px 0; font-size: 15px; color: #94a3b8;">Hi ${(userName || 'User').replace(/</g, '&lt;')}, here are the details for your uploaded document.</p>
 
-Hi ${userName},
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px; background: rgba(15, 23, 42, 0.6); border-radius: 14px; border: 1px solid rgba(255,255,255,0.06);">
+          <tr><td style="padding: 20px 20px 12px 20px;">
+            <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #e2e8f0;">📄 ${safeName}</p>
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="color: #94a3b8; font-size: 13px;">Risk level</span></td><td style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); text-align: right;"><span style="font-weight: 600; color: ${riskColor};">${riskLevel}</span></td></tr>
+              <tr><td style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="color: #94a3b8; font-size: 13px;">Category</span></td><td style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); text-align: right; color: #e2e8f0;">${riskCategory && riskCategory !== 'None' ? riskCategory.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '—'}</td></tr>
+              <tr><td style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="color: #94a3b8; font-size: 13px;">Confidence</span></td><td style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); text-align: right; color: #e2e8f0;">${confidenceStr}</td></tr>
+              <tr><td style="padding: 8px 0;"><span style="color: #94a3b8; font-size: 13px;">Pages / chunks</span></td><td style="padding: 8px 0; text-align: right; color: #e2e8f0;">${numPages} / ${numChunks}</td></tr>
+            </table>
+          </td></tr>
+        </table>
 
-Your document has been successfully uploaded and analyzed. Here's the complete report:
+        ${riskExplanation ? `
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px; background: ${riskBg}; border-radius: 14px; border-left: 4px solid ${riskColor};">
+          <tr><td style="padding: 18px 20px;">
+            <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Why this status</p>
+            <p style="margin: 0; font-size: 14px; color: #cbd5e1; line-height: 1.5;">${safeExplanation}</p>
+          </td></tr>
+        </table>
+        ` : ''}
 
-Document: ${documentName}
-Pages/Sheets: ${numPages}
-Chunks: ${numChunks}
-${riskCategory && riskCategory !== 'None' ? `Category: ${riskCategory}\n` : ''}
-${riskConfidence ? `Confidence: ${Math.round(riskConfidence * 100)}%\n` : ''}
+        ${recList ? `
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; background: rgba(59, 130, 246, 0.08); border-radius: 14px; border: 1px solid rgba(59, 130, 246, 0.2);">
+          <tr><td style="padding: 18px 20px;">
+            <p style="margin: 0 0 12px 0; font-size: 13px; font-weight: 700; color: #e2e8f0;">💡 Recommendations</p>
+            <ul style="margin: 0; padding-left: 20px; color: #94a3b8; font-size: 14px; line-height: 1.5;">${recList}</ul>
+          </td></tr>
+        </table>
+        ` : ''}
 
-Risk Level: ${riskLevel}
-${riskExplanation ? `\nAnalysis: ${riskExplanation}\n` : ''}
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+          <tr>
+            <td align="center" style="padding: 20px; background: rgba(59, 130, 246, 0.1); border-radius: 14px; border: 1px dashed rgba(59, 130, 246, 0.3);">
+              <p style="margin: 0 0 12px 0; font-size: 12px; color: #94a3b8;">Share this link — anyone can view the analysis (no login required)</p>
+              <a href="${sharedDocumentUrl}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: #fff; padding: 14px 28px; text-decoration: none; font-weight: 700; font-size: 15px; border-radius: 12px;">View document details</a>
+              <p style="margin: 12px 0 0 0; font-size: 11px; color: #64748b; word-break: break-all;">${sharedDocumentUrl}</p>
+            </td>
+          </tr>
+        </table>
 
-${recommendations && recommendations.length > 0 ? `\nRecommendations:\n${recommendations.map(rec => `- ${rec}`).join('\n')}\n` : ''}
-
-View Document Details: ${documentUrl}
-
-You can also chat with your document, get explanations in different languages, and find solution providers if needed.
-
-© ${new Date().getFullYear()} Aegis AI. All rights reserved.
-      `,
+        <p style="margin: 0; font-size: 12px; color: #64748b; text-align: center;">You can also chat with this document and get explanations in the app.</p>
+      </td>
+    </tr>
+    <tr><td style="padding: 20px 0; text-align: center; color: #64748b; font-size: 12px;">© ${year} Aegis AI</td></tr>
+  </table>
+</body>
+</html>`,
+      text: `Document analysis complete\n\nHi ${userName},\n\nDocument: ${documentName}\nRisk level: ${riskLevel}\nCategory: ${riskCategory || '—'}\nConfidence: ${confidenceStr}\nPages/chunks: ${numPages} / ${numChunks}\n${riskExplanation ? `\nWhy this status: ${riskExplanation}\n` : ''}${recommendations?.length ? `\nRecommendations:\n${recommendations.map(r => `- ${r}`).join('\n')}\n` : ''}\nView document (shareable link): ${sharedDocumentUrl}\n\n© ${year} Aegis AI`,
     };
 
     await transporter.sendMail(mailOptions);
     console.log(`✅ Document upload email sent to ${userEmail} for document: ${documentName}`);
   } catch (error) {
     console.error('Error sending document upload email:', error);
-    // Don't throw - email failures shouldn't break the upload flow
   }
 }
 

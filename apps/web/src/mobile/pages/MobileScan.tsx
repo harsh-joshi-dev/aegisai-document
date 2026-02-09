@@ -1,27 +1,17 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { uploadFile } from '../../api/client';
-
-function dataUrlToFile(dataUrl: string, filename: string) {
-  const [header, base64] = dataUrl.split(',');
-  const mimeMatch = header.match(/data:(.*);base64/);
-  const mime = mimeMatch?.[1] || 'image/jpeg';
-  const byteString = atob(base64);
-  const array = new Uint8Array(byteString.length);
-  for (let i = 0; i < byteString.length; i++) array[i] = byteString.charCodeAt(i);
-  return new File([array], filename, { type: mime });
-}
 
 export default function MobileScan() {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const navigate = useNavigate();
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [capturedDataUrl, setCapturedDataUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<{ id: string; filename: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const canUseCamera = useMemo(() => {
-    // On mobile browsers, file input with capture is the most reliable way
-    return true;
-  }, []);
+  const canUseCamera = useMemo(() => true, []);
 
   const onPick = async (file: File | null) => {
     if (!file) return;
@@ -32,12 +22,30 @@ export default function MobileScan() {
       const resp = await uploadFile(file);
       if (!resp.success) throw new Error('Upload failed');
       setResult({ id: resp.document.id, filename: resp.document.filename });
+      setPendingFile(null);
+      setCapturedDataUrl(null);
     } catch (e: any) {
       setError(e?.message || 'Failed to upload scan');
     } finally {
       setUploading(false);
     }
   };
+
+  const handleRetake = () => {
+    setPendingFile(null);
+    setCapturedDataUrl(null);
+    setError(null);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  // After scan completes, show success and auto-navigate to docs after a short delay
+  useEffect(() => {
+    if (!result) return;
+    const t = setTimeout(() => {
+      navigate('/m/docs', { replace: true });
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [result, navigate]);
 
   return (
     <div>
@@ -57,14 +65,14 @@ export default function MobileScan() {
           accept="image/*"
           capture={canUseCamera ? 'environment' : undefined}
           style={{ display: 'none' }}
-          onChange={async (e) => {
+          onChange={(e) => {
             const f = e.target.files?.[0] || null;
             if (f) {
+              setPendingFile(f);
               const reader = new FileReader();
               reader.onload = () => setCapturedDataUrl(typeof reader.result === 'string' ? reader.result : null);
               reader.readAsDataURL(f);
             }
-            await onPick(f);
           }}
         />
 
@@ -72,29 +80,28 @@ export default function MobileScan() {
           <button className="m-btn primary" onClick={() => inputRef.current?.click()} disabled={uploading}>
             {uploading ? 'Uploading…' : 'Open camera'}
           </button>
-          {capturedDataUrl && (
-            <button
-              className="m-btn"
-              onClick={() => {
-                const file = dataUrlToFile(capturedDataUrl, `scan-${Date.now()}.jpg`);
-                onPick(file);
-              }}
-              disabled={uploading}
-            >
-              Re-upload
-            </button>
-          )}
         </div>
       </div>
 
-      {capturedDataUrl && (
+      {capturedDataUrl && pendingFile && !result && (
         <div className="m-card" style={{ marginBottom: 12 }}>
           <div style={{ fontWeight: 800, marginBottom: 8 }}>Preview</div>
+          <p style={{ fontSize: 12, color: 'rgba(15,23,42,0.6)', marginBottom: 10 }}>
+            Only upload document images (e.g. contracts, forms). If this is not a document, tap Retake.
+          </p>
           <img
             src={capturedDataUrl}
             alt="Scan preview"
-            style={{ width: '100%', borderRadius: 12, border: '1px solid rgba(15,23,42,0.08)' }}
+            style={{ width: '100%', borderRadius: 12, border: '1px solid rgba(15,23,42,0.08)', marginBottom: 12 }}
           />
+          <div className="m-row">
+            <button className="m-btn primary" onClick={() => onPick(pendingFile)} disabled={uploading}>
+              {uploading ? 'Uploading…' : 'Upload document'}
+            </button>
+            <button className="m-btn" onClick={handleRetake} disabled={uploading}>
+              Retake
+            </button>
+          </div>
         </div>
       )}
 
@@ -105,19 +112,18 @@ export default function MobileScan() {
       )}
 
       {result && (
-        <div className="m-card">
-          <div style={{ fontWeight: 900, marginBottom: 6 }}>Uploaded</div>
-          <div style={{ color: 'rgba(15,23,42,0.75)', fontSize: 13, marginBottom: 10 }}>
+        <div className="m-card m-scan-success">
+          <div className="m-scan-complete-badge">Scan complete</div>
+          <div style={{ fontWeight: 900, marginBottom: 6 }}>Document uploaded</div>
+          <div style={{ color: 'rgba(15,23,42,0.75)', fontSize: 13, marginBottom: 12 }}>
             {result.filename}
           </div>
-          <div className="m-row">
-            <a className="m-btn primary" href={`/m/docs`} style={{ textDecoration: 'none' }}>
-              View in Documents
-            </a>
-            <a className="m-btn" href={`/chat`} style={{ textDecoration: 'none' }}>
-              Ask in Chat
-            </a>
-          </div>
+          <p style={{ fontSize: 12, color: 'rgba(15,23,42,0.6)', marginBottom: 12 }}>
+            Taking you to Documents…
+          </p>
+          <a className="m-btn primary" href="/m/docs" style={{ textDecoration: 'none' }}>
+            View in Documents
+          </a>
         </div>
       )}
     </div>

@@ -581,6 +581,26 @@ export async function renameDocument(documentId: string, filename: string): Prom
   return response.data;
 }
 
+/** Public shared document (no auth). Used when opening a shared link. */
+export interface SharedDocumentResponse {
+  success: boolean;
+  document: {
+    id: string;
+    filename: string;
+    uploadedAt: string;
+    riskLevel: string;
+    riskCategory: string | null;
+    riskConfidence: number | null;
+    riskExplanation: string | null;
+    recommendations: string[];
+  };
+}
+
+export async function getSharedDocument(documentId: string): Promise<SharedDocumentResponse> {
+  const response = await apiClient.get<SharedDocumentResponse>(`/api/documents/${documentId}/shared`);
+  return response.data;
+}
+
 // Document verification
 export interface VerificationResponse {
   success: boolean;

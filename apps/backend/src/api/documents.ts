@@ -6,6 +6,55 @@ import { z } from 'zod';
 
 const router = express.Router();
 
+/**
+ * Public shared document view — no auth required.
+ * GET /api/documents/:documentId/shared
+ * Returns document summary for shared link (id, filename, risk, etc.).
+ */
+router.get('/:documentId/shared', async (req: Request, res: Response) => {
+  const { documentId } = req.params;
+  if (!documentId) {
+    return res.status(400).json({ error: 'Document ID is required' });
+  }
+  try {
+    const row = await pool.query(
+      `SELECT id, filename, uploaded_at, risk_level, risk_category, risk_confidence, metadata
+       FROM documents WHERE id = $1`,
+      [documentId]
+    );
+    const doc = row.rows[0];
+    if (!doc) {
+      return res.status(404).json({
+        error: 'Not found',
+        message: 'This shared document is not available or the link is invalid.',
+      });
+    }
+    const raw = (doc as { risk_confidence?: number }).risk_confidence;
+    const riskConfidence = raw == null ? null : (typeof raw === 'number' && raw <= 1 ? Math.round(raw * 100) : raw);
+    const metadata = (doc as { metadata?: Record<string, unknown> }).metadata || {};
+    const meta = metadata as { riskExplanation?: string; recommendations?: string[] };
+    res.json({
+      success: true,
+      document: {
+        id: (doc as { id: string }).id,
+        filename: (doc as { filename: string }).filename,
+        uploadedAt: (doc as { uploaded_at: Date }).uploaded_at,
+        riskLevel: (doc as { risk_level: string }).risk_level,
+        riskCategory: ((doc as { risk_category: string | null }).risk_category) || null,
+        riskConfidence,
+        riskExplanation: meta.riskExplanation || null,
+        recommendations: Array.isArray(meta.recommendations) ? meta.recommendations : [],
+      },
+    });
+  } catch (error) {
+    console.error('Shared document error:', error);
+    res.status(500).json({
+      error: 'Failed to load shared document',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 const listDocumentsSchema = z.object({
   riskLevel: z.enum(['Critical', 'Warning', 'Normal']).optional(),
   riskCategory: z.enum(['Legal', 'Financial', 'Compliance', 'Operational', 'Medical', 'None']).optional(),
@@ -27,17 +76,21 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     
     res.json({
       success: true,
-      documents: documents.map((doc: { id: string; filename: string; uploaded_at: Date; risk_level: string; risk_category: string | null; risk_confidence: number | null; version_number: number; folder_id: string | null; metadata: Record<string, unknown> }) => ({
-        id: doc.id,
-        filename: doc.filename,
-        uploadedAt: doc.uploaded_at,
-        riskLevel: doc.risk_level,
-        riskCategory: doc.risk_category || null,
-        riskConfidence: doc.risk_confidence || null,
-        versionNumber: doc.version_number || 1,
-        folderId: doc.folder_id || null,
-        metadata: doc.metadata || {},
-      })),
+      documents: documents.map((doc: { id: string; filename: string; uploaded_at: Date; risk_level: string; risk_category: string | null; risk_confidence: number | null; version_number: number; folder_id: string | null; metadata: Record<string, unknown> }) => {
+        const raw = doc.risk_confidence;
+        const riskConfidence = raw == null ? null : (typeof raw === 'number' && raw <= 1 ? Math.round(raw * 100) : raw);
+        return {
+          id: doc.id,
+          filename: doc.filename,
+          uploadedAt: doc.uploaded_at,
+          riskLevel: doc.risk_level,
+          riskCategory: doc.risk_category || null,
+          riskConfidence,
+          versionNumber: doc.version_number || 1,
+          folderId: doc.folder_id || null,
+          metadata: doc.metadata || {},
+        };
+      }),
       count: documents.length,
     });
   } catch (error) {

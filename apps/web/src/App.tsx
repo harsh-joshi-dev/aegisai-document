@@ -12,6 +12,7 @@ import ContactPage from './pages/ContactPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import NotFoundPage from './pages/NotFoundPage';
+import SharedDocumentPage from './pages/SharedDocumentPage';
 import MobileLayout from './mobile/MobileLayout';
 import MobileHome from './mobile/pages/MobileHome';
 import MobileScan from './mobile/pages/MobileScan';
@@ -69,6 +70,7 @@ function AppContent() {
   if (!user) {
     return (
       <Routes>
+        <Route path="/document/:documentId" element={<SharedDocumentPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/contact" element={<ContactPage />} />
@@ -116,6 +118,7 @@ function AppContent() {
 
         <main className="main-content">
           <Routes>
+            <Route path="/document/:documentId" element={<SharedDocumentPage />} />
             <Route path="/" element={<UploadPage />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/pricing" element={<PricingPage />} />

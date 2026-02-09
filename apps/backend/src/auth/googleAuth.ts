@@ -53,14 +53,14 @@ passport.use(
             ]
           );
 
-          // Send welcome email for new user (async, don't block)
-          const { sendWelcomeEmail } = await import('../services/emailService.js');
-          sendWelcomeEmail(
-            profile.emails?.[0]?.value || '',
-            profile.displayName || 'User'
-          ).catch(err => {
-            console.error('Failed to send welcome email:', err);
-          });
+          // Send welcome email to the Gmail address the user selected when signing up with Google
+          const newUserEmail = profile.emails?.[0]?.value || '';
+          if (newUserEmail) {
+            const { sendWelcomeEmail } = await import('../services/emailService.js');
+            sendWelcomeEmail(newUserEmail, profile.displayName || 'User').catch(err => {
+              console.error('Failed to send welcome email:', err);
+            });
+          }
 
           // Mark welcome email as sent
           await client.query(

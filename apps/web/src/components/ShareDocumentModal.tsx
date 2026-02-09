@@ -46,8 +46,9 @@ export default function ShareDocumentModal({
       ? `Risk Level: ${document.riskLevel}${document.riskCategory ? ` (${document.riskCategory})` : ''}`
       : 'Risk Level: Normal';
 
-    const confidence = document.riskConfidence
-      ? `Confidence: ${document.riskConfidence}%`
+    const confidenceVal = document.riskConfidence;
+    const confidence = confidenceVal != null
+      ? `Confidence: ${typeof confidenceVal === 'number' && confidenceVal <= 1 ? Math.round(confidenceVal * 100) : confidenceVal}%`
       : '';
 
     return `📄 Document Analysis: ${document.filename}\n\n${riskInfo}${confidence ? `\n${confidence}` : ''}\n\nAnalyzed by ${companyName} - Intelligent Document Analysis Platform\n\nView details: ${shareUrl}`;

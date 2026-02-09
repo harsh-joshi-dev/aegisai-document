@@ -182,6 +182,8 @@ router.post('/', requireAuth, upload.single('file') as unknown as import('expres
         userId,
         {
           numPages: parsed.numPages,
+          riskExplanation: riskAnalysis.explanation || null,
+          recommendations: riskAnalysis.recommendations || [],
           ...parsed.metadata,
         },
         riskAnalysis.riskCategory || 'None',
@@ -256,27 +258,30 @@ router.post('/', requireAuth, upload.single('file') as unknown as import('expres
       throw new Error(`Failed to insert chunks: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 
-    // Send email notification (async, don't block)
+    // Send email to the Gmail account the user used to log in (from their session/profile)
     try {
-      const { sendDocumentUploadEmail } = await import('../services/emailService.js');
-      const userEmail = authReq.user.email;
-      const userName = authReq.user.name || 'User';
-      
-      sendDocumentUploadEmail(
-        userEmail ?? '',
-        userName,
-        req.file.originalname,
-        document.id,
-        riskAnalysis.riskLevel,
-        riskAnalysis.riskCategory || null,
-        riskAnalysis.confidence || null,
-        riskAnalysis.explanation || null,
-        riskAnalysis.recommendations || [],
-        parsed.numPages || 0,
-        validChunks.length
-      ).catch(err => {
-        console.error('Failed to send document upload email:', err);
-      });
+      const userEmail = authReq.user?.email ?? '';
+      if (!userEmail) {
+        console.warn('Upload: no user email in session, skipping document notification email');
+      } else {
+        const { sendDocumentUploadEmail } = await import('../services/emailService.js');
+        const userName = authReq.user?.name || 'User';
+        sendDocumentUploadEmail(
+          userEmail,
+          userName,
+          req.file.originalname,
+          document.id,
+          riskAnalysis.riskLevel,
+          riskAnalysis.riskCategory || null,
+          riskAnalysis.confidence || null,
+          riskAnalysis.explanation || null,
+          riskAnalysis.recommendations || [],
+          parsed.numPages || 0,
+          validChunks.length
+        ).catch(err => {
+          console.error('Failed to send document upload email:', err);
+        });
+      }
     } catch (error) {
       console.error('Error preparing document upload email:', error);
       // Continue - email failures shouldn't break upload
@@ -416,6 +421,8 @@ router.post('/text', requireAuth, async (req: Request, res: Response) => {
       {
         ...parsed.metadata,
         source: 'text',
+        riskExplanation: riskAnalysis.explanation || null,
+        recommendations: riskAnalysis.recommendations || [],
       },
       riskAnalysis.riskCategory || 'None',
       riskAnalysis.confidence || 0.5,
@@ -592,7 +599,11 @@ router.post('/email', requireAuth, async (req: Request, res: Response) => {
     const document = await insertDocument(
       safeSubject,
       userId,
-      parsed.metadata,
+      {
+        ...parsed.metadata,
+        riskExplanation: riskAnalysis.explanation || null,
+        recommendations: riskAnalysis.recommendations || [],
+      },
       riskAnalysis.riskCategory || 'None',
       riskAnalysis.confidence || 0.5,
       1

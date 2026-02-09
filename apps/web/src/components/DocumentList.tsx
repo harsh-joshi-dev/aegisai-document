@@ -46,6 +46,8 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
   const [selectedRiskLevelFilter, setSelectedRiskLevelFilter] = useState<string>('all');
   const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
   const [editingFilename, setEditingFilename] = useState<string>('');
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     loadDocuments();
@@ -224,6 +226,24 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
     } finally {
       setLoadingExplanation(false);
     }
+  };
+
+  /** Two-line explanation for why the document is in this risk status (shown on card). */
+  const getStatusExplanation = (doc: Document): string => {
+    const cat = doc.riskCategory && doc.riskCategory !== 'None' ? doc.riskCategory : null;
+    if (doc.riskLevel === 'Critical') {
+      if (cat === 'Legal') return 'Contains high-risk legal clauses (e.g. uncapped liability, broad indemnity) that may expose the organization.';
+      if (cat === 'Financial') return 'Identified financial risks such as unclear pricing, missing terms, or compliance gaps that need review.';
+      if (cat === 'Compliance') return 'Compliance or regulatory concerns detected. Recommended for legal or compliance review before signing.';
+      if (cat === 'Operational') return 'Operational or contractual risks identified that could impact delivery, SLAs, or obligations.';
+      return 'High-risk content detected. Professional review recommended before proceeding.';
+    }
+    if (doc.riskLevel === 'Warning') {
+      if (cat) return `Moderate risk in ${cat} category. Review suggested to address potential issues.`;
+      return 'Some concerns detected. Worth a quick review to ensure nothing is missed.';
+    }
+    if (cat) return `Classified as ${cat}. No significant risks flagged; standard review applies.`;
+    return 'No significant risks detected. Document appears to be in good order.';
   };
 
   const getRiskBadgeClass = (riskLevel: string) => {
@@ -427,19 +447,49 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
               </div>
             )}
           </div>
-          <button onClick={loadDocuments} className="refresh-button" title="Refresh list">
-            <svg className="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M3 12a9 9 0 0118 0M21 12a9 9 0 00-18 0" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M12 3v6m0 6v6" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            Refresh
-          </button>
+          {!props.compact && (
+            <button onClick={loadDocuments} className="refresh-button" title="Refresh list">
+              <svg className="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M3 12a9 9 0 0118 0M21 12a9 9 0 00-18 0" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M12 3v6m0 6v6" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              Refresh
+            </button>
+          )}
         </div>
       </div>
 
       {/* Search and Filters — only show when there are documents */}
       {documents.length > 0 && (
-        <div className="document-filters">
+        <div className={`document-filters ${props.compact ? 'document-filters-mobile' : ''}`}>
+          {props.compact && (
+            <div className="document-filters-mobile-icons">
+              <button
+                type="button"
+                className={`m-filter-icon-btn ${showMobileSearch ? 'active' : ''}`}
+                onClick={() => setShowMobileSearch((s) => !s)}
+                aria-label="Toggle search"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M21 21l-4.35-4.35" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span>Search</span>
+              </button>
+              <button
+                type="button"
+                className={`m-filter-icon-btn ${showMobileFilters ? 'active' : ''}`}
+                onClick={() => setShowMobileFilters((s) => !s)}
+                aria-label="Toggle filters"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span>Filters</span>
+              </button>
+            </div>
+          )}
+          {(showMobileSearch || !props.compact) && (
           <div className="search-box">
             <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -465,6 +515,8 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
               </button>
             )}
           </div>
+          )}
+          {(showMobileFilters || !props.compact) && (
           <div className="filter-group">
             <div className="filter-item">
               <label htmlFor="folder-filter" className="filter-label">
@@ -528,6 +580,7 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
               </select>
             </div>
           </div>
+          )}
         </div>
       )}
 
@@ -619,6 +672,7 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
               </div>
               
               <div className="document-card-body">
+                <p className="document-status-explanation">{getStatusExplanation(doc)}</p>
                 <div className="document-meta">
                   {doc.folderId && (
                     <div className="meta-item folder-meta">
@@ -642,7 +696,11 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
                   {doc.riskConfidence !== undefined && (
                     <div className="meta-item">
                       <span className="meta-label">Confidence:</span>
-                      <span className="meta-value">{doc.riskConfidence}%</span>
+                      <span className="meta-value">
+                        {typeof doc.riskConfidence === 'number' && doc.riskConfidence <= 1
+                          ? `${Math.round(doc.riskConfidence * 100)}%`
+                          : `${doc.riskConfidence}%`}
+                      </span>
                     </div>
                   )}
                 </div>
