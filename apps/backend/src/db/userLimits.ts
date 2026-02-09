@@ -1,6 +1,7 @@
 import { pool } from './pgvector.js';
 
-export const MAX_DOCUMENTS_PER_USER = 10;
+/** Set high for unlimited uploads; can be lowered later for quotas */
+export const MAX_DOCUMENTS_PER_USER = 999_999;
 
 /**
  * Check if user has reached document limit

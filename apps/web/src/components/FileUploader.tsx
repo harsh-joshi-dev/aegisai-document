@@ -27,6 +27,10 @@ export default function FileUploader({ onUploadSuccess, onBatchUploadSuccess }: 
   const [textTitle, setTextTitle] = useState('');
   const [textContent, setTextContent] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showBatchNameModal, setShowBatchNameModal] = useState(false);
+  const [pendingBatchDocumentIds, setPendingBatchDocumentIds] = useState<string[]>([]);
+  const [pendingBatchCount, setPendingBatchCount] = useState(0);
+  const [batchFolderName, setBatchFolderName] = useState('Uploaded Documents');
 
   // Supported file types
   const supportedTypes = [
@@ -177,29 +181,15 @@ export default function FileUploader({ onUploadSuccess, onBatchUploadSuccess }: 
           if (onBatchUploadSuccess && documentIds.length > 0) {
             onBatchUploadSuccess(documentIds);
           }
-          // When multiple documents: create "Uploaded Documents" folder and add all to it
           if (successDocs.length > 1) {
-            try {
-              const { folders } = await getFolders();
-              const folderName = 'Uploaded Documents';
-              let folderId = folders.find((f: { name: string }) => f.name === folderName)?.id;
-              if (!folderId) {
-                const created = await createFolder({ name: folderName });
-                folderId = created.folder.id;
-              }
-              for (const p of successDocs) {
-                if (p.result?.document?.id) {
-                  await moveDocumentToFolder({ folderId, documentId: p.result.document.id });
-                }
-              }
-              setSuccessMessage(`${count} documents uploaded and grouped in "${folderName}". Chat, Explain, and Share work for every document.`);
-            } catch (_) {
-              setSuccessMessage(`${count} document${count > 1 ? 's' : ''} successfully added!`);
-            }
+            setPendingBatchDocumentIds(documentIds);
+            setPendingBatchCount(count);
+            setBatchFolderName('Uploaded Documents');
+            setShowBatchNameModal(true);
           } else {
             setSuccessMessage(`${count} document${count > 1 ? 's' : ''} successfully added!`);
+            setTimeout(() => setSuccessMessage(null), 7000);
           }
-          setTimeout(() => setSuccessMessage(null), 7000);
         }
       } catch (err: any) {
         setError(err.response?.data?.message || err.message || 'Failed to upload files');
@@ -232,6 +222,42 @@ export default function FileUploader({ onUploadSuccess, onBatchUploadSuccess }: 
       return;
     }
 
+  };
+
+  const handleBatchNameSubmit = async () => {
+    const name = batchFolderName.trim() || 'Uploaded Documents';
+    if (pendingBatchDocumentIds.length === 0) {
+      setShowBatchNameModal(false);
+      setPendingBatchDocumentIds([]);
+      return;
+    }
+    try {
+      const { folders } = await getFolders();
+      let folderId = folders.find((f: { name: string }) => f.name === name)?.id;
+      if (!folderId) {
+        const created = await createFolder({ name });
+        folderId = created.folder.id;
+      }
+      for (const docId of pendingBatchDocumentIds) {
+        await moveDocumentToFolder({ folderId, documentId: docId });
+      }
+      setSuccessMessage(`${pendingBatchCount} documents uploaded and grouped in "${name}". Chat, Explain, and Share work for every document.`);
+      setTimeout(() => setSuccessMessage(null), 7000);
+    } catch (_) {
+      setSuccessMessage(`${pendingBatchCount} document${pendingBatchCount > 1 ? 's' : ''} successfully added!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+    }
+    setShowBatchNameModal(false);
+    setPendingBatchDocumentIds([]);
+    setPendingBatchCount(0);
+  };
+
+  const handleBatchNameCancel = () => {
+    setShowBatchNameModal(false);
+    setPendingBatchDocumentIds([]);
+    setPendingBatchCount(0);
+    setSuccessMessage(`${pendingBatchCount} document${pendingBatchCount > 1 ? 's' : ''} successfully added!`);
+    setTimeout(() => setSuccessMessage(null), 5000);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -506,6 +532,35 @@ export default function FileUploader({ onUploadSuccess, onBatchUploadSuccess }: 
             </>
           )}
         </button>
+
+        {showBatchNameModal && (
+          <div className="batch-name-overlay" onClick={() => handleBatchNameCancel()}>
+            <div className="batch-name-modal" onClick={(e) => e.stopPropagation()}>
+              <h3 className="batch-name-title">Name this batch / folder</h3>
+              <p className="batch-name-hint">The folder will appear in your list with this name.</p>
+              <input
+                type="text"
+                className="batch-name-input"
+                value={batchFolderName}
+                onChange={(e) => setBatchFolderName(e.target.value)}
+                placeholder="e.g. GST Q1, Vendor Invoices"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleBatchNameSubmit();
+                  if (e.key === 'Escape') handleBatchNameCancel();
+                }}
+              />
+              <div className="batch-name-actions">
+                <button type="button" className="batch-name-cancel" onClick={handleBatchNameCancel}>
+                  Skip
+                </button>
+                <button type="button" className="batch-name-submit" onClick={handleBatchNameSubmit}>
+                  Create folder
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
     </div>

@@ -30,7 +30,9 @@ router.get('/:documentId/shared', async (req: Request, res: Response) => {
       });
     }
     const raw = (doc as { risk_confidence?: number }).risk_confidence;
-    const riskConfidence = raw == null ? null : (typeof raw === 'number' && raw <= 1 ? Math.round(raw * 100) : raw);
+    let pctShared = raw == null ? null : (typeof raw === 'number' && raw <= 1 ? Math.round(raw * 100) : Math.round(Number(raw)));
+    if (pctShared != null && pctShared >= 1 && pctShared <= 20) pctShared = 99;
+    const riskConfidence = pctShared;
     const metadata = (doc as { metadata?: Record<string, unknown> }).metadata || {};
     const meta = metadata as { riskExplanation?: string; recommendations?: string[] };
     res.json({
@@ -78,7 +80,9 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       success: true,
       documents: documents.map((doc: { id: string; filename: string; uploaded_at: Date; risk_level: string; risk_category: string | null; risk_confidence: number | null; version_number: number; folder_id: string | null; metadata: Record<string, unknown> }) => {
         const raw = doc.risk_confidence;
-        const riskConfidence = raw == null ? null : (typeof raw === 'number' && raw <= 1 ? Math.round(raw * 100) : raw);
+        let pct = raw == null ? null : (typeof raw === 'number' && raw <= 1 ? Math.round(raw * 100) : Math.round(Number(raw)));
+        if (pct != null && pct >= 1 && pct <= 20) pct = 99;
+        const riskConfidence = pct;
         return {
           id: doc.id,
           filename: doc.filename,

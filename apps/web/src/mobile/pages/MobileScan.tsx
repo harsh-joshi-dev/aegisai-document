@@ -36,6 +36,9 @@ export default function MobileScan() {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<{ count: number; filename?: string; documentIds: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showBatchNameModal, setShowBatchNameModal] = useState(false);
+  const [pendingBatchDocumentIds, setPendingBatchDocumentIds] = useState<string[]>([]);
+  const [batchFolderName, setBatchFolderName] = useState('Uploaded Documents');
 
   const uploadAll = async () => {
     if (pendingFiles.length === 0) return;
@@ -57,18 +60,9 @@ export default function MobileScan() {
         if (i < pendingFiles.length - 1) await new Promise(r => setTimeout(r, 400));
       }
       if (uploadedIds.length > 1) {
-        try {
-          const { folders } = await getFolders();
-          const folderName = 'Uploaded Documents';
-          let folderId = folders.find((f: { name: string }) => f.name === folderName)?.id;
-          if (!folderId) {
-            const created = await createFolder({ name: folderName });
-            folderId = created.folder.id;
-          }
-          for (const id of uploadedIds) {
-            await moveDocumentToFolder({ folderId, documentId: id });
-          }
-        } catch (_) { /* folder grouping best-effort */ }
+        setPendingBatchDocumentIds(uploadedIds);
+        setBatchFolderName('Uploaded Documents');
+        setShowBatchNameModal(true);
       }
       setResult({
         count: uploadedIds.length,
@@ -134,6 +128,33 @@ export default function MobileScan() {
     setError(null);
     cameraInputRef.current && (cameraInputRef.current.value = '');
     fileInputRef.current && (fileInputRef.current.value = '');
+  };
+
+  const handleBatchNameSubmit = async () => {
+    const name = batchFolderName.trim() || 'Uploaded Documents';
+    if (pendingBatchDocumentIds.length === 0) {
+      setShowBatchNameModal(false);
+      setPendingBatchDocumentIds([]);
+      return;
+    }
+    try {
+      const { folders } = await getFolders();
+      let folderId = folders.find((f: { name: string }) => f.name === name)?.id;
+      if (!folderId) {
+        const created = await createFolder({ name });
+        folderId = created.folder.id;
+      }
+      for (const docId of pendingBatchDocumentIds) {
+        await moveDocumentToFolder({ folderId, documentId: docId });
+      }
+    } catch (_) { /* best-effort */ }
+    setShowBatchNameModal(false);
+    setPendingBatchDocumentIds([]);
+  };
+
+  const handleBatchNameCancel = () => {
+    setShowBatchNameModal(false);
+    setPendingBatchDocumentIds([]);
   };
 
   useEffect(() => {
@@ -261,6 +282,61 @@ export default function MobileScan() {
             <a className="m-btn" href="/m/docs" style={{ textDecoration: 'none' }}>
               View in Documents
             </a>
+          </div>
+        </div>
+      )}
+
+      {showBatchNameModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 16,
+          }}
+          onClick={handleBatchNameCancel}
+        >
+          <div
+            className="m-card"
+            style={{ maxWidth: 360, width: '100%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontWeight: 800, marginBottom: 4 }}>Name this batch / folder</div>
+            <p style={{ fontSize: 13, color: 'rgba(15,23,42,0.7)', marginBottom: 12 }}>
+              The folder will show in your list with this name.
+            </p>
+            <input
+              type="text"
+              value={batchFolderName}
+              onChange={(e) => setBatchFolderName(e.target.value)}
+              placeholder="e.g. GST Q1, Vendor Invoices"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                marginBottom: 12,
+                fontSize: 16,
+                border: '2px solid #e2e8f0',
+                borderRadius: 8,
+                boxSizing: 'border-box',
+              }}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleBatchNameSubmit();
+                if (e.key === 'Escape') handleBatchNameCancel();
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" className="m-btn" onClick={handleBatchNameCancel}>
+                Skip
+              </button>
+              <button type="button" className="m-btn primary" onClick={handleBatchNameSubmit}>
+                Create folder
+              </button>
+            </div>
           </div>
         </div>
       )}
