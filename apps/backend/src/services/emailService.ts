@@ -9,6 +9,15 @@ function isEmailConfigured(): boolean {
   return !!(config.smtp.user && config.smtp.password && config.smtp.fromEmail);
 }
 
+/** Call at startup or for debugging: returns status and list of missing vars. */
+export function getEmailConfigStatus(): { configured: boolean; missing: string[] } {
+  const missing: string[] = [];
+  if (!config.smtp.user) missing.push('SMTP_USER');
+  if (!config.smtp.password) missing.push('SMTP_PASSWORD');
+  if (!config.smtp.fromEmail) missing.push('FROM_EMAIL');
+  return { configured: missing.length === 0, missing };
+}
+
 function getTransporter(): nodemailer.Transporter {
   if (!transporter) {
     transporter = nodemailer.createTransport({
@@ -21,6 +30,14 @@ function getTransporter(): nodemailer.Transporter {
     });
   }
   return transporter;
+}
+
+function logEmailError(context: string, error: unknown): void {
+  const err = error as { message?: string; code?: string; response?: string; responseCode?: number };
+  console.error(`[Email] ${context}:`, err?.message ?? error);
+  if (err?.code) console.error('[Email] code:', err.code);
+  if (err?.response) console.error('[Email] response:', err.response);
+  if (err?.responseCode) console.error('[Email] responseCode:', err.responseCode);
 }
 
 function formatConfidence(val: number | null): string {
@@ -38,7 +55,8 @@ export async function sendWelcomeEmail(
   userName: string
 ): Promise<void> {
   if (!isEmailConfigured()) {
-    console.warn('⚠️ SMTP not configured (SMTP_USER, SMTP_PASSWORD, FROM_EMAIL). Skipping welcome email.');
+    const { missing } = getEmailConfigStatus();
+    console.warn('⚠️ SMTP not configured. Missing:', missing.join(', '), '— skipping welcome email.');
     return;
   }
   try {
@@ -116,7 +134,7 @@ export async function sendWelcomeEmail(
     await transporter.sendMail(mailOptions);
     console.log(`✅ Welcome email sent to ${userEmail}`);
   } catch (error) {
-    console.error('Error sending welcome email:', error);
+    logEmailError('welcome email', error);
   }
 }
 
@@ -138,7 +156,8 @@ export async function sendDocumentUploadEmail(
   numChunks: number
 ): Promise<void> {
   if (!isEmailConfigured()) {
-    console.warn('⚠️ SMTP not configured (SMTP_USER, SMTP_PASSWORD, FROM_EMAIL). Skipping document upload email.');
+    const { missing } = getEmailConfigStatus();
+    console.warn('⚠️ SMTP not configured. Missing:', missing.join(', '), '— skipping document upload email.');
     return;
   }
   try {
@@ -237,21 +256,27 @@ export async function sendDocumentUploadEmail(
     await transporter.sendMail(mailOptions);
     console.log(`✅ Document upload email sent to ${userEmail} for document: ${documentName}`);
   } catch (error) {
-    console.error('Error sending document upload email:', error);
+    logEmailError('document upload email', error);
   }
 }
 
 /**
- * Verify SMTP connection
+ * Verify SMTP connection (useful at startup or for health checks).
+ * Logs clearly if not configured or if connection fails.
  */
 export async function verifySMTPConnection(): Promise<boolean> {
+  const { configured, missing } = getEmailConfigStatus();
+  if (!configured) {
+    console.warn('⚠️ SMTP not configured. Missing:', missing.join(', '));
+    return false;
+  }
   try {
-    const transporter = getTransporter();
-    await transporter.verify();
+    const t = getTransporter();
+    await t.verify();
     console.log('✅ SMTP connection verified');
     return true;
   } catch (error) {
-    console.error('❌ SMTP connection failed:', error);
+    logEmailError('SMTP verify', error);
     return false;
   }
 }

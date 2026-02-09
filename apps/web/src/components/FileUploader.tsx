@@ -161,6 +161,7 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
         }
 
         setFiles([]);
+        setUploadProgress([]);
 
         // Check if all uploads were successful after all files are processed
         const allSuccess = newProgress.every(p => p.status === 'success');

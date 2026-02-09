@@ -7,6 +7,106 @@
   color: var(--text-main);
 }
 
+/* Mobile header: logo + user + logout */
+.m-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: 100;
+}
+
+.m-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 1.125rem;
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+
+.m-header-logo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.m-header-logo-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--primary);
+}
+
+.m-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.m-header-user {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.m-header-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  color: #f87171;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.m-header-logout:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.m-header-logout:active {
+  transform: scale(0.98);
+}
+
+.m-header-logout svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Very narrow screens: icon-only logout so it never gets clipped */
+@media (max-width: 380px) {
+  .m-header-logout span {
+    display: none;
+  }
+  .m-header-logout {
+    padding: 10px;
+  }
+  .m-header-user {
+    max-width: 60px;
+  }
+}
+
 .m-content {
   flex: 1;
   padding: 16px 16px 100px;
@@ -124,6 +224,45 @@
   color: #16a34a;
   background: rgba(34, 197, 94, 0.15);
   margin-bottom: 10px;
+}
+
+/* Scan document options: Take photo / Choose file */
+.m-scan-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.m-scan-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  text-align: left;
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.m-scan-opt.primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  border: none;
+  color: white;
+}
+
+.m-scan-opt:active {
+  transform: scale(0.98);
+}
+
+.m-scan-opt-icon {
+  font-size: 20px;
+  flex-shrink: 0;
 }
 
 /* Quick Actions */

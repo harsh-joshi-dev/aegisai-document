@@ -136,6 +136,17 @@ async function start() {
   try {
     await initializeDatabase();
     console.log('Database initialized');
+
+    // Log email (SMTP) status at startup so you can see why emails might not send
+    const { getEmailConfigStatus, verifySMTPConnection } = await import('./services/emailService.js');
+    const emailStatus = getEmailConfigStatus();
+    if (emailStatus.configured) {
+      console.log('📧 SMTP configured (SMTP_USER, SMTP_PASSWORD, FROM_EMAIL set). Verifying connection...');
+      const ok = await verifySMTPConnection();
+      if (!ok) console.warn('📧 SMTP verification failed — check credentials (e.g. Gmail: use App Password, not account password).');
+    } else {
+      console.warn('📧 SMTP not configured. Missing:', emailStatus.missing.join(', '), '— welcome and document emails will be skipped.');
+    }
     
     app.listen(config.server.port, '0.0.0.0', () => {
       console.log(`🚀 Server running on http://localhost:${config.server.port}`);
