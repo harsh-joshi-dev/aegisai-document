@@ -68,8 +68,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         
         setLoading(false);
       },
-      (error) => {
-        setError(`Location error: ${error.message}`);
+      (err) => {
+        setError(`Location error: ${err.message}`);
         setLoading(false);
       },
       {
@@ -91,7 +91,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <LocationContext.Provider value={{ location, loading, requestLocation }}>
+    <LocationContext.Provider value={{ location, loading, error, requestLocation }}>
       {children}
     </LocationContext.Provider>
   );

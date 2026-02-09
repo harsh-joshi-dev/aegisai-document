@@ -8,7 +8,6 @@ import WhatIfSimulator from './WhatIfSimulator';
 import VoiceMode from './VoiceMode';
 import TrustScore from './TrustScore';
 import AgentSwarm from './AgentSwarm';
-import DocumentCompleteness from './DocumentCompleteness';
 import FolderManager from './FolderManager';
 import './DocumentList.css';
 
@@ -38,8 +37,6 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
   const [selectedDocumentForTrustScore, setSelectedDocumentForTrustScore] = useState<Document | null>(null);
   const [isAgentSwarmOpen, setIsAgentSwarmOpen] = useState(false);
   const [selectedDocumentForAgentSwarm, setSelectedDocumentForAgentSwarm] = useState<Document | null>(null);
-  const [isCompletenessOpen, setIsCompletenessOpen] = useState(false);
-  const [selectedDocumentForCompleteness, setSelectedDocumentForCompleteness] = useState<Document | null>(null);
   const [showInfoTooltip, setShowInfoTooltip] = useState(false);
   const infoTooltipRef = useRef<HTMLDivElement>(null);
   const [folders, setFolders] = useState<Folder[]>([]);

@@ -34,7 +34,7 @@ export default function DocumentVerification({
     setVerification(null);
 
     try {
-      const response = await verifyDocument({ documentId });
+      const response = await verifyDocument(documentId);
       setVerification(response.verification);
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Verification failed');
@@ -248,7 +248,7 @@ export default function DocumentVerification({
                     Warnings
                   </h4>
                   <ul>
-                    {verification.warnings.map((warning, index) => (
+                    {verification.warnings.map((warning: string, index: number) => (
                       <li key={index}>{warning}</li>
                     ))}
                   </ul>
@@ -264,7 +264,7 @@ export default function DocumentVerification({
                     Recommendations
                   </h4>
                   <ul>
-                    {verification.recommendations.map((rec, index) => (
+                    {verification.recommendations.map((rec: string, index: number) => (
                       <li key={index}>{rec}</li>
                     ))}
                   </ul>

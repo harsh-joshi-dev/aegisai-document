@@ -23,7 +23,7 @@ export default function FolderManager({ documents, onDocumentMoved }: FolderMana
   const [newFolderName, setNewFolderName] = useState('');
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
   const [editFolderName, setEditFolderName] = useState('');
-  const [draggedDocument, setDraggedDocument] = useState<string | null>(null);
+  const [_draggedDocument, _setDraggedDocument] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   useEffect(() => {

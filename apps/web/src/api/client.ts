@@ -581,3 +581,24 @@ export async function renameDocument(documentId: string, filename: string): Prom
   return response.data;
 }
 
+// Document verification
+export interface VerificationResponse {
+  success: boolean;
+  verification: {
+    isAuthentic: boolean;
+    isAuthorized: boolean;
+    fraudScore: number;
+    confidence: number;
+    status: 'Verified' | 'Suspicious' | 'Fraudulent' | 'Unknown';
+    checks: Record<string, { passed: boolean; score: number; details: string }>;
+    warnings: string[];
+    recommendations: string[];
+  };
+  document: { id: string; filename: string };
+}
+
+export async function verifyDocument(documentId: string): Promise<VerificationResponse> {
+  const response = await apiClient.post<VerificationResponse>(`/api/verify/${documentId}`);
+  return response.data;
+}
+
