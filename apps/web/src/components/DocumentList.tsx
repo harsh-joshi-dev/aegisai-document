@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { getDocuments, Document, explainDocument, getFolders, Folder, renameDocument } from '../api/client';
 import { formatConfidence } from '../utils/confidence';
 import ServiceProviderModal from './ServiceProviderModal';
@@ -50,11 +50,20 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
   const [editingFilename, setEditingFilename] = useState<string>('');
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [folderSummaryExpanded, setFolderSummaryExpanded] = useState(true);
+  const documentsGridRef = useRef<HTMLDivElement>(null);
+
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     loadDocuments();
     loadFolders();
   }, []);
+
+  useEffect(() => {
+    const folderId = searchParams.get('folder');
+    if (folderId) setSelectedFolderFilter(folderId);
+  }, [searchParams]);
 
   const loadFolders = async () => {
     try {
@@ -126,6 +135,38 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
     const folder = folders.find(f => f.id === folderId);
     return folder ? folder.name : '';
   };
+
+  const documentsInSelectedFolder = useMemo(() => {
+    if (selectedFolderFilter === 'all' || selectedFolderFilter === 'none') return [];
+    const q = (searchQuery || props.searchQuery || '').trim().toLowerCase();
+    let list = documents.filter((d) => d.folderId === selectedFolderFilter);
+    if (q) list = list.filter((d) => (d.filename || '').toLowerCase().includes(q));
+    return list;
+  }, [documents, selectedFolderFilter, searchQuery, props.searchQuery]);
+
+  const folderSummary = useMemo(() => {
+    if (selectedFolderFilter === 'all' || selectedFolderFilter === 'none' || documentsInSelectedFolder.length === 0) return null;
+    const critical = documentsInSelectedFolder.filter((d) => d.riskLevel === 'Critical');
+    const warning = documentsInSelectedFolder.filter((d) => d.riskLevel === 'Warning');
+    const normal = documentsInSelectedFolder.filter((d) => d.riskLevel === 'Normal');
+    return {
+      folderName: getFolderName(selectedFolderFilter),
+      critical: critical.length,
+      warning: warning.length,
+      normal: normal.length,
+      total: documentsInSelectedFolder.length,
+      needAttention: critical.length + warning.length,
+      byStatus: { Critical: critical, Warning: warning, Normal: normal } as const,
+    };
+  }, [selectedFolderFilter, documentsInSelectedFolder, folders]);
+
+  const RISK_ORDER: Record<string, number> = { Critical: 0, Warning: 1, Normal: 2 };
+  const displayDocuments = useMemo(() => {
+    if (selectedFolderFilter !== 'all' && selectedFolderFilter !== 'none') {
+      return [...visibleDocuments].sort((a, b) => (RISK_ORDER[a.riskLevel] ?? 2) - (RISK_ORDER[b.riskLevel] ?? 2));
+    }
+    return visibleDocuments;
+  }, [visibleDocuments, selectedFolderFilter]);
 
   const handleStartRename = (document: Document) => {
     setEditingDocumentId(document.id);
@@ -303,7 +344,14 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
 
   return (
     <div className="document-list">
-      <FolderManager documents={documents} onDocumentMoved={loadDocuments} />
+      <FolderManager
+        documents={documents}
+        onDocumentMoved={loadDocuments}
+        onOpenFolder={(folderId) => {
+          setSelectedFolderFilter(folderId);
+          setSearchParams({ folder: folderId });
+        }}
+      />
       <div className="document-list-header">
         <div className="header-content">
           <svg className="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -583,6 +631,120 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
             </div>
           </div>
           )}
+          {folderSummary && (
+            <div className="folder-summary-card">
+              <div className="folder-summary-header">
+                <div className="folder-summary-title">
+                  <svg className="folder-summary-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>{folderSummary.folderName}</span>
+                </div>
+                <button
+                  type="button"
+                  className="folder-summary-toggle"
+                  onClick={() => setFolderSummaryExpanded((e) => !e)}
+                  aria-expanded={folderSummaryExpanded}
+                >
+                  {folderSummaryExpanded ? 'Collapse' : 'Expand'}
+                </button>
+              </div>
+              <div className="folder-summary-stats">
+                <div className="folder-stat critical">
+                  <span className="folder-stat-value">{folderSummary.critical}</span>
+                  <span className="folder-stat-label">Critical</span>
+                </div>
+                <div className="folder-stat warning">
+                  <span className="folder-stat-value">{folderSummary.warning}</span>
+                  <span className="folder-stat-label">Warning</span>
+                </div>
+                <div className="folder-stat normal">
+                  <span className="folder-stat-value">{folderSummary.normal}</span>
+                  <span className="folder-stat-label">Normal</span>
+                </div>
+                <div className="folder-stat total">
+                  <span className="folder-stat-value">{folderSummary.total}</span>
+                  <span className="folder-stat-label">Total</span>
+                </div>
+                {folderSummary.needAttention > 0 && (
+                  <div className="folder-stat need-attention">
+                    <span className="folder-stat-value">{folderSummary.needAttention}</span>
+                    <span className="folder-stat-label">Need attention</span>
+                  </div>
+                )}
+              </div>
+              <div className="folder-summary-quick-filters">
+                <button
+                  type="button"
+                  className={`folder-filter-chip ${selectedRiskLevelFilter === 'all' ? 'active' : ''}`}
+                  onClick={() => setSelectedRiskLevelFilter('all')}
+                >
+                  All ({folderSummary.total})
+                </button>
+                {folderSummary.critical > 0 && (
+                  <button
+                    type="button"
+                    className={`folder-filter-chip critical ${selectedRiskLevelFilter === 'Critical' ? 'active' : ''}`}
+                    onClick={() => setSelectedRiskLevelFilter(selectedRiskLevelFilter === 'Critical' ? 'all' : 'Critical')}
+                  >
+                    Critical ({folderSummary.critical})
+                  </button>
+                )}
+                {folderSummary.warning > 0 && (
+                  <button
+                    type="button"
+                    className={`folder-filter-chip warning ${selectedRiskLevelFilter === 'Warning' ? 'active' : ''}`}
+                    onClick={() => setSelectedRiskLevelFilter(selectedRiskLevelFilter === 'Warning' ? 'all' : 'Warning')}
+                  >
+                    Warning ({folderSummary.warning})
+                  </button>
+                )}
+                {folderSummary.normal > 0 && (
+                  <button
+                    type="button"
+                    className={`folder-filter-chip normal ${selectedRiskLevelFilter === 'Normal' ? 'active' : ''}`}
+                    onClick={() => setSelectedRiskLevelFilter(selectedRiskLevelFilter === 'Normal' ? 'all' : 'Normal')}
+                  >
+                    Normal ({folderSummary.normal})
+                  </button>
+                )}
+              </div>
+              {folderSummaryExpanded && (
+                <div className="folder-summary-by-status">
+                  <p className="folder-summary-by-status-title">Documents by status</p>
+                  {(['Critical', 'Warning', 'Normal'] as const).map((status) =>
+                    folderSummary.byStatus[status].length > 0 ? (
+                      <div key={status} className={`folder-status-group ${status.toLowerCase()}`}>
+                        <span className="folder-status-label">{status}</span>
+                        <ul className="folder-status-doc-list">
+                          {folderSummary.byStatus[status].map((doc) => (
+                            <li key={doc.id}>
+                              <button
+                                type="button"
+                                className="folder-doc-link"
+                                onClick={() => documentsGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                              >
+                                {doc.filename}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null
+                  )}
+                </div>
+              )}
+              <div className="folder-summary-actions">
+                <button
+                  type="button"
+                  className="folder-open-docs-btn"
+                  onClick={() => documentsGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                >
+                  Open documents
+                </button>
+              </div>
+            </div>
+          )}
           {selectedFolderFilter !== 'all' && selectedFolderFilter !== 'none' && visibleDocuments.length > 0 && (
             <div className="folder-actions-bar">
               <p className="folder-actions-hint">
@@ -621,8 +783,8 @@ export default function DocumentList(props: { searchQuery?: string; compact?: bo
           <p className="hint">{documents.length === 0 ? 'Upload a file to get started!' : 'Try a different search.'}</p>
         </div>
       ) : (
-        <div className="documents-grid">
-          {visibleDocuments.map((doc) => (
+        <div className="documents-grid" ref={documentsGridRef}>
+          {displayDocuments.map((doc) => (
             <div
               key={doc.id}
               className="document-card"

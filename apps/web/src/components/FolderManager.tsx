@@ -13,9 +13,11 @@ import './FolderManager.css';
 interface FolderManagerProps {
   documents: Array<{ id: string; filename: string; folderId?: string | null }>;
   onDocumentMoved?: () => void;
+  /** When user clicks "Open" on a folder, show it in the main list and optionally sync URL */
+  onOpenFolder?: (folderId: string) => void;
 }
 
-export default function FolderManager({ documents, onDocumentMoved }: FolderManagerProps) {
+export default function FolderManager({ documents, onDocumentMoved, onOpenFolder }: FolderManagerProps) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -291,6 +293,18 @@ export default function FolderManager({ documents, onDocumentMoved }: FolderMana
                   </span>
                 )}
                 <div className="folder-actions">
+                  {onOpenFolder && folderDocs.length > 0 && (
+                    <button
+                      className="folder-action-btn open"
+                      onClick={() => onOpenFolder(folder.id)}
+                      title="Open folder and view summary"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Open
+                    </button>
+                  )}
                   <button
                     className="folder-action-btn add"
                     onClick={() => {
