@@ -40,12 +40,12 @@
 
 .login-card {
   background: var(--bg-card);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   padding: var(--spacing-3xl);
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-subtle);
   border: 1px solid var(--border-light);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   position: relative;
   overflow: hidden;
 }
@@ -121,29 +121,34 @@
   align-items: center;
   justify-content: center;
   gap: var(--spacing-md);
-  padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--bg-card);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-md);
+  padding: 0.85rem 1.5rem;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-main);
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   margin-bottom: var(--spacing-2xl);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
   position: relative;
 }
 
 .google-login-button:hover {
-  border-color: #4285f4;
-  box-shadow: var(--shadow-md);
+  border-color: rgba(66, 133, 244, 0.5);
+  box-shadow: 0 4px 20px rgba(66, 133, 244, 0.2);
   background: var(--bg-elevated);
   transform: translateY(-1px);
 }
 
 .google-login-button:active {
   transform: translateY(0);
+}
+
+.google-login-button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .google-icon {

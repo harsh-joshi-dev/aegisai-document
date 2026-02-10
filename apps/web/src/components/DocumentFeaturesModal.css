@@ -1,53 +1,121 @@
-.doc-features-overlay { display: flex; align-items: center; justify-content: center; }
+.doc-features-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
 .doc-features-modal {
   max-width: 720px;
+  width: 100%;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-subtle);
+  overflow: hidden;
 }
+
 .doc-features-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-card-hover);
 }
-.doc-features-header h2 { margin: 0; font-size: 1.2rem; }
+
+.doc-features-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
 .doc-features-filename {
   margin: 0;
-  font-size: 0.9rem;
-  color: var(--text-secondary, #666);
+  font-size: 0.875rem;
+  color: var(--text-muted);
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.doc-features-modal .modal-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 1.35rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.2s, background 0.2s;
+}
+
+.doc-features-modal .modal-close:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .doc-features-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 1rem;
+  gap: 0.4rem;
+  padding: 1rem 1.5rem 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-card);
 }
+
 .doc-features-tabs .tab-btn {
-  padding: 0.4rem 0.65rem;
-  font-size: 0.85rem;
-  border: 1px solid var(--border, #ddd);
-  background: var(--surface, #fff);
-  border-radius: 6px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  border-radius: var(--radius-md);
   cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
 }
+
+.doc-features-tabs .tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-light);
+}
+
 .doc-features-tabs .tab-btn.active {
-  background: var(--primary, #2563eb);
+  background: var(--primary);
   color: #fff;
-  border-color: var(--primary, #2563eb);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
 }
+
 .doc-features-body {
   overflow: auto;
   flex: 1;
-  min-height: 200px;
+  min-height: 220px;
+  padding: 1.25rem 1.5rem;
 }
-.tab-panel { padding: 0.5rem 0; }
-.tab-hint { font-size: 0.9rem; color: var(--text-secondary, #666); margin-bottom: 0.75rem; }
+
+.tab-panel { padding: 0; }
+
+.tab-hint {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
 .deadline-add, .comments-add {
   display: flex;
   flex-wrap: wrap;
@@ -60,24 +128,50 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--border, #eee);
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 .risk-clauses-list li {
-  padding: 0.5rem;
+  padding: 0.6rem 0.75rem;
   margin-bottom: 0.5rem;
-  border-radius: 6px;
-  border-left: 4px solid #888;
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--border-light);
 }
-.risk-clauses-list li.severity-red { border-left-color: #c00; background: #fff5f5; }
-.risk-clauses-list li.severity-amber { border-left-color: #f59e0b; background: #fffbeb; }
-.risk-clauses-list li.severity-green { border-left-color: #059669; background: #f0fdf4; }
+.risk-clauses-list li.severity-red { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.08); }
+.risk-clauses-list li.severity-amber { border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.08); }
+.risk-clauses-list li.severity-green { border-left-color: #10b981; background: rgba(16, 185, 129, 0.08); }
 .clause-text { font-weight: 500; display: block; }
-.reason { font-size: 0.9rem; color: var(--text-secondary, #666); }
-.share-summary-box { background: var(--surface-alt, #f5f5f5); padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; }
-.scam-prob { font-size: 1.1rem; }
-.draft-text { white-space: pre-wrap; font-size: 0.9rem; max-height: 300px; overflow: auto; background: var(--surface-alt, #f5f5f5); padding: 1rem; border-radius: 6px; }
-.export-ical { display: inline-block; margin-top: 0.5rem; font-size: 0.9rem; }
+.reason { font-size: 0.875rem; color: var(--text-muted); }
+.share-summary-box {
+  background: var(--bg-card-hover);
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--border-subtle);
+}
+.scam-prob { font-size: 1.05rem; font-weight: 600; }
+.draft-text {
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+  max-height: 300px;
+  overflow: auto;
+  background: var(--bg-card-hover);
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+}
+.export-ical {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.export-ical:hover { color: var(--primary-light, #60a5fa); }
 
 .financial-impact-chart { margin: 0.75rem 0; }
 
@@ -106,10 +200,12 @@
 }
 .policy-matcher-fields select {
   min-width: 200px;
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  border: 1px solid var(--border, #ddd);
-  background: var(--surface, #fff);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--bg-card-hover);
+  color: var(--text-main);
+  font-size: 0.9rem;
 }
 .policy-matcher-result .summary { margin-bottom: 1rem; }
 .policy-matcher-result h4 { margin: 0.75rem 0 0.35rem 0; font-size: 1rem; }

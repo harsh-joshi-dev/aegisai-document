@@ -51,7 +51,8 @@ export default function WhatShouldIDoNextModal({ document, onClose }: WhatShould
             <h2>What Should I Do Next?</h2>
             <button type="button" className="modal-close" onClick={onClose} aria-label="Close">&times;</button>
           </div>
-          <div className="modal-body">
+          <div className="modal-body loading-wrap">
+            <div className="loading-spinner" aria-hidden />
             <p className="loading-message">Analyzing document and preparing action plan…</p>
           </div>
         </div>

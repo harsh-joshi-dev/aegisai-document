@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import { featuresByCategory } from '../config/featuresByCategory';
 import './LandingPage.css';
 
 // Hook for scroll animations
@@ -309,6 +310,59 @@ export default function LandingPage() {
                 </svg>
               </button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* End-to-end: Everything we do */}
+      <section id="product-end-to-end" className="section-padding end-to-end-section">
+        <div className="section-container">
+          <div className="section-header reveal fade-up">
+            <h2 className="section-title">Everything we do, <span className="text-gradient">end to end</span></h2>
+            <p className="section-subtitle">From upload to action—one place for all your document intelligence.</p>
+          </div>
+          <div className="e2e-flow">
+            <div className="e2e-step reveal fade-up">
+              <div className="e2e-step-icon">📤</div>
+              <h4>Upload & organize</h4>
+              <p>Drop documents, auto-categorize by risk, and manage with folders.</p>
+            </div>
+            <div className="e2e-arrow" aria-hidden>→</div>
+            <div className="e2e-step reveal fade-up">
+              <div className="e2e-step-icon">⚡</div>
+              <h4>What should I do next?</h4>
+              <p>Get one clear action, deadline, and who should handle it.</p>
+            </div>
+            <div className="e2e-arrow" aria-hidden>→</div>
+            <div className="e2e-step reveal fade-up">
+              <div className="e2e-step-icon">📋</div>
+              <h4>Explain, risk & trust</h4>
+              <p>Simple or professional explanations, risk clauses, trust & scam scores.</p>
+            </div>
+            <div className="e2e-arrow" aria-hidden>→</div>
+            <div className="e2e-step reveal fade-up">
+              <div className="e2e-step-icon">📊</div>
+              <h4>Financial & dashboard</h4>
+              <p>Financial impact, deadlines, risk trends, and health at a glance.</p>
+            </div>
+            <div className="e2e-arrow" aria-hidden>→</div>
+            <div className="e2e-step reveal fade-up">
+              <div className="e2e-step-icon">💬</div>
+              <h4>Chat & act</h4>
+              <p>Ask anything, get drafts, negotiate, share safe summaries, find experts.</p>
+            </div>
+          </div>
+          <div className="e2e-feature-grid">
+            {featuresByCategory.map((cat, ci) => (
+              <div key={cat.id} className="e2e-category reveal fade-up" style={{ transitionDelay: `${ci * 0.05}s` }}>
+                <h4 className="e2e-category-title">{cat.label}</h4>
+                <ul>
+                  {cat.features.slice(0, 6).map((f) => (
+                    <li key={f.id}>{f.label}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
       </section>

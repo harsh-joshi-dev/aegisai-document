@@ -1,87 +1,107 @@
-/* Reserve space for fixed Folders panel (320px + 20px) so it doesn't overlap upload/content */
+/* ========== Upload page ========== */
 .upload-page {
-  width: 65%;
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-/* Feature runner bar (when ?feature=xxx from Features menu) */
+/* ========== Feature runner bar ========== */
 .upload-feature-runner {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%);
-  border: 1px solid var(--border-subtle, rgba(59, 130, 246, 0.25));
-  border-radius: var(--radius-lg, 12px);
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.25rem;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.06) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 24px rgba(59, 130, 246, 0.08);
 }
 
 .upload-feature-runner-header {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.85rem;
 }
 
 .upload-feature-runner-label {
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--text-main, #f8fafc);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
 }
 
 .upload-feature-runner-body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem 1rem;
+  gap: 0.85rem 1.25rem;
 }
 
 .upload-feature-runner-hint {
   font-size: 0.9rem;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted);
 }
 
 .upload-feature-runner-select-label {
   font-size: 0.875rem;
-  color: var(--text-muted, #94a3b8);
+  font-weight: 500;
+  color: var(--text-muted);
   margin-right: 0.25rem;
 }
 
 .upload-feature-runner-select {
-  min-width: 200px;
-  max-width: 320px;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius-md, 8px);
-  border: 1px solid var(--border-medium, #334155);
-  background: var(--bg-subtle, #1e293b);
-  color: var(--text-main, #f8fafc);
+  min-width: 220px;
+  max-width: 340px;
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--bg-card-hover);
+  color: var(--text-main);
   font-size: 0.9rem;
+  font-weight: 500;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.upload-feature-runner-select:hover {
+  border-color: var(--border-strong);
+}
+
+.upload-feature-runner-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-dim);
 }
 
 .upload-feature-runner-btn {
-  padding: 0.5rem 1.25rem;
-  border-radius: var(--radius-md, 8px);
+  padding: 0.55rem 1.35rem;
+  border-radius: var(--radius-md);
   font-weight: 600;
   font-size: 0.9rem;
-  background: var(--primary, #3b82f6);
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: #fff;
   border: none;
   cursor: pointer;
-  transition: background 0.2s;
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .upload-feature-runner-btn:hover {
-  background: var(--primary-dark, #2563eb);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
 }
 
+/* ========== Post-upload CTA ========== */
 .upload-universal-cta {
   position: relative;
-  background: var(--bg-subtle, #f1f5f9);
-  border: 1px solid var(--border-medium, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  padding: 1rem 2.5rem 1rem 1.25rem;
-  margin-bottom: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem 1.5rem 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
 .upload-universal-cta-text {
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 0.85rem 0;
   font-size: 0.9375rem;
-  color: var(--text-primary, #0f172a);
+  font-weight: 500;
+  color: var(--text-main);
 }
 
 .upload-universal-cta-actions {
@@ -94,55 +114,66 @@
 .upload-universal-cta-btn {
   display: inline-flex;
   align-items: center;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-md, 8px);
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius-md);
   font-weight: 600;
   font-size: 0.875rem;
   text-decoration: none;
-  transition: background 0.2s, color 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .upload-universal-cta-btn.primary {
-  background: var(--primary, #3b82f6);
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: #fff;
+  border: none;
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.35);
 }
 
 .upload-universal-cta-btn.primary:hover {
-  background: var(--primary-dark, #2563eb);
-  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
 }
 
 .upload-universal-cta-btn.secondary {
-  background: transparent;
-  color: var(--primary, #3b82f6);
-  border: 1px solid var(--primary, #3b82f6);
+  background: var(--bg-elevated);
+  color: var(--primary);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   cursor: pointer;
 }
 
 .upload-universal-cta-btn.secondary:hover {
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--primary-dim);
+  border-color: var(--primary);
 }
 
 .upload-universal-cta-hint {
   font-size: 0.8125rem;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
+  width: 100%;
 }
 
 .upload-universal-cta-dismiss {
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: none;
+  top: 0.85rem;
+  right: 0.85rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
   border: none;
+  border-radius: var(--radius-md);
   font-size: 1.25rem;
   line-height: 1;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
   cursor: pointer;
-  padding: 0.25rem;
+  transition: color 0.2s ease, background 0.2s ease;
 }
 
 .upload-universal-cta-dismiss:hover {
-  color: var(--text-primary, #0f172a);
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 @media (min-width: 1025px) {

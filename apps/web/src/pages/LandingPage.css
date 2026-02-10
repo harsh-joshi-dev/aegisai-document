@@ -548,6 +548,113 @@
   color: var(--text-muted);
 }
 
+/* End-to-end product section */
+.end-to-end-section {
+  background: linear-gradient(180deg, var(--bg-main) 0%, var(--bg-subtle) 50%, var(--bg-main) 100%);
+}
+
+.e2e-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+
+.e2e-step {
+  flex: 1;
+  min-width: 160px;
+  max-width: 220px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s var(--ease-expo), box-shadow 0.25s ease;
+}
+
+.e2e-step:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--border-subtle);
+}
+
+.e2e-step-icon {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  line-height: 1;
+}
+
+.e2e-step h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.e2e-step p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.e2e-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .e2e-flow {
+    flex-direction: column;
+    align-items: center;
+  }
+  .e2e-arrow { transform: rotate(90deg); }
+  .e2e-step { max-width: 100%; }
+}
+
+.e2e-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.5rem;
+}
+
+.e2e-category {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.e2e-category:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.e2e-category-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.e2e-category ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.e2e-category li {
+  margin-bottom: 0.25rem;
+}
+
 /* Bento Grid */
 .bento-section {
   background: linear-gradient(to bottom, #020202 0%, #09090b 100%);

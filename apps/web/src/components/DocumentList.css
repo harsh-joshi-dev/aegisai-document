@@ -46,8 +46,9 @@
   margin-bottom: var(--spacing-xl);
   padding: var(--spacing-lg);
   background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
@@ -105,20 +106,19 @@
 
 .search-input {
   width: 100%;
-  padding: 0.75rem 1rem 0.75rem 3rem;
-  background: var(--bg-subtle);
-  border: 2px solid var(--border-medium);
+  padding: 0.65rem 1rem 0.65rem 3rem;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   color: var(--text-main);
   font-size: 0.9375rem;
   outline: none;
-  transition: all var(--transition-base);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .search-input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-dim);
-  background: var(--bg-elevated);
 }
 
 .search-input::placeholder {
@@ -433,32 +433,29 @@
 }
 
 .filter-select {
-  padding: 0.625rem 0.875rem;
-  background: var(--bg-subtle);
-  border: 2px solid var(--border-medium);
+  padding: 0.55rem 2rem 0.55rem 0.75rem;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   color: var(--text-main);
-  font-size: 0.9375rem;
+  font-size: 0.9rem;
+  font-weight: 500;
   outline: none;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
-  background-size: 12px;
-  padding-right: 2.5rem;
 }
 
 .filter-select:hover {
-  border-color: var(--border-light);
-  background-color: var(--bg-elevated);
+  border-color: var(--border-strong);
 }
 
 .filter-select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-dim);
-  background-color: var(--bg-elevated);
 }
 
 .meta-item.folder-meta {
@@ -837,23 +834,24 @@
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: all var(--transition-base);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--border-subtle);
+  transition: transform 0.25s var(--ease-expo), box-shadow 0.25s ease, border-color 0.25s ease;
   position: relative;
   overflow: hidden;
-  animation: slideUp 0.4s ease both;
+  animation: slideUp 0.4s var(--ease-expo) both;
   cursor: move;
   user-select: none;
 }
 
 .document-card:active {
-  opacity: 0.7;
-  transform: scale(0.98);
+  opacity: 0.95;
+  transform: scale(0.99);
 }
 
 .document-card[draggable="true"]:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--border-subtle);
+  transform: translateY(-2px);
 }
 
 @keyframes slideUp {
@@ -884,9 +882,9 @@
 }
 
 .document-card:hover {
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
-  transform: translateY(-4px);
-  border-color: var(--primary);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(59, 130, 246, 0.2);
+  transform: translateY(-3px);
+  border-color: rgba(59, 130, 246, 0.35);
 }
 
 .document-card-header {
@@ -1130,19 +1128,21 @@
 .trust-score-button,
 .agent-swarm-button,
 .completeness-button {
-  padding: var(--spacing-md) var(--spacing-lg);
-  border: 2px solid transparent;
-  border-radius: 999px;
-  font-size: 0.875rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-base);
-  display: flex;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-xs);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  gap: 0.35rem;
+  background: var(--bg-card-hover);
+  color: var(--text-main);
   position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 

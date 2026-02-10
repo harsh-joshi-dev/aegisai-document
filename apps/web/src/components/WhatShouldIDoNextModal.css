@@ -1,50 +1,128 @@
+/* What Should I Do Next - Premium modal */
 .what-should-i-do-next-modal {
-  max-width: 520px;
+  max-width: 560px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-subtle);
+  overflow: hidden;
 }
 
 .what-should-i-do-next-modal .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-card-hover);
 }
 
 .what-should-i-do-next-modal .modal-header h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
 }
 
 .what-should-i-do-next-modal .modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 1.35rem;
   cursor: pointer;
-  color: var(--text-secondary, #666);
+  color: var(--text-muted);
   line-height: 1;
+  transition: color 0.2s, background 0.2s;
 }
 
+.what-should-i-do-next-modal .modal-close:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.what-should-i-do-next-modal .modal-body {
+  padding: 1.5rem;
+}
+
+/* Loading state */
+.what-should-i-do-next-modal .loading-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 2rem;
+}
+
+.what-should-i-do-next-modal .loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: wsidn-spin 0.9s linear infinite;
+}
+
+@keyframes wsidn-spin {
+  to { transform: rotate(360deg); }
+}
+
+.what-should-i-do-next-modal .loading-message {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.what-should-i-do-next-modal .error-message {
+  margin: 0;
+  color: var(--error);
+  font-size: 0.95rem;
+}
+
+/* Summary card */
 .what-should-i-do-next-modal .action-intel-summary {
-  background: var(--surface-alt, #f5f5f5);
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--primary-dim) 0%, rgba(139, 92, 246, 0.08) 100%);
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--border-subtle);
 }
 
 .what-should-i-do-next-modal .summary-statement {
   margin: 0;
   font-weight: 500;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text-main);
 }
 
+/* Sections */
 .what-should-i-do-next-modal .action-intel-section {
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.what-should-i-do-next-modal .action-intel-section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .what-should-i-do-next-modal .action-intel-section h3 {
   margin: 0 0 0.5rem 0;
-  font-size: 0.9rem;
-  color: var(--text-secondary, #666);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
 }
 
 .what-should-i-do-next-modal .immediate-risks {
@@ -53,39 +131,56 @@
 }
 
 .what-should-i-do-next-modal .immediate-risks li {
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
 }
 
 .what-should-i-do-next-modal .risk-severity-critical {
-  color: var(--risk-critical, #c00);
+  color: #f87171;
 }
 
 .what-should-i-do-next-modal .risk-severity-warning {
-  color: var(--risk-warning, #b8860b);
+  color: #fbbf24;
 }
 
 .what-should-i-do-next-modal .action-required,
-.what-should-i-do-next-modal .who-handle,
-.what-should-i-do-next-modal .suggested-next-step {
+.what-should-i-do-next-modal .who-handle {
   margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-main);
 }
 
 .what-should-i-do-next-modal .deadline {
+  font-weight: 600;
+  color: var(--primary-light, #60a5fa);
+}
+
+.what-should-i-do-next-modal .urgency {
   font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Suggested next step - CTA card */
+.what-should-i-do-next-modal .suggested-next {
+  margin-top: 0.5rem;
 }
 
 .what-should-i-do-next-modal .suggested-next-step {
-  background: var(--surface-alt, #f0f7ff);
-  padding: 0.75rem;
-  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.06) 100%);
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  margin-top: 0.5rem;
+  font-size: 0.9375rem;
+  color: var(--text-main);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.what-should-i-do-next-modal .loading-message,
-.what-should-i-do-next-modal .error-message {
-  margin: 0;
-  color: var(--text-secondary, #666);
-}
-
-.what-should-i-do-next-modal .error-message {
-  color: var(--error, #c00);
+.what-should-i-do-next-modal .suggested-next-step::before {
+  content: '💡';
+  font-size: 1.1rem;
 }
