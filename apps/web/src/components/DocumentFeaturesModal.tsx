@@ -178,7 +178,7 @@ function FinancialTab({ documentId }: { documentId: string }) {
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v: number) => [v?.toLocaleString(), 'Amount']} />
               <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                {barData.map((entry, i) => (
+                {barData.map((entry) => (
                   <Cell key={entry.name} fill={entry.fill} />
                 ))}
               </Bar>
@@ -431,7 +431,7 @@ function CommentsTab({ documentId }: { documentId: string }) {
   );
 }
 
-function PolicyMatcherTab({ currentDocumentId, currentFilename }: { currentDocumentId: string; currentFilename: string }) {
+function PolicyMatcherTab({ currentDocumentId }: { currentDocumentId: string; currentFilename: string }) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(true);
   const [policyDocId, setPolicyDocId] = useState(currentDocumentId);

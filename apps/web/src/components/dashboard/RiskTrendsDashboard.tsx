@@ -11,7 +11,6 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  ComposedChart,
   LineChart,
   Line,
 } from 'recharts';
