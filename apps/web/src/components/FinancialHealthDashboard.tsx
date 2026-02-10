@@ -47,7 +47,7 @@ export default function FinancialHealthDashboard() {
         <div className="financial-health-header">
           <h3>Financial Health</h3>
           <span
-            className="financial-health-badge"
+            className={`financial-health-badge financial-health-badge-${summary.riskLevel}`}
             style={{ background: riskColor[summary.riskLevel], color: '#fff' }}
           >
             {summary.riskLevel}

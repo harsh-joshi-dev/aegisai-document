@@ -215,7 +215,7 @@ export default function FolderManager({ documents, onDocumentMoved, onOpenFolder
         <div className="folder-manager-header-actions">
           <button
             type="button"
-            className="organize-by-year-button"
+            className={`organize-by-year-button ${organizingByYear ? 'active' : ''}`}
             onClick={handleOrganizeByYear}
             disabled={organizingByYear || documents.length === 0}
             title="Sort all documents into FY folders (e.g. FY 2024-25)"
