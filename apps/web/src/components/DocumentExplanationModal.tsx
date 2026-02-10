@@ -11,7 +11,16 @@ interface DocumentExplanationModalProps {
   riskLevel: 'Critical' | 'Warning' | 'Normal';
   riskCategory?: string;
   language?: string;
+  /** Explain like I'm 10 (simple) / 20 (detailed) / Professional */
+  level?: 'simple' | 'detailed' | 'professional';
+  onLevelChange?: (level: 'simple' | 'detailed' | 'professional') => void;
 }
+
+const LEVEL_OPTIONS: { value: 'simple' | 'detailed' | 'professional'; label: string }[] = [
+  { value: 'simple', label: "Like I'm 10 (simple)" },
+  { value: 'detailed', label: "Like I'm 20 (detailed)" },
+  { value: 'professional', label: 'Professional' },
+];
 
 export default function DocumentExplanationModal({
   isOpen,
@@ -21,6 +30,8 @@ export default function DocumentExplanationModal({
   riskLevel,
   riskCategory,
   language = 'en',
+  level = 'detailed',
+  onLevelChange,
 }: DocumentExplanationModalProps) {
   const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -100,6 +111,7 @@ export default function DocumentExplanationModal({
       'ja': 'ja-JP',
       'hi': 'hi-IN',
       'gu': 'gu-IN',
+      'mr': 'mr-IN',
     };
     return languageMap[langCode] || langCode;
   };
@@ -398,6 +410,23 @@ export default function DocumentExplanationModal({
         </div>
 
         <div className="explanation-controls">
+          {onLevelChange && (
+            <div className="explanation-level-selector">
+              <label htmlFor="explanation-level">Explain:</label>
+              <select
+                id="explanation-level"
+                value={level}
+                onChange={(e) => {
+                  const v = e.target.value as 'simple' | 'detailed' | 'professional';
+                  onLevelChange(v);
+                }}
+              >
+                {LEVEL_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="language-selector">
             <select
               id="explanation-language"

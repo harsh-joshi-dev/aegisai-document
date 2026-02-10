@@ -184,6 +184,10 @@ export async function initializeDatabase() {
     // Initialize folders (may depend on documents/users)
     const { initializeFolders } = await import('../api/folders.js');
     await initializeFolders();
+
+    // Initialize feature tables (deadlines, comments, risk clauses, cases, policies)
+    const { initializeFeaturesSchema } = await import('./featuresSchema.js');
+    await initializeFeaturesSchema();
     
     // Check if pgvector is available
     const hasPgvector = await checkPgvectorAvailable();

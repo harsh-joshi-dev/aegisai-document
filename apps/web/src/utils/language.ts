@@ -13,6 +13,7 @@ export const supportedLanguages: Language[] = [
   { code: 'ja', name: 'Japanese', nativeName: '日本語' },
   { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
   { code: 'gu', name: 'Gujarati', nativeName: 'ગુજરાતી' },
+  { code: 'mr', name: 'Marathi', nativeName: 'मराठी' },
 ];
 
 export function getLanguageByCode(code: string): Language | undefined {

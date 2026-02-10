@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getDocuments, Document, explainDocument, getFolders, Folder, renameDocument, type FinanceToolId } from '../api/client';
+import { getDocuments, Document, getFolders, Folder, renameDocument, type FinanceToolId } from '../api/client';
 import { formatConfidence } from '../utils/confidence';
 import ServiceProviderModal from './ServiceProviderModal';
 import DocumentExplanationModal from './DocumentExplanationModal';
@@ -12,7 +12,25 @@ import TrustScore from './TrustScore';
 import AgentSwarm from './AgentSwarm';
 import FolderManager from './FolderManager';
 import FinanceToolsModal from './FinanceToolsModal';
+import WhatShouldIDoNextModal from './WhatShouldIDoNextModal';
+import DocumentFeaturesModal from './DocumentFeaturesModal';
+import type { TabId } from './DocumentFeaturesModal';
 import './DocumentList.css';
+
+/** Map feature runner id to DocumentFeaturesModal tab. */
+const FEATURE_TO_TAB: Record<string, TabId> = {
+  'deadlines': 'deadlines',
+  'financial-impact': 'financial',
+  'risk-clauses': 'risky',
+  'share-summary': 'share',
+  'scam-score': 'scam',
+  'drafts': 'drafts',
+  'negotiation': 'negotiation',
+  'comments': 'comments',
+  'policy-matcher': 'policy',
+  'completeness': 'completeness',
+  'verify': 'verify',
+};
 
 export interface DocumentListProps {
   searchQuery?: string;
@@ -20,6 +38,10 @@ export interface DocumentListProps {
   /** When set, open Finance Tools modal with this tool and documents preselected (e.g. from Upload page). */
   openFinanceTool?: { toolId: FinanceToolId; documentIds: string[] };
   onFinanceToolsClose?: () => void;
+  /** When set, open the corresponding feature modal for the given document (from Features menu / feature runner). */
+  openFeatureForDocument?: { feature: string; documentId: string };
+  /** Called after the feature modal has been opened (so parent can clear openFeatureForDocument). */
+  onFeatureOpened?: () => void;
 }
 
 export default function DocumentList(props: DocumentListProps = {}) {
@@ -34,11 +56,13 @@ export default function DocumentList(props: DocumentListProps = {}) {
   const [selectedDocumentForShare, setSelectedDocumentForShare] = useState<Document | null>(null);
   const [selectedDocumentForChat, setSelectedDocumentForChat] = useState<Document | null>(null);
   const [explanationData, setExplanationData] = useState<{
+    documentId: string;
     documentName: string;
     explanation: string;
     riskLevel: 'Critical' | 'Warning' | 'Normal';
     riskCategory?: string;
   } | null>(null);
+  const [explainLevel, setExplainLevel] = useState<'simple' | 'detailed' | 'professional'>('detailed');
   const [loadingExplanation, setLoadingExplanation] = useState(false);
   const [isWhatIfOpen, setIsWhatIfOpen] = useState(false);
   const [selectedDocumentForWhatIf, setSelectedDocumentForWhatIf] = useState<Document | null>(null);
@@ -62,6 +86,10 @@ export default function DocumentList(props: DocumentListProps = {}) {
   const [folderSummaryExpanded, setFolderSummaryExpanded] = useState(true);
   const documentsGridRef = useRef<HTMLDivElement>(null);
   const [isFinanceToolsOpen, setIsFinanceToolsOpen] = useState(false);
+  const [selectedDocumentForWhatNext, setSelectedDocumentForWhatNext] = useState<Document | null>(null);
+  const [isDocumentFeaturesOpen, setIsDocumentFeaturesOpen] = useState(false);
+  const [selectedDocumentForFeatures, setSelectedDocumentForFeatures] = useState<Document | null>(null);
+  const [documentFeaturesInitialTab, setDocumentFeaturesInitialTab] = useState<TabId>('deadlines');
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -80,6 +108,45 @@ export default function DocumentList(props: DocumentListProps = {}) {
     const folderId = searchParams.get('folder');
     if (folderId) setSelectedFolderFilter(folderId);
   }, [searchParams]);
+
+  // Feature runner / Features menu: open the right modal for the requested document
+  useEffect(() => {
+    const req = props.openFeatureForDocument;
+    if (!req || loading) return;
+    const doc = documents.find((d) => d.id === req.documentId);
+    if (!doc) return;
+
+    const feature = req.feature;
+    if (feature === 'what-next') {
+      setSelectedDocumentForWhatNext(doc);
+      props.onFeatureOpened?.();
+      return;
+    }
+    if (feature === 'explain') {
+      handleExplainDocument(doc);
+      props.onFeatureOpened?.();
+      return;
+    }
+    if (feature === 'trust-score') {
+      setSelectedDocumentForTrustScore(doc);
+      setIsTrustScoreOpen(true);
+      props.onFeatureOpened?.();
+      return;
+    }
+    const tab = FEATURE_TO_TAB[feature];
+    if (tab) {
+      setSelectedDocumentForFeatures(doc);
+      setDocumentFeaturesInitialTab(tab);
+      setIsDocumentFeaturesOpen(true);
+      props.onFeatureOpened?.();
+      return;
+    }
+    // policy-matcher or unknown: open Document Features on default tab
+    setSelectedDocumentForFeatures(doc);
+    setDocumentFeaturesInitialTab('deadlines');
+    setIsDocumentFeaturesOpen(true);
+    props.onFeatureOpened?.();
+  }, [props.openFeatureForDocument, loading, documents]);
 
   const loadFolders = async () => {
     try {
@@ -265,14 +332,19 @@ export default function DocumentList(props: DocumentListProps = {}) {
     setIsShareModalOpen(true);
   };
 
-  const handleExplainDocument = async (doc: Document) => {
+  const handleExplainDocument = async (doc: Document, level?: 'simple' | 'detailed' | 'professional') => {
+    const effectiveLevel = level ?? explainLevel;
     setLoadingExplanation(true);
     try {
-      const explanation = await explainDocument({
+      const { explainDocumentWithLevel } = await import('../api/client');
+      const explanation = await explainDocumentWithLevel({
         documentId: doc.id,
         language: 'en',
+        level: effectiveLevel,
       });
+      setExplainLevel(effectiveLevel);
       setExplanationData({
+        documentId: doc.id,
         documentName: doc.filename,
         explanation: explanation.explanation,
         riskLevel: doc.riskLevel as 'Critical' | 'Warning' | 'Normal',
@@ -285,6 +357,13 @@ export default function DocumentList(props: DocumentListProps = {}) {
     } finally {
       setLoadingExplanation(false);
     }
+  };
+
+  const handleExplainLevelChange = async (newLevel: 'simple' | 'detailed' | 'professional') => {
+    if (!explanationData?.documentId) return;
+    setExplainLevel(newLevel);
+    const doc = documents.find(d => d.id === explanationData.documentId);
+    if (doc) await handleExplainDocument(doc, newLevel);
   };
 
   /** Two-line explanation for why the document is in this risk status (shown on card). */
@@ -835,6 +914,7 @@ export default function DocumentList(props: DocumentListProps = {}) {
             >
               <div className="document-card-header">
                 {editingDocumentId === doc.id ? (
+                  <div className="document-card-title-block">
                   <div className="document-rename-input-wrapper">
                     <input
                       type="text"
@@ -871,27 +951,39 @@ export default function DocumentList(props: DocumentListProps = {}) {
                       </svg>
                     </button>
                   </div>
+                  </div>
                 ) : (
-                  <div className="document-filename-wrapper">
-                    <div 
-                      className="document-filename" 
-                      title={doc.filename}
-                      onDoubleClick={() => handleStartRename(doc)}
-                    >
-                      {doc.filename.length > 40 
-                        ? doc.filename.substring(0, 40) + '...' 
-                        : doc.filename}
+                  <div className="document-card-title-block">
+                    <div className="document-filename-wrapper">
+                      <div 
+                        className="document-filename" 
+                        title={doc.filename}
+                        onDoubleClick={() => handleStartRename(doc)}
+                      >
+                        {doc.filename.length > 40 
+                          ? doc.filename.substring(0, 40) + '...' 
+                          : doc.filename}
+                      </div>
+                      <button
+                        onClick={() => handleStartRename(doc)}
+                        className="rename-button"
+                        title="Rename document"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleStartRename(doc)}
-                      className="rename-button"
-                      title="Rename document"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </button>
+                    {doc.riskLevel === 'Critical' && (
+                      <p className="document-card-risk-line" title={getStatusExplanation(doc)}>High priority – review recommended</p>
+                    )}
+                    {doc.riskLevel === 'Warning' && (
+                      <p className="document-card-risk-line">Review suggested</p>
+                    )}
+                    {doc.riskLevel === 'Normal' && doc.riskCategory && doc.riskCategory !== 'None' && (
+                      <p className="document-card-risk-line">Classified as {doc.riskCategory}</p>
+                    )}
                   </div>
                 )}
                 <span className={`risk-badge ${getRiskBadgeClass(doc.riskLevel)}`}>
@@ -940,6 +1032,16 @@ export default function DocumentList(props: DocumentListProps = {}) {
                     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" strokeWidth="2"/>
                   </svg>
                   Chat
+                </button>
+                <button
+                  onClick={() => setSelectedDocumentForWhatNext(doc)}
+                  className="what-next-button"
+                  title="What should I do next? Risks, action, deadline, who should handle"
+                >
+                  <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  What Next?
                 </button>
                 <button
                   onClick={() => handleExplainDocument(doc)}
@@ -1041,6 +1143,22 @@ export default function DocumentList(props: DocumentListProps = {}) {
                     Solution Providers
                   </button>
                 )}
+                <button
+                  onClick={() => {
+                    setSelectedDocumentForFeatures(doc);
+                    setDocumentFeaturesInitialTab('deadlines');
+                    setIsDocumentFeaturesOpen(true);
+                  }}
+                  className="more-features-button"
+                  title="Deadlines, Financial Impact, Why Risky?, Share Summary, Scam Score, Drafts, Comments"
+                >
+                  <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="1" strokeWidth="2"/>
+                    <circle cx="19" cy="12" r="1" strokeWidth="2"/>
+                    <circle cx="5" cy="12" r="1" strokeWidth="2"/>
+                  </svg>
+                  More
+                </button>
               </div>
             </div>
           ))}
@@ -1067,7 +1185,7 @@ export default function DocumentList(props: DocumentListProps = {}) {
         />
       )}
 
-      {/* Document Explanation Modal */}
+      {/* Document Explanation Modal (Explain like 10 / 20 / Professional) */}
       {explanationData && (
         <DocumentExplanationModal
           isOpen={isExplanationModalOpen}
@@ -1079,6 +1197,8 @@ export default function DocumentList(props: DocumentListProps = {}) {
           explanation={explanationData.explanation}
           riskLevel={explanationData.riskLevel}
           riskCategory={explanationData.riskCategory}
+          level={explainLevel}
+          onLevelChange={handleExplainLevelChange}
         />
       )}
 
@@ -1117,6 +1237,28 @@ export default function DocumentList(props: DocumentListProps = {}) {
           }}
           documentId={selectedDocumentForWhatIf.id}
           documentName={selectedDocumentForWhatIf.filename}
+        />
+      )}
+
+      {/* What Should I Do Next Modal */}
+      {selectedDocumentForWhatNext && (
+        <WhatShouldIDoNextModal
+          document={selectedDocumentForWhatNext}
+          onClose={() => setSelectedDocumentForWhatNext(null)}
+        />
+      )}
+
+      {/* Document Features (Deadlines, Financial, Risk, Share, Scam, Drafts, Comments) */}
+      {selectedDocumentForFeatures && (
+        <DocumentFeaturesModal
+          isOpen={isDocumentFeaturesOpen}
+          onClose={() => {
+            setIsDocumentFeaturesOpen(false);
+            setSelectedDocumentForFeatures(null);
+            setDocumentFeaturesInitialTab('deadlines');
+          }}
+          document={selectedDocumentForFeatures}
+          initialTab={documentFeaturesInitialTab}
         />
       )}
 

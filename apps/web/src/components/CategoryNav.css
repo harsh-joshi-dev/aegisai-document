@@ -1,0 +1,123 @@
+.category-nav {
+  position: relative;
+}
+
+.category-nav-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: var(--space-sm, 0.5rem) var(--space-md, 0.75rem);
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md, 6px);
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.category-nav-trigger:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.category-nav-trigger[aria-expanded="true"] {
+  color: var(--primary);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.category-nav-chevron {
+  font-size: 0.6rem;
+  opacity: 0.8;
+  transition: transform 0.2s;
+}
+
+.category-nav-trigger[aria-expanded="true"] .category-nav-chevron {
+  transform: rotate(180deg);
+}
+
+.category-nav-mega {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 320px;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.category-nav-mega-inner {
+  display: flex;
+  min-height: 200px;
+}
+
+.category-nav-categories {
+  width: 160px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-subtle);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.category-nav-cat {
+  padding: 0.6rem 1rem;
+  cursor: default;
+}
+
+.category-nav-cat-label {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.category-nav-cat.active .category-nav-cat-label {
+  color: var(--primary);
+}
+
+.category-nav-cat:hover .category-nav-cat-label {
+  color: var(--text-main);
+}
+
+.category-nav-features-panel {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  min-width: 220px;
+}
+
+.category-nav-features-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.category-nav-features-list li {
+  margin: 0;
+}
+
+.category-nav-feature-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.category-nav-feature-btn:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--primary);
+}
+
+.category-nav-feature-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}

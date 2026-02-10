@@ -26,6 +26,7 @@ export default function ChatUI({ preselectedDocumentIds = [] }: ChatUIProps) {
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>(preselectedDocumentIds);
+  const [viewAs, setViewAs] = useState<'user' | 'manager' | 'auditor'>('user');
   // const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [isDocumentDropdownOpen, setIsDocumentDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -122,6 +123,7 @@ export default function ChatUI({ preselectedDocumentIds = [] }: ChatUIProps) {
         topK: 5,
         documentIds: selectedDocumentIds.length > 0 ? selectedDocumentIds : undefined,
         userLocation: userLocation || undefined,
+        viewAs,
       });
 
       const assistantMessage: Message = {
@@ -239,6 +241,20 @@ export default function ChatUI({ preselectedDocumentIds = [] }: ChatUIProps) {
               </div>
             )}
           </div>
+          <div className="view-as-selector">
+            <label htmlFor="view-as-select">View as:</label>
+            <select
+              id="view-as-select"
+              value={viewAs}
+              onChange={(e) => setViewAs(e.target.value as 'user' | 'manager' | 'auditor')}
+              className="view-as-select"
+              title="User = simple, Manager = risk & cost, Auditor = clauses & citations"
+            >
+              <option value="user">User</option>
+              <option value="manager">Manager</option>
+              <option value="auditor">Auditor</option>
+            </select>
+          </div>
           <div className="language-selector">
             <select
               id="language-select"
@@ -276,7 +292,23 @@ export default function ChatUI({ preselectedDocumentIds = [] }: ChatUIProps) {
 
             {message.role === 'assistant' && message.confidence !== undefined && (
               <div className="message-confidence">
-                <strong>Confidence:</strong> {formatConfidence(message.confidence)}
+                <div className="confidence-header">
+                  <span className="confidence-meter" title="Source strength">
+                    <strong>Confidence:</strong> {formatConfidence(message.confidence)}%
+                  </span>
+                </div>
+                <div className="confidence-bar-wrap" role="progressbar" aria-valuenow={message.confidence} aria-valuemin={0} aria-valuemax={100} title={`${message.confidence}%`}>
+                  <div
+                    className="confidence-bar-fill"
+                    style={{
+                      width: `${Math.min(100, Math.max(0, message.confidence))}%`,
+                      backgroundColor: message.confidence >= 70 ? '#16a34a' : message.confidence >= 40 ? '#f59e0b' : '#dc2626',
+                    }}
+                  />
+                </div>
+                {message.confidence < 50 && (
+                  <span className="missing-data-warning">⚠️ Low confidence — answer may be incomplete or inferred. Verify with the document.</span>
+                )}
               </div>
             )}
 

@@ -1,0 +1,91 @@
+.what-should-i-do-next-modal {
+  max-width: 520px;
+}
+
+.what-should-i-do-next-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.what-should-i-do-next-modal .modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.what-should-i-do-next-modal .modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary, #666);
+  line-height: 1;
+}
+
+.what-should-i-do-next-modal .action-intel-summary {
+  background: var(--surface-alt, #f5f5f5);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.what-should-i-do-next-modal .summary-statement {
+  margin: 0;
+  font-weight: 500;
+}
+
+.what-should-i-do-next-modal .action-intel-section {
+  margin-bottom: 1rem;
+}
+
+.what-should-i-do-next-modal .action-intel-section h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.what-should-i-do-next-modal .immediate-risks {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.what-should-i-do-next-modal .immediate-risks li {
+  margin-bottom: 0.35rem;
+}
+
+.what-should-i-do-next-modal .risk-severity-critical {
+  color: var(--risk-critical, #c00);
+}
+
+.what-should-i-do-next-modal .risk-severity-warning {
+  color: var(--risk-warning, #b8860b);
+}
+
+.what-should-i-do-next-modal .action-required,
+.what-should-i-do-next-modal .who-handle,
+.what-should-i-do-next-modal .suggested-next-step {
+  margin: 0;
+}
+
+.what-should-i-do-next-modal .deadline {
+  font-weight: 500;
+}
+
+.what-should-i-do-next-modal .suggested-next-step {
+  background: var(--surface-alt, #f0f7ff);
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.what-should-i-do-next-modal .loading-message,
+.what-should-i-do-next-modal .error-message {
+  margin: 0;
+  color: var(--text-secondary, #666);
+}
+
+.what-should-i-do-next-modal .error-message {
+  color: var(--error, #c00);
+}

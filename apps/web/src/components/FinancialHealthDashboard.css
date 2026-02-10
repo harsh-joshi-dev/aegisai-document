@@ -36,6 +36,11 @@
   margin-bottom: 0.5rem;
 }
 
+.financial-health-chart {
+  margin: 0.75rem 0;
+  min-height: 180px;
+}
+
 .financial-health-safe {
   margin: 0 0 0.5rem 0;
   font-size: 0.875rem;

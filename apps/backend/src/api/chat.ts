@@ -17,6 +17,8 @@ const chatRequestSchema = z.object({
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
   }).optional(), // User location for service providers
+  /** Role-based view: user = simple explanation, manager = risk & cost focus, auditor = clauses & citations */
+  viewAs: z.enum(['user', 'manager', 'auditor']).optional(),
 });
 
 router.post('/', requireAuth, async (req: Request, res: Response) => {
@@ -37,7 +39,8 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       validated.language,
       validated.topK,
       userDocumentIds,
-      validated.userLocation
+      validated.userLocation,
+      validated.viewAs
     );
     
     res.json({

@@ -30,6 +30,7 @@ export default function ChatModal({ isOpen, onClose, document }: ChatModalProps)
   const [documentContent, setDocumentContent] = useState<string | null>(null);
   const [pdfError, setPdfError] = useState(false);
   const [quickQuestions, setQuickQuestions] = useState<string[]>([]);
+  const [viewAs, setViewAs] = useState<'user' | 'manager' | 'auditor'>('user');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -149,6 +150,7 @@ export default function ChatModal({ isOpen, onClose, document }: ChatModalProps)
           latitude: userLocation.latitude,
           longitude: userLocation.longitude,
         } : undefined,
+        viewAs,
       });
 
       const assistantMessage: Message = {
@@ -264,6 +266,16 @@ export default function ChatModal({ isOpen, onClose, document }: ChatModalProps)
           <div className="chat-modal-chat-panel">
             <div className="chat-panel-header">
               <div className="language-selector-inline">
+                <select
+                  value={viewAs}
+                  onChange={(e) => setViewAs(e.target.value as 'user' | 'manager' | 'auditor')}
+                  className="language-select-small"
+                  title="User = simple, Manager = risk & cost, Auditor = clauses"
+                >
+                  <option value="user">View: User</option>
+                  <option value="manager">View: Manager</option>
+                  <option value="auditor">View: Auditor</option>
+                </select>
                 <select
                   value={selectedLanguage}
                   onChange={(e) => setSelectedLanguage(e.target.value)}

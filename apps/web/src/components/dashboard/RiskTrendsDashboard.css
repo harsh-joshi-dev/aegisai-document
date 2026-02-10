@@ -78,6 +78,11 @@
   min-height: 300px;
 }
 
+.chart-wrapper {
+  min-height: 340px;
+  width: 100%;
+}
+
 .chart-bars {
   display: flex;
   align-items: flex-end;

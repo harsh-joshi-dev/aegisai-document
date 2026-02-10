@@ -35,6 +35,15 @@ import completenessRouter from './api/completeness.js';
 import foldersRouter from './api/folders.js';
 import verifyDocumentRouter from './api/verifyDocument.js';
 import financeToolsRouter from './api/financeTools.js';
+import actionIntelligenceRouter from './api/actionIntelligence.js';
+import deadlinesRouter from './api/deadlines.js';
+import financialImpactRouter from './api/financialImpact.js';
+import riskClausesRouter from './api/riskClauses.js';
+import commentsRouter from './api/comments.js';
+import policyMatcherRouter from './api/policyMatcher.js';
+import shareSummaryRouter from './api/shareSummary.js';
+import scamScoreRouter from './api/scamScore.js';
+import draftsRouter from './api/drafts.js';
 
 const app = express();
 
@@ -120,6 +129,18 @@ app.use('/api/completeness', completenessRouter);
 app.use('/api/folders', foldersRouter);
 app.use('/api/verify', verifyDocumentRouter);
 app.use('/api/finance-tools', financeToolsRouter);
+app.use('/api/action-intelligence', actionIntelligenceRouter);
+app.use('/api/deadlines', deadlinesRouter);
+app.use('/api/financial-impact', financialImpactRouter);
+app.use('/api/risk-clauses', riskClausesRouter);
+app.use('/api/comments', commentsRouter);
+app.use('/api/policy-matcher', policyMatcherRouter);
+app.use('/api/share-summary', shareSummaryRouter);
+app.use('/api/scam-score', scamScoreRouter);
+app.use('/api/drafts', draftsRouter);
+
+// Risk clauses per document (nested under documents in some clients; mount as /api/risk-clauses/:documentId)
+// Already mounted as riskClausesRouter with GET /:documentId
 
 // Debug: Log registered routes
 console.log('✅ Routes registered: /api/upload, /api/chat, /api/documents, /api/compare, /api/rules, /api/templates, /api/negotiation, /api/analytics, /api/redaction, /api/compliance, /api/sso, /api/white-label, /api/dashboard, /api/benchmarking, /api/alerts, /api/reports, /api/service-providers');

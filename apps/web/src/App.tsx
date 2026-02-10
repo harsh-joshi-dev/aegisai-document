@@ -6,6 +6,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import UploadPage from './pages/upload';
 import ChatPage from './pages/chat';
 import LandingPage from './pages/LandingPage';
+import RiskTrendsDashboard from './components/dashboard/RiskTrendsDashboard';
 import LoginPage from './components/LoginPage';
 import PricingPage from './pages/PricingPage';
 import ContactPage from './pages/ContactPage';
@@ -13,6 +14,7 @@ import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import SharedDocumentPage from './pages/SharedDocumentPage';
+import CategoryNav from './components/CategoryNav';
 import MobileLayout from './mobile/MobileLayout';
 import MobileHome from './mobile/pages/MobileHome';
 import MobileScan from './mobile/pages/MobileScan';
@@ -100,6 +102,7 @@ function AppContent() {
               Aegis AI
             </Link>
             <div className="nav-links">
+              <CategoryNav />
               <Link
                 to="/"
                 className={location.pathname === '/' ? 'active' : ''}
@@ -111,6 +114,12 @@ function AppContent() {
                 className={location.pathname === '/chat' ? 'active' : ''}
               >
                 Chat
+              </Link>
+              <Link
+                to="/dashboard"
+                className={location.pathname === '/dashboard' ? 'active' : ''}
+              >
+                Dashboard
               </Link>
               <div className="user-info">
                 <img src={user.picture || '/default-avatar.png'} alt={user.name} className="user-avatar" />
@@ -126,6 +135,7 @@ function AppContent() {
             <Route path="/document/:documentId" element={<SharedDocumentPage />} />
             <Route path="/" element={<UploadPage />} />
             <Route path="/chat" element={<ChatPage />} />
+            <Route path="/dashboard" element={<RiskTrendsDashboard />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />

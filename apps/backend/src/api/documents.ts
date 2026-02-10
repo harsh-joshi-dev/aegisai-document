@@ -1,10 +1,42 @@
 import express, { Request, Response } from 'express';
 import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
-import { getDocuments, updateDocumentFilename, pool } from '../db/pgvector.js';
+import { getDocuments, updateDocumentFilename, pool, getDocumentContent } from '../db/pgvector.js';
 import { logAuditEvent } from '../compliance/auditLog.js';
 import { z } from 'zod';
 
 const router = express.Router();
+
+/**
+ * Get document content (from chunks) for authenticated owner.
+ * GET /api/documents/:documentId/content
+ */
+router.get('/:documentId/content', requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
+  const { documentId } = req.params;
+  if (!authReq.user) {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+  }
+  try {
+    const docs = await getDocuments({ userId: authReq.user.id, documentIds: [documentId] });
+    if (docs.length === 0) {
+      return res.status(404).json({ error: 'Not found', message: 'Document not found or access denied.' });
+    }
+    const content = await getDocumentContent(documentId);
+    const doc = docs[0] as { filename: string };
+    res.json({
+      success: true,
+      documentId,
+      filename: doc.filename,
+      content: content || '',
+    });
+  } catch (error) {
+    console.error('Document content error:', error);
+    res.status(500).json({
+      error: 'Failed to get document content',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
 
 /**
  * Public shared document view — no auth required.

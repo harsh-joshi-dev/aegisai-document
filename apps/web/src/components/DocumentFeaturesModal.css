@@ -1,0 +1,137 @@
+.doc-features-overlay { display: flex; align-items: center; justify-content: center; }
+.doc-features-modal {
+  max-width: 720px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.doc-features-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.doc-features-header h2 { margin: 0; font-size: 1.2rem; }
+.doc-features-filename {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #666);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doc-features-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+.doc-features-tabs .tab-btn {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--border, #ddd);
+  background: var(--surface, #fff);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.doc-features-tabs .tab-btn.active {
+  background: var(--primary, #2563eb);
+  color: #fff;
+  border-color: var(--primary, #2563eb);
+}
+.doc-features-body {
+  overflow: auto;
+  flex: 1;
+  min-height: 200px;
+}
+.tab-panel { padding: 0.5rem 0; }
+.tab-hint { font-size: 0.9rem; color: var(--text-secondary, #666); margin-bottom: 0.75rem; }
+.deadline-add, .comments-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.deadline-add input[type="text"], .comments-add textarea { flex: 1; min-width: 120px; }
+.deadline-list, .comments-list, .risk-clauses-list { list-style: none; padding: 0; margin: 0; }
+.deadline-list li, .comments-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border, #eee);
+}
+.risk-clauses-list li {
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+  border-left: 4px solid #888;
+}
+.risk-clauses-list li.severity-red { border-left-color: #c00; background: #fff5f5; }
+.risk-clauses-list li.severity-amber { border-left-color: #f59e0b; background: #fffbeb; }
+.risk-clauses-list li.severity-green { border-left-color: #059669; background: #f0fdf4; }
+.clause-text { font-weight: 500; display: block; }
+.reason { font-size: 0.9rem; color: var(--text-secondary, #666); }
+.share-summary-box { background: var(--surface-alt, #f5f5f5); padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; }
+.scam-prob { font-size: 1.1rem; }
+.draft-text { white-space: pre-wrap; font-size: 0.9rem; max-height: 300px; overflow: auto; background: var(--surface-alt, #f5f5f5); padding: 1rem; border-radius: 6px; }
+.export-ical { display: inline-block; margin-top: 0.5rem; font-size: 0.9rem; }
+
+.financial-impact-chart { margin: 0.75rem 0; }
+
+.scam-gauge-wrap { text-align: center; margin: 0.75rem 0; }
+.scam-gauge-wrap .scam-prob { margin: 0.5rem 0 0 0; font-size: 1rem; }
+.scam-signals-list { list-style: none; padding: 0; margin: 0.75rem 0; }
+.scam-signals-list li { padding: 0.35rem 0; border-bottom: 1px solid var(--border, #eee); }
+.scam-signals-list li.signal-high { color: #dc2626; }
+.scam-signals-list li.signal-medium { color: #f59e0b; }
+.scam-signals-list li.signal-low { color: #6b7280; }
+
+/* Policy Matcher tab */
+.policy-matcher-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+.policy-matcher-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #666);
+}
+.policy-matcher-fields select {
+  min-width: 200px;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border, #ddd);
+  background: var(--surface, #fff);
+}
+.policy-matcher-result .summary { margin-bottom: 1rem; }
+.policy-matcher-result h4 { margin: 0.75rem 0 0.35rem 0; font-size: 1rem; }
+
+/* Completeness / Verify inline results */
+.completeness-inline-result,
+.verify-inline-result { margin-top: 1rem; }
+.completeness-score-box,
+.verify-status-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 2px solid;
+  margin-bottom: 0.75rem;
+}
+.completeness-score-box .score-value { font-size: 1.5rem; font-weight: 700; }
+.completeness-score-box .score-label { font-size: 0.95rem; color: var(--text-secondary, #666); }
+.status-badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
+.verify-checks-list { list-style: none; padding: 0; margin: 0.5rem 0; }
+.verify-checks-list li { padding: 0.35rem 0; }
+.verify-checks-list li.passed { color: #16a34a; }
+.verify-checks-list li.failed { color: #dc2626; }
+.tab-panel .error { color: #dc2626; font-size: 0.9rem; margin: 0.5rem 0; }

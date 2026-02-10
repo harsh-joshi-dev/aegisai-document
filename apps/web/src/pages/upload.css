@@ -5,6 +5,70 @@
   margin: 0 auto;
 }
 
+/* Feature runner bar (when ?feature=xxx from Features menu) */
+.upload-feature-runner {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%);
+  border: 1px solid var(--border-subtle, rgba(59, 130, 246, 0.25));
+  border-radius: var(--radius-lg, 12px);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.upload-feature-runner-header {
+  margin-bottom: 0.75rem;
+}
+
+.upload-feature-runner-label {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-main, #f8fafc);
+}
+
+.upload-feature-runner-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+
+.upload-feature-runner-hint {
+  font-size: 0.9rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.upload-feature-runner-select-label {
+  font-size: 0.875rem;
+  color: var(--text-muted, #94a3b8);
+  margin-right: 0.25rem;
+}
+
+.upload-feature-runner-select {
+  min-width: 200px;
+  max-width: 320px;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-medium, #334155);
+  background: var(--bg-subtle, #1e293b);
+  color: var(--text-main, #f8fafc);
+  font-size: 0.9rem;
+}
+
+.upload-feature-runner-btn {
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-md, 8px);
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: var(--primary, #3b82f6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.upload-feature-runner-btn:hover {
+  background: var(--primary-dark, #2563eb);
+}
+
 .upload-universal-cta {
   position: relative;
   background: var(--bg-subtle, #f1f5f9);

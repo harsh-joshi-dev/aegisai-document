@@ -10,6 +10,8 @@ const router = Router();
 const explainRequestSchema = z.object({
   documentId: z.string().uuid(),
   language: z.string().default('en'),
+  /** Explain like I'm 10 (simple), 20 (detailed), or professional */
+  level: z.enum(['simple', 'detailed', 'professional']).default('detailed'),
 });
 
 let llm: ChatOpenAI | null = null;
@@ -53,22 +55,36 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 
     const document = documents[0];
 
-    // Generate explanation prompt
-    const explanationPrompt = `You are a helpful document analysis assistant. Explain the following document in a clear, easy-to-understand way in ${validated.language}. 
+    const level = validated.level;
+    const levelInstructions = {
+      simple: 'Explain like the reader is 10 years old. Use very simple words, short sentences, and avoid jargon. No legal or technical terms unless you explain them in one simple phrase.',
+      detailed: 'Explain for an educated adult (like 20). Be clear and thorough. You may use some technical terms but explain key concepts. Cover summary, risk, what to understand, and next steps.',
+      professional: 'Explain for a lawyer/CA/auditor. Use precise legal and business terminology. Include clause references, obligations, and compliance implications where relevant.',
+    };
+
+    // Get document content for context
+    const { getDocumentContent } = await import('../db/pgvector.js');
+    const docContent = await getDocumentContent(validated.documentId);
+    const contentSnippet = docContent ? docContent.substring(0, 3000) : '';
+
+    const explanationPrompt = `You are a helpful document analysis assistant. Explain the following document in ${validated.language}.
 
 Document Information:
 - Filename: ${document.filename}
 - Risk Level: ${document.risk_level}
 - Risk Category: ${document.risk_category || 'Not specified'}
 
+Explanation level: ${level}. ${levelInstructions[level]}
+
+${contentSnippet ? `Document content (excerpt):\n${contentSnippet}` : ''}
+
 IMPORTANT: Start your explanation with "I will explain this document to you." Then immediately provide the explanation without any additional introductory phrases like "Sure!", "Let's break down", etc.
 
-Please provide a comprehensive explanation that:
+Provide a comprehensive explanation that:
 1. Summarizes what this document is about
 2. Explains why it has been classified as ${document.risk_level} risk
-3. Describes what the user should understand about this document
+3. Describes what the user should understand
 4. Provides clear guidance on what actions they should take next
-5. Uses simple, clear language that anyone can understand
 
 Write the explanation in ${validated.language}. Be direct and clear.`;
 
@@ -84,6 +100,7 @@ Write the explanation in ${validated.language}. Be direct and clear.`;
       success: true,
       explanation,
       language: validated.language,
+      level: validated.level,
       document: {
         id: document.id,
         filename: document.filename,

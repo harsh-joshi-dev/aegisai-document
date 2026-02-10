@@ -51,6 +51,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       ar: 'Arabic',
       hi: 'Hindi',
       gu: 'Gujarati',
+      mr: 'Marathi',
       nl: 'Dutch',
       pl: 'Polish',
       tr: 'Turkish',

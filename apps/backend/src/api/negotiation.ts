@@ -3,6 +3,7 @@
  */
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
+import { requireAuth } from '../auth/middleware.js';
 import { prepareNegotiation } from '../agents/negotiationPrep.js';
 
 const router = Router();
@@ -11,7 +12,7 @@ const negotiationPrepSchema = z.object({
   documentText: z.string().min(100, 'Document text must be at least 100 characters'),
 });
 
-router.post('/prepare', async (req: Request, res: Response) => {
+router.post('/prepare', requireAuth, async (req: Request, res: Response) => {
   try {
     const validated = negotiationPrepSchema.parse(req.body);
     

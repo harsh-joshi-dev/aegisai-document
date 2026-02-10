@@ -89,7 +89,8 @@ export async function queryRAG(
   language: string = 'en',
   topK: number = 5,
   documentIds?: string[],
-  userLocation?: Location
+  userLocation?: Location,
+  viewAs?: 'user' | 'manager' | 'auditor'
 ): Promise<RAGResponse> {
   try {
     // Generate embedding for the question
@@ -121,8 +122,8 @@ export async function queryRAG(
       .map((chunk: { filename: string; content: string }, index: number) => `[Source ${index + 1}: ${chunk.filename}]\n${chunk.content}`)
       .join('\n\n---\n\n');
     
-    // Create prompt
-    const prompt = createQAPrompt(question, context, language);
+    // Create prompt (with optional role-based view)
+    const prompt = createQAPrompt(question, context, language, viewAs);
     
     // Generate answer using LLM with logprobs for confidence
     const llm = getLLM();

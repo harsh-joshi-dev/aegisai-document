@@ -97,6 +97,8 @@ export interface ChatRequest {
   topK?: number;
   documentIds?: string[]; // For multi-document chat
   userLocation?: Location; // User location for service providers
+  /** Role-based view: user = simple, manager = risk & cost, auditor = clauses & citations */
+  viewAs?: 'user' | 'manager' | 'auditor';
 }
 
 export interface Document {
@@ -574,6 +576,17 @@ export async function organizeFoldersByYear(): Promise<{ success: boolean; messa
   return response.data;
 }
 
+// Negotiation simulator (prepare strategy, talking points)
+export async function prepareNegotiation(documentText: string): Promise<{
+  success: boolean;
+  extractedTerms?: any;
+  marketResearch?: any;
+  counterProposal?: any;
+}> {
+  const response = await apiClient.post('/api/negotiation/prepare', { documentText });
+  return response.data;
+}
+
 // Financial Health Dashboard
 export type DashboardRiskLevel = 'Green' | 'Yellow' | 'Red';
 
@@ -732,4 +745,250 @@ export async function runFinanceTool(
   });
   return response.data;
 }
+
+// --- Action Intelligence: What Should I Do Next ---
+export interface ActionIntelligenceResult {
+  immediateRisks: Array<{ severity: 'Critical' | 'Warning'; description: string }>;
+  actionRequired: string;
+  deadline: string | null;
+  urgency: 'Critical' | 'High' | 'Medium' | 'Low' | 'None';
+  whoShouldHandle: 'CA' | 'Lawyer' | 'User' | 'Compliance' | 'Financial';
+  summaryStatement: string;
+  suggestedNextStep: string;
+}
+
+export async function getWhatShouldIDoNext(documentId: string): Promise<{
+  success: boolean;
+  documentId: string;
+  result: ActionIntelligenceResult;
+}> {
+  const response = await apiClient.post('/api/action-intelligence', { documentId });
+  return response.data;
+}
+
+// --- Deadlines & Obligation Tracker ---
+export interface DeadlineItem {
+  id: string;
+  document_id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  due_date: string;
+  due_type: string | null;
+  reminder_sent: boolean;
+  calendar_synced: boolean;
+  severity: string;
+  assignee_type: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getDeadlines(params?: { documentId?: string; from?: string; to?: string }): Promise<{
+  success: boolean;
+  deadlines: DeadlineItem[];
+}> {
+  const q = new URLSearchParams();
+  if (params?.documentId) q.set('documentId', params.documentId);
+  if (params?.from) q.set('from', params.from);
+  if (params?.to) q.set('to', params.to);
+  const response = await apiClient.get(`/api/deadlines?${q.toString()}`);
+  return response.data;
+}
+
+export async function createDeadline(data: {
+  documentId: string;
+  title: string;
+  description?: string;
+  due_date: string;
+  due_type?: string;
+  severity?: 'Critical' | 'High' | 'Medium' | 'Low';
+  assignee_type?: string;
+}): Promise<{ success: boolean; deadline: DeadlineItem }> {
+  const response = await apiClient.post('/api/deadlines', data);
+  return response.data;
+}
+
+export async function markDeadlineReminderSent(id: string): Promise<{ success: boolean }> {
+  const response = await apiClient.post(`/api/deadlines/${id}/reminder-sent`, {});
+  return response.data;
+}
+
+export async function markDeadlineCalendarSynced(id: string): Promise<{ success: boolean }> {
+  const response = await apiClient.post(`/api/deadlines/${id}/calendar-synced`, {});
+  return response.data;
+}
+
+export async function deleteDeadline(id: string): Promise<{ success: boolean }> {
+  const response = await apiClient.delete(`/api/deadlines/${id}`);
+  return response.data;
+}
+
+export function getDeadlinesIcalUrl(from?: string, to?: string): string {
+  const q = new URLSearchParams();
+  if (from) q.set('from', from);
+  if (to) q.set('to', to);
+  return `${API_BASE_URL}/api/deadlines/export/ical?${q.toString()}`;
+}
+
+// --- Financial Impact Estimator ---
+export async function getFinancialImpact(
+  documentId: string,
+  scenario?: string
+): Promise<{
+  success: boolean;
+  documentId: string;
+  estimate: {
+    taxPayable: { amount: number | null; currency: string; description: string } | null;
+    lateFees: { amount: number | null; currency: string; description: string } | null;
+    interest: { amount: number | null; rate: string; description: string } | null;
+    worstCaseExposure: { amount: number | null; currency: string; description: string } | null;
+    summary: string;
+    scenario?: string | null;
+  };
+}> {
+  const response = await apiClient.post('/api/financial-impact', { documentId, scenario });
+  return response.data;
+}
+
+// --- Explain with level (simple / detailed / professional) ---
+export interface ExplainRequestWithLevel extends ExplainRequest {
+  level?: 'simple' | 'detailed' | 'professional';
+}
+
+export async function explainDocumentWithLevel(
+  request: ExplainRequestWithLevel
+): Promise<ExplainResponse & { level?: string }> {
+  const response = await apiClient.post('/api/explain', request);
+  return response.data;
+}
+
+// --- Risk Clauses (Why Is This Risky? red/amber/green) ---
+export interface RiskClauseItem {
+  severity: 'red' | 'amber' | 'green';
+  clauseText: string;
+  startOffset?: number;
+  endOffset?: number;
+  reason: string;
+}
+
+export async function getRiskClauses(documentId: string): Promise<{
+  success: boolean;
+  documentId: string;
+  clauses: RiskClauseItem[];
+  summary: string;
+}> {
+  const response = await apiClient.get(`/api/risk-clauses/${documentId}`);
+  return response.data;
+}
+
+// --- Document Comments ---
+export interface DocumentComment {
+  id: string;
+  document_id: string;
+  user_id: string;
+  content: string;
+  mentions: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getDocumentComments(documentId: string): Promise<{
+  success: boolean;
+  comments: DocumentComment[];
+}> {
+  const response = await apiClient.get(`/api/comments/${documentId}`);
+  return response.data;
+}
+
+export async function createDocumentComment(
+  documentId: string,
+  content: string,
+  mentions?: string[]
+): Promise<{ success: boolean; comment: DocumentComment }> {
+  const response = await apiClient.post('/api/comments', { documentId, content, mentions });
+  return response.data;
+}
+
+export async function updateDocumentComment(
+  commentId: string,
+  content: string
+): Promise<{ success: boolean; comment: DocumentComment }> {
+  const response = await apiClient.put(`/api/comments/${commentId}`, { content });
+  return response.data;
+}
+
+export async function deleteDocumentComment(commentId: string): Promise<{ success: boolean }> {
+  const response = await apiClient.delete(`/api/comments/${commentId}`);
+  return response.data;
+}
+
+// --- Policy & SOP Matcher ---
+export async function matchPolicyWithContract(
+  policyDocumentId: string,
+  contractDocumentId: string
+): Promise<{
+  success: boolean;
+  policyDocumentId: string;
+  contractDocumentId: string;
+  policyFilename?: string;
+  contractFilename?: string;
+  policyViolations: Array<{ policyRule: string; contractClause: string; severity: string; description: string }>;
+  missingClauses: Array<{ requiredByPolicy: string; suggestion: string; priority: string }>;
+  summary: string;
+}> {
+  const response = await apiClient.post('/api/policy-matcher/match', {
+    policyDocumentId,
+    contractDocumentId,
+  });
+  return response.data;
+}
+
+// --- Share Safe Summary ---
+export async function generateShareSummary(
+  documentId: string,
+  title?: string
+): Promise<{
+  success: boolean;
+  documentId: string;
+  title: string;
+  summary: string;
+  shareableText: string;
+}> {
+  const response = await apiClient.post('/api/share-summary/generate', { documentId, title });
+  return response.data;
+}
+
+// --- Scam / Fraud Probability ---
+export async function getScamScore(documentId: string): Promise<{
+  success: boolean;
+  documentId: string;
+  scamProbability: number;
+  signals: Array<{ type: string; description: string; severity: string }>;
+  summary: string;
+}> {
+  const response = await apiClient.post('/api/scam-score', { documentId });
+  return response.data;
+}
+
+// --- Auto-generated Drafts ---
+export async function generateDraft(
+  documentId: string,
+  type: 'legal_reply' | 'email_response' | 'appeal_draft',
+  userIntent?: string
+): Promise<{
+  success: boolean;
+  documentId: string;
+  type: string;
+  draft: string;
+  subject?: string;
+  disclaimer: string;
+}> {
+  const response = await apiClient.post('/api/drafts/generate', {
+    documentId,
+    type,
+    userIntent,
+  });
+  return response.data;
+}
+
 

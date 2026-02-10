@@ -152,6 +152,29 @@
   border-bottom: 1px solid #e5e7eb;
   background: #f9fafb;
   gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.explanation-level-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.explanation-level-selector label {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+.explanation-level-selector select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  background: var(--bg-card);
+  color: var(--text-main);
+  cursor: pointer;
+  min-width: 160px;
 }
 
 .language-selector {
