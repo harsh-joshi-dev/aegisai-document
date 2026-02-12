@@ -71,7 +71,7 @@ export default function FinancialHealthDashboard() {
                   innerRadius={45}
                   outerRadius={70}
                   paddingAngle={2}
-                  label={({ name, value }) => `${name}: ${value}`}
+                  label={({ name, value }: { name: string; value?: number }) => `${name}: ${value ?? 0}`}
                 >
                   {pieData.map((entry) => (
                     <Cell key={entry.name} fill={entry.color} />
