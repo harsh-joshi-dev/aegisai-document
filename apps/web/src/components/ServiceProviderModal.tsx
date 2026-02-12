@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from '../contexts/LocationContext';
-import { getServiceProviders, ServiceProvider } from '../api/client';
+import { getServiceProviders, ServiceProvider, type ServiceProviderCategory } from '../api/client';
 import './ServiceProviderModal.css';
 
 interface ServiceProviderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  category: 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' | 'None';
+  category: ServiceProviderCategory;
   riskExplanation?: string;
   documentName?: string;
 }
@@ -58,6 +58,14 @@ export default function ServiceProviderModal({
         return '✅';
       case 'Operational':
         return '⚙️';
+      case 'Medical':
+        return '🏥';
+      case 'NBFC':
+        return '🏦';
+      case 'CharteredAccountant':
+        return '📒';
+      case 'DPDPConsultant':
+        return '🔒';
       default:
         return '📋';
     }
@@ -73,6 +81,14 @@ export default function ServiceProviderModal({
         return 'Locate compliance consultants and experts';
       case 'Operational':
         return 'Discover business consultants and operational advisors';
+      case 'Medical':
+        return 'Healthcare and medical providers';
+      case 'NBFC':
+        return 'NBFCs and microfinance institutions by location';
+      case 'CharteredAccountant':
+        return 'Chartered Accountants for verification and audit';
+      case 'DPDPConsultant':
+        return 'DPDP compliance and data protection consultants';
       default:
         return '';
     }

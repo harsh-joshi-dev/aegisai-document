@@ -121,6 +121,12 @@ function AppContent() {
               >
                 Dashboard
               </Link>
+              <Link
+                to="/pricing"
+                className={location.pathname === '/pricing' ? 'active' : ''}
+              >
+                Pricing
+              </Link>
               <div className="user-info">
                 <img src={user.picture || '/default-avatar.png'} alt={user.name} className="user-avatar" />
                 <span className="user-name">{user.name}</span>

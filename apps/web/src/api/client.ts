@@ -284,8 +284,12 @@ export interface Location {
   country?: string;
 }
 
+export type ServiceProviderCategory =
+  | 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' | 'None'
+  | 'NBFC' | 'CharteredAccountant' | 'DPDPConsultant';
+
 export async function getServiceProviders(
-  category: 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' | 'None',
+  category: ServiceProviderCategory,
   location: Location
 ): Promise<ServiceProvidersResponse> {
   const response = await apiClient.post<ServiceProvidersResponse>('/api/service-providers', {

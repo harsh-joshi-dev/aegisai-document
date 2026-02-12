@@ -44,6 +44,17 @@ export const featuresByCategory: NavCategory[] = [
     ],
   },
   {
+    id: 'sme-lending',
+    label: 'SME Lending (India)',
+    features: [
+      { id: 'loan-applications', label: 'Loan Applications (ULI)', type: 'page', path: '/' },
+      { id: 'financial-consistency', label: 'Financial Consistency Report', type: 'feature' },
+      { id: 'due-diligence', label: 'Due Diligence Report (NBFC)', type: 'feature' },
+      { id: 'dpdp-compliance', label: 'DPDP Consent & Rights', type: 'page', path: '/' },
+      { id: 'pricing', label: 'Pricing (INR)', type: 'page', path: '/pricing' },
+    ],
+  },
+  {
     id: 'compliance',
     label: 'Compliance',
     features: [

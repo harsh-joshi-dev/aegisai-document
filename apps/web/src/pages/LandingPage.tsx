@@ -40,32 +40,32 @@ export default function LandingPage() {
     setActiveFaq(activeFaq === index ? null : index);
   };
 
-  // Image slider data
+  // Image slider data — India SME Lending
   const sliderImages = [
     {
-      title: 'Document Analysis Dashboard',
-      description: 'Real-time risk assessment and AI-powered insights',
+      title: 'ULI Document Fetch',
+      description: 'GST returns, ITR, bank statements & Aadhaar with consent-based access',
+      image: '📄'
+    },
+    {
+      title: 'Consistency Score & Risk Flags',
+      description: 'GST vs ITR revenue mismatch, employment continuity, bank velocity rules',
       image: '📊'
     },
     {
-      title: 'Agent Swarm in Action',
-      description: 'Multiple AI agents working simultaneously on document review',
-      image: '🤖'
+      title: 'Due Diligence Report',
+      description: 'NBFC-ready credit committee report: Approve / Review / Decline',
+      image: '📋'
     },
     {
-      title: 'Interactive Chat Interface',
-      description: 'Ask questions and get instant answers from your documents',
-      image: '💬'
+      title: 'DPDP Compliance',
+      description: 'Immutable consent logs, 90-day auto-deletion, data principal rights',
+      image: '🔒'
     },
     {
-      title: 'Risk Heatmap Visualization',
-      description: 'Visual representation of document risks across your portfolio',
-      image: '🔥'
-    },
-    {
-      title: 'Auto-Redlining Feature',
-      description: 'AI-suggested edits aligned with your company playbook',
-      image: '✏️'
+      title: 'Indic Language OCR',
+      description: 'Hindi, Gujarati, Tamil & more — Sarvam AI vision for regional documents',
+      image: '🌐'
     }
   ];
 
@@ -141,7 +141,8 @@ export default function LandingPage() {
           <div className="landing-nav-links">
             <a href="#features" className="nav-link">Features</a>
             <a href="#how-it-works" className="nav-link">How it Works</a>
-            <a href="#security" className="nav-link">Security</a>
+            <Link to="/pricing" className="nav-link">Pricing (INR)</Link>
+            <a href="#security" className="nav-link">Security & DPDP</a>
             <a href="#testimonials" className="nav-link">Testimonials</a>
             <div className="nav-divider"></div>
             <Link to="/login" className="nav-link">Log In</Link>
@@ -160,31 +161,30 @@ export default function LandingPage() {
           <div className="hero-content reveal fade-up">
             <div className="hero-badge">
               <span className="badge-dot"></span>
-              <span>v2.0 Now Available</span>
+              <span>India 2026 — ULI & DPDP Compliant</span>
             </div>
             <h1 className="hero-title">
-              Legal Intelligence <br />
+              SME Lending Intelligence <br />
               <span className="gradient-text-primary">At The Speed of AI.</span>
             </h1>
             <p className="hero-description">
-              Stop manually reviewing contracts. Aegis employs autonomous agent swarms to
-              <strong> extract</strong>, <strong> audit</strong>, and <strong> negotiate</strong> your documents in seconds.
+              Connect to GST, ITR, bank statements & Aadhaar via <strong>ULI</strong>. Get <strong>consistency scores</strong>, risk flags, and NBFC-ready due diligence reports — with full <strong>DPDP</strong> consent logging and data localisation.
             </p>
             <div className="hero-cta-group">
               <button onClick={handleGetStarted} className="btn btn-primary btn-lg">
-                Start Analyzing Documents
+                Start Loan Analysis
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </button>
-              <button className="btn btn-secondary btn-lg" onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}>
-                View Interactive Demo
-              </button>
+              <Link to="/pricing" className="btn btn-secondary btn-lg">
+                View INR Pricing
+              </Link>
             </div>
             <div className="hero-trust">
-              <p>Trusted by forward-thinking legal teams</p>
+              <p>Trusted by NBFCs and microfinance institutions</p>
               <div className="trust-logos">
-                {['Acme Corp', 'GlobalTech', 'LawFlow', 'LexisNext'].map((logo, i) => (
+                {['GST–ITR Consistency', 'DPDP Audit Trail', 'Indic Language OCR', '90-Day Auto-Delete'].map((logo, i) => (
                   <span key={i} className="trust-logo">{logo}</span>
                 ))}
               </div>
@@ -200,7 +200,7 @@ export default function LandingPage() {
                     <div className="light yellow"></div>
                     <div className="light green"></div>
                   </div>
-                  <div className="mockup-address">aegis.ai/dashboard/contracts/msa-v2.pdf</div>
+                  <div className="mockup-address">aegis.ai/loan-applications/uli-consent</div>
                 </div>
                 <div className="mockup-body">
                   <div className="mockup-sidebar">
@@ -222,11 +222,11 @@ export default function LandingPage() {
                     <div className="ai-popover">
                       <div className="ai-avatar">🤖</div>
                       <div className="ai-message">
-                        <strong>Critical Risk Detected</strong>
-                        <p>This indemnity clause is uncapped. Suggest adding a liability cap of 2x fees.</p>
+                        <strong>Revenue Mismatch Flag</strong>
+                        <p>GST taxable value 40% higher than ITR gross receipts. Review for credit committee.</p>
                         <div className="ai-actions">
-                          <button className="btn-xs primary">Auto-Fix</button>
-                          <button className="btn-xs secondary">Ignore</button>
+                          <button className="btn-xs primary">Due Diligence Report</button>
+                          <button className="btn-xs secondary">View Consent Log</button>
                         </div>
                       </div>
                     </div>
@@ -243,24 +243,24 @@ export default function LandingPage() {
         <div className="section-container">
           <div className="stats-grid reveal fade-up">
             <div className="stat-card">
-              <div className="stat-icon">⚡</div>
-              <div className="stat-number" data-target="500">0</div>
-              <div className="stat-label">Documents Analyzed</div>
+              <div className="stat-icon">📄</div>
+              <div className="stat-number" data-target="100">0</div>
+              <div className="stat-label">ULI API Calls / Min</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">⏱️</div>
+              <div className="stat-icon">✓</div>
               <div className="stat-number" data-target="95">0</div>
-              <div className="stat-label">% Time Saved</div>
+              <div className="stat-label">% GST–ITR Match Accuracy</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">🎯</div>
-              <div className="stat-number" data-target="99">0</div>
-              <div className="stat-label">% Accuracy</div>
+              <div className="stat-icon">🔒</div>
+              <div className="stat-number" data-target="90">0</div>
+              <div className="stat-label">Day DPDP Retention</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">👥</div>
-              <div className="stat-number" data-target="1000">0</div>
-              <div className="stat-label">Active Users</div>
+              <div className="stat-icon">🌐</div>
+              <div className="stat-number" data-target="22">0</div>
+              <div className="stat-label">Indian Languages (Voice)</div>
             </div>
           </div>
         </div>
@@ -270,8 +270,8 @@ export default function LandingPage() {
       <section id="slider" className="slider-section section-padding dark-section">
         <div className="section-container">
           <div className="section-header reveal fade-up">
-            <h2 className="section-title">See Aegis in Action</h2>
-            <p className="section-subtitle">Explore our powerful features through interactive demonstrations</p>
+            <h2 className="section-title">SME Lending in Action</h2>
+            <p className="section-subtitle">ULI integration, consistency checks, and DPDP-compliant workflows</p>
           </div>
           <div className="slider-container reveal zoom-in">
             <div className="slider-wrapper">
