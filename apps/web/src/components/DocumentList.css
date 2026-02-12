@@ -45,13 +45,26 @@
 .document-filters {
   margin-bottom: var(--spacing-xl);
   padding: var(--spacing-lg);
-  background: var(--bg-card);
+  background: linear-gradient(165deg, var(--bg-card) 0%, rgba(255, 255, 255, 0.02) 100%);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--border-subtle);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.document-filters::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+  opacity: 0.65;
 }
 
 .document-filters-mobile .document-filters-mobile-icons {
@@ -830,17 +843,32 @@
 }
 
 .document-card {
-  background: var(--bg-card);
+  background: linear-gradient(165deg, var(--bg-card) 0%, rgba(255, 255, 255, 0.02) 100%);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--border-subtle);
-  transition: transform 0.25s var(--ease-expo), box-shadow 0.25s ease, border-color 0.25s ease;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22), 0 0 0 1px var(--border-subtle);
+  transition: transform 0.25s var(--ease-expo), box-shadow 0.3s ease, border-color 0.25s ease;
   position: relative;
   overflow: hidden;
   animation: slideUp 0.4s var(--ease-expo) both;
   cursor: move;
   user-select: none;
+}
+
+.document-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary) 0%, transparent 60%);
+  opacity: 0.5;
+}
+
+.document-card:hover {
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28), 0 0 0 1px var(--border-subtle);
 }
 
 .document-card:active {

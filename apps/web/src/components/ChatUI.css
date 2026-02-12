@@ -3,17 +3,29 @@
   flex-direction: column;
   height: calc(100vh - 200px);
   max-height: 850px;
-  background: var(--bg-card);
+  background: linear-gradient(165deg, var(--bg-card) 0%, rgba(255, 255, 255, 0.02) 100%);
   border-radius: var(--radius-xl);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--border-subtle);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28), 0 0 0 1px var(--border-subtle);
   border: 1px solid var(--border-light);
   overflow: hidden;
+  position: relative;
+}
+
+.chat-ui::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+  z-index: 1;
 }
 
 .chat-header {
   padding: var(--spacing-xl);
   border-bottom: 1px solid var(--border-light);
-  background: var(--bg-primary);
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.06) 0%, transparent 100%);
 }
 
 .header-title-section {

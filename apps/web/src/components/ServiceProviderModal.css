@@ -24,17 +24,29 @@
   }
 }
 
-.modal-content {
-  background: var(--bg-card);
+.service-provider-modal-content {
+  background: linear-gradient(165deg, var(--bg-card) 0%, rgba(255, 255, 255, 0.02) 100%);
   border-radius: 24px;
   max-width: 1200px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border-subtle);
-  animation: slideUp 0.3s ease;
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   border: 1px solid var(--border-light);
+}
+
+.service-provider-modal-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+  border-radius: 24px 24px 0 0;
+  z-index: 1;
 }
 
 @keyframes slideUp {
@@ -510,7 +522,7 @@
     padding: 1rem;
   }
 
-  .modal-content {
+  .service-provider-modal-content {
     max-height: 95vh;
   }
 

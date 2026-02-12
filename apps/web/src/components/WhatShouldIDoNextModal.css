@@ -1,11 +1,23 @@
 /* What Should I Do Next - Premium modal */
 .what-should-i-do-next-modal {
   max-width: 560px;
-  background: var(--bg-card);
+  background: linear-gradient(165deg, var(--bg-card) 0%, rgba(255, 255, 255, 0.02) 100%);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-subtle);
   overflow: hidden;
+  position: relative;
+}
+
+.what-should-i-do-next-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+  z-index: 1;
 }
 
 .what-should-i-do-next-modal .modal-header {
@@ -14,7 +26,7 @@
   align-items: center;
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-card-hover);
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.06) 0%, transparent 100%);
 }
 
 .what-should-i-do-next-modal .modal-header h2 {
