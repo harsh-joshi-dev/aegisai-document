@@ -4,9 +4,7 @@ import { LocationProvider } from './contexts/LocationContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import UploadPage from './pages/upload';
-import ChatPage from './pages/chat';
 import LandingPage from './pages/LandingPage';
-import RiskTrendsDashboard from './components/dashboard/RiskTrendsDashboard';
 import LoginPage from './components/LoginPage';
 import PricingPage from './pages/PricingPage';
 import ContactPage from './pages/ContactPage';
@@ -110,18 +108,6 @@ function AppContent() {
                 Upload
               </Link>
               <Link
-                to="/chat"
-                className={location.pathname === '/chat' ? 'active' : ''}
-              >
-                Chat
-              </Link>
-              <Link
-                to="/dashboard"
-                className={location.pathname === '/dashboard' ? 'active' : ''}
-              >
-                Dashboard
-              </Link>
-              <Link
                 to="/pricing"
                 className={location.pathname === '/pricing' ? 'active' : ''}
               >
@@ -140,8 +126,6 @@ function AppContent() {
           <Routes>
             <Route path="/document/:documentId" element={<SharedDocumentPage />} />
             <Route path="/" element={<UploadPage />} />
-            <Route path="/chat" element={<ChatPage />} />
-            <Route path="/dashboard" element={<RiskTrendsDashboard />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />

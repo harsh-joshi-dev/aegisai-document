@@ -5,10 +5,7 @@ import { getServiceProviders, getAllNearbyProviders, Location } from '../service
 const router = Router();
 
 const serviceProviderRequestSchema = z.object({
-  category: z.enum([
-    'Legal', 'Financial', 'Compliance', 'Operational', 'Medical', 'None',
-    'NBFC', 'CharteredAccountant', 'DPDPConsultant', // India SME Lending
-  ]),
+  category: z.enum(['NBFC', 'CharteredAccountant', 'DPDPConsultant', 'None']),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   limit: z.number().int().min(1).max(20).optional().default(5),

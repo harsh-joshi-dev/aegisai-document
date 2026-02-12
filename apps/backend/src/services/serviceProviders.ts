@@ -4,8 +4,8 @@
 export interface ServiceProvider {
   id: string;
   name: string;
-  category: 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical';
-  type: string; // e.g., "Lawyer", "Advocate", "Accountant", "Consultant", "Doctor", "Clinic"
+  category: 'NBFC' | 'CharteredAccountant' | 'DPDPConsultant' | 'Financial'; // Financial used when mapping from Places
+  type: string;
   phone: string;
   email?: string;
   address: string;
@@ -16,19 +16,13 @@ export interface ServiceProvider {
   longitude: number;
   rating?: number;
   specialization?: string[];
-  distance?: number; // in km
+  distance?: number;
   website?: string;
   placeId?: string;
 }
 
-// Map document categories to Google Places search terms
+// ULI + DPDP only: NBFC, CA, DPDP Consultant
 const CATEGORY_TO_SEARCH_TERMS: Record<string, string[]> = {
-  Legal: ['lawyer', 'attorney', 'law firm', 'advocate', 'legal services'],
-  Financial: ['accountant', 'financial advisor', 'tax consultant', 'CPA', 'financial services'],
-  Compliance: ['compliance consultant', 'regulatory consultant', 'compliance services'],
-  Operational: ['business consultant', 'operations consultant', 'business advisor'],
-  Medical: ['doctor', 'physician', 'clinic', 'medical center', 'hospital', 'healthcare provider', 'pharmacy'],
-  // India SME Lending
   NBFC: ['NBFC', 'microfinance', 'small finance bank', 'lending company', 'loan office'],
   CharteredAccountant: ['chartered accountant', 'CA firm', 'CA office', 'audit firm'],
   DPDPConsultant: ['data protection consultant', 'privacy consultant', 'DPDP compliance'],
@@ -108,8 +102,7 @@ async function getProvidersFromGooglePlaces(
           const provider: ServiceProvider = {
             id: place.place_id,
             name: place.name,
-            category: (category === 'NBFC' || category === 'CharteredAccountant' || category === 'DPDPConsultant'
-              ? 'Financial' : category) as ServiceProvider['category'],
+            category: (category === 'NBFC' || category === 'CharteredAccountant' || category === 'DPDPConsultant' ? category : 'Financial') as ServiceProvider['category'],
             type: place.types?.[0]?.replace(/_/g, ' ') || term,
             phone: phone,
             address: place.formatted_address || '',
@@ -147,168 +140,82 @@ async function getProvidersFromGooglePlaces(
   }
 }
 
-// Fallback mock data (used when API key is not available)
+// Fallback mock data — ULI + DPDP only: NBFC, CA, DPDP Consultant (India)
 const FALLBACK_PROVIDERS: ServiceProvider[] = [
-  // Legal - Lawyers & Advocates
   {
-    id: '1',
-    name: 'John Smith Law Firm',
-    category: 'Legal',
-    type: 'Lawyer',
-    phone: '+1-555-0101',
-    email: 'john.smith@lawfirm.com',
-    address: '123 Main Street, Suite 200',
-    city: 'San Francisco',
-    state: 'California',
-    country: 'USA',
-    latitude: 37.7749,
-    longitude: -122.4194,
-    rating: 4.8,
-    specialization: ['Contract Law', 'Corporate Law', 'Employment Law'],
+    id: 'nbfc-1',
+    name: 'SME Finance NBFC',
+    category: 'NBFC',
+    type: 'NBFC',
+    phone: '+91-98765-43210',
+    address: 'MG Road, Bangalore',
+    city: 'Bangalore',
+    state: 'Karnataka',
+    country: 'India',
+    latitude: 12.9716,
+    longitude: 77.5946,
+    rating: 4.5,
+    specialization: ['SME Lending', 'Microfinance'],
   },
   {
-    id: '2',
-    name: 'Sarah Johnson Legal Services',
-    category: 'Legal',
-    type: 'Advocate',
-    phone: '+1-555-0102',
-    email: 'sarah.j@legal.com',
-    address: '456 Market Street',
-    city: 'San Francisco',
-    state: 'California',
-    country: 'USA',
-    latitude: 37.7849,
-    longitude: -122.4094,
-    rating: 4.9,
-    specialization: ['Contract Law', 'Intellectual Property'],
-  },
-  {
-    id: '3',
-    name: 'Michael Chen & Associates',
-    category: 'Legal',
-    type: 'Lawyer',
-    phone: '+1-555-0103',
-    address: '789 Broadway',
-    city: 'New York',
-    state: 'New York',
-    country: 'USA',
-    latitude: 40.7128,
-    longitude: -74.0060,
-    rating: 4.7,
-    specialization: ['Corporate Law', 'M&A'],
-  },
-  // Financial - Accountants & Financial Advisors
-  {
-    id: '4',
-    name: 'ABC Financial Advisors',
-    category: 'Financial',
-    type: 'Financial Advisor',
-    phone: '+1-555-0201',
-    email: 'contact@abcfina.com',
-    address: '321 Financial District',
-    city: 'San Francisco',
-    state: 'California',
-    country: 'USA',
-    latitude: 37.7949,
-    longitude: -122.4000,
+    id: 'nbfc-2',
+    name: 'Small Finance Lending',
+    category: 'NBFC',
+    type: 'NBFC',
+    phone: '+91-98765-43211',
+    address: 'Bandra West, Mumbai',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    country: 'India',
+    latitude: 19.0596,
+    longitude: 72.8295,
     rating: 4.6,
-    specialization: ['Tax Planning', 'Investment Advisory'],
+    specialization: ['ULI Integration', 'Loan Against GST'],
   },
   {
-    id: '5',
-    name: 'XYZ Accounting Services',
-    category: 'Financial',
-    type: 'Accountant',
-    phone: '+1-555-0202',
-    address: '654 Business Park',
-    city: 'New York',
-    state: 'New York',
-    country: 'USA',
-    latitude: 40.7028,
-    longitude: -74.0160,
+    id: 'ca-1',
+    name: 'Chartered Accountants & Co.',
+    category: 'CharteredAccountant',
+    type: 'Chartered Accountant',
+    phone: '+91-98765-43212',
+    address: 'Connaught Place, New Delhi',
+    city: 'New Delhi',
+    state: 'Delhi',
+    country: 'India',
+    latitude: 28.6304,
+    longitude: 77.2177,
     rating: 4.8,
-    specialization: ['Tax Preparation', 'Audit Services'],
+    specialization: ['GST', 'ITR Verification', 'Audit'],
   },
-  // Compliance - Compliance Consultants
   {
-    id: '6',
-    name: 'Compliance Experts Inc.',
-    category: 'Compliance',
-    type: 'Compliance Consultant',
-    phone: '+1-555-0301',
-    email: 'info@complianceexperts.com',
-    address: '987 Compliance Center',
-    city: 'San Francisco',
-    state: 'California',
-    country: 'USA',
-    latitude: 37.8049,
-    longitude: -122.4100,
-    rating: 4.9,
-    specialization: ['GDPR', 'SOC 2', 'HIPAA'],
-  },
-  // Operational - Business Consultants
-  {
-    id: '7',
-    name: 'Operational Excellence Group',
-    category: 'Operational',
-    type: 'Business Consultant',
-    phone: '+1-555-0401',
-    address: '147 Operations Hub',
-    city: 'San Francisco',
-    state: 'California',
-    country: 'USA',
-    latitude: 37.8149,
-    longitude: -122.4200,
+    id: 'ca-2',
+    name: 'Tax & Audit Firm',
+    category: 'CharteredAccountant',
+    type: 'CA Firm',
+    phone: '+91-98765-43213',
+    address: 'Anna Salai, Chennai',
+    city: 'Chennai',
+    state: 'Tamil Nadu',
+    country: 'India',
+    latitude: 13.0827,
+    longitude: 80.2707,
     rating: 4.7,
-    specialization: ['Process Optimization', 'Risk Management'],
-  },
-  // Medical - Doctors & Healthcare Providers
-  {
-    id: 'med-1',
-    name: 'City Medical Center',
-    category: 'Medical',
-    type: 'Medical Clinic',
-    phone: '+1-555-0501',
-    email: 'info@citymedical.com',
-    address: '789 Health Avenue',
-    city: 'New York',
-    state: 'New York',
-    country: 'USA',
-    latitude: 40.7128,
-    longitude: -74.0060,
-    rating: 4.8,
-    specialization: ['General Medicine', 'Prescription Review'],
+    specialization: ['Due Diligence', 'Financial Consistency'],
   },
   {
-    id: 'med-2',
-    name: 'Dr. Smith Family Practice',
-    category: 'Medical',
-    type: 'Family Doctor',
-    phone: '+1-555-0502',
-    email: 'contact@drsmith.com',
-    address: '456 Medical Plaza',
-    city: 'San Francisco',
-    state: 'California',
-    country: 'USA',
-    latitude: 37.7849,
-    longitude: -122.4094,
+    id: 'dpdp-1',
+    name: 'DPDP Compliance Advisors',
+    category: 'DPDPConsultant',
+    type: 'DPDP Consultant',
+    phone: '+91-98765-43214',
+    address: 'Salt Lake, Kolkata',
+    city: 'Kolkata',
+    state: 'West Bengal',
+    country: 'India',
+    latitude: 22.5749,
+    longitude: 88.4339,
     rating: 4.9,
-    specialization: ['Family Medicine', 'Prescription Management'],
-  },
-  {
-    id: 'med-3',
-    name: 'HealthCare Plus Clinic',
-    category: 'Medical',
-    type: 'Healthcare Provider',
-    phone: '+1-555-0503',
-    address: '321 Wellness Drive',
-    city: 'Los Angeles',
-    state: 'California',
-    country: 'USA',
-    latitude: 34.0522,
-    longitude: -118.2437,
-    rating: 4.7,
-    specialization: ['Primary Care', 'Medical Consultation'],
+    specialization: ['Data Principal Rights', 'Consent Audit', 'Data Localisation'],
   },
 ];
 
@@ -340,9 +247,7 @@ export interface Location {
   country?: string;
 }
 
-export type ServiceProviderCategory =
-  | 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' | 'None'
-  | 'NBFC' | 'CharteredAccountant' | 'DPDPConsultant';
+export type ServiceProviderCategory = 'NBFC' | 'CharteredAccountant' | 'DPDPConsultant' | 'None';
 
 export async function getServiceProviders(
   category: ServiceProviderCategory,
@@ -353,8 +258,7 @@ export async function getServiceProviders(
     return [];
   }
 
-  const placesCategory = category as 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical';
-  const realProviders = await getProvidersFromGooglePlaces(placesCategory, userLocation);
+  const realProviders = await getProvidersFromGooglePlaces(category, userLocation);
   
   if (realProviders.length > 0) {
     console.log(`✅ Found ${realProviders.length} real providers from Google Places API`);
@@ -383,31 +287,23 @@ export async function getServiceProviders(
   return providers.slice(0, limit);
 }
 
-// Get all providers near a location (for fallback)
+// Get all providers near a location — ULI + DPDP only
 export async function getAllNearbyProviders(
   userLocation: Location,
   radiusKm: number = 50,
   limit: number = 10
 ): Promise<ServiceProvider[]> {
-  // Try to get real data for all categories
-  const allCategories: Array<'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical'> = 
-    ['Legal', 'Financial', 'Compliance', 'Operational', 'Medical'];
-  
+  const allCategories: ServiceProviderCategory[] = ['NBFC', 'CharteredAccountant', 'DPDPConsultant'];
   const allProviders: ServiceProvider[] = [];
-  
   for (const category of allCategories) {
     const providers = await getProvidersFromGooglePlaces(category, userLocation, radiusKm * 1000);
     allProviders.push(...providers);
   }
-
   if (allProviders.length > 0) {
-    // Remove duplicates and sort
     const unique = Array.from(new Map(allProviders.map(p => [p.id, p])).values());
     unique.sort((a, b) => (a.distance || 0) - (b.distance || 0));
     return unique.slice(0, limit);
   }
-
-  // Fallback to mock data
   const providers = FALLBACK_PROVIDERS.map((provider) => ({
     ...provider,
     distance: calculateDistance(
@@ -417,12 +313,7 @@ export async function getAllNearbyProviders(
       provider.longitude
     ),
   }));
-
-  // Filter by radius
   const nearby = providers.filter((p) => (p.distance || 0) <= radiusKm);
-
-  // Sort by distance
   nearby.sort((a, b) => (a.distance || 0) - (b.distance || 0));
-
   return nearby.slice(0, limit);
 }

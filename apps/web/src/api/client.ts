@@ -284,9 +284,7 @@ export interface Location {
   country?: string;
 }
 
-export type ServiceProviderCategory =
-  | 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' | 'None'
-  | 'NBFC' | 'CharteredAccountant' | 'DPDPConsultant';
+export type ServiceProviderCategory = 'NBFC' | 'CharteredAccountant' | 'DPDPConsultant' | 'None';
 
 export async function getServiceProviders(
   category: ServiceProviderCategory,

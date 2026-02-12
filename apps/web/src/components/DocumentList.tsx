@@ -305,26 +305,11 @@ export default function DocumentList(props: DocumentListProps = {}) {
   };
   
   // Determine category for service providers
-  const getProviderCategory = (document: Document): 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' | 'None' => {
-    if (document.riskCategory && document.riskCategory !== 'None') {
-      return document.riskCategory as 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' | 'None';
-    }
-    
-    // For Critical documents without category, infer from filename
-    if (document.riskLevel === 'Critical') {
-      const filename = document.filename?.toLowerCase() || '';
-      if (filename.includes('prescription') || filename.includes('medical') || filename.includes('doctor') || filename.includes('health')) {
-        return 'Medical';
-      } else if (filename.includes('contract') || filename.includes('legal') || filename.includes('agreement')) {
-        return 'Legal';
-      } else if (filename.includes('financial') || filename.includes('tax') || filename.includes('invoice')) {
-        return 'Financial';
-      } else {
-        return 'Legal'; // Default for Critical documents
-      }
-    }
-    
-    return 'None';
+  const getProviderCategory = (document: Document): 'NBFC' | 'CharteredAccountant' | 'DPDPConsultant' | 'None' => {
+    const filename = document.filename?.toLowerCase() || '';
+    if (filename.includes('gst') || filename.includes('itr') || filename.includes('tax') || filename.includes('bank')) return 'CharteredAccountant';
+    if (filename.includes('consent') || filename.includes('dpdp') || filename.includes('audit')) return 'DPDPConsultant';
+    return 'NBFC'; // Default for loan/ULI context
   };
 
   const handleShareDocument = (document: Document) => {
@@ -584,7 +569,7 @@ export default function DocumentList(props: DocumentListProps = {}) {
                           </svg>
                           <span className="button-info-name">Solution Providers</span>
                         </div>
-                        <p>Find professional service providers near you (shown for Critical documents)</p>
+                        <p>Find NBFC, Chartered Accountant, or DPDP consultants near you</p>
                       </div>
                     </div>
                   </div>
@@ -594,18 +579,6 @@ export default function DocumentList(props: DocumentListProps = {}) {
           </div>
           {!props.compact && (
             <>
-              <button
-                type="button"
-                onClick={() => setIsFinanceToolsOpen(true)}
-                className="finance-tools-header-btn"
-                title="Tax, reconciliation, fraud detection & more"
-              >
-                <svg className="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-                Finance & Tax Tools
-              </button>
               <button onClick={loadDocuments} className="refresh-button" title="Refresh list">
                 <svg className="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path d="M3 12a9 9 0 0118 0M21 12a9 9 0 00-18 0" strokeWidth="2" strokeLinecap="round"/>
@@ -857,7 +830,7 @@ export default function DocumentList(props: DocumentListProps = {}) {
           {selectedFolderFilter !== 'all' && selectedFolderFilter !== 'none' && visibleDocuments.length > 0 && (
             <div className="folder-actions-bar">
               <p className="folder-actions-hint">
-                Use these with the whole folder, or use Chat / Explain / Share / What If / Voice / Trust Score / Agent Swarm on each document below.
+                Use Due Diligence Report and NBFC/CA/DPDP providers for each document below.
               </p>
               <div className="folder-actions-buttons">
                 <Link
@@ -1034,130 +1007,27 @@ export default function DocumentList(props: DocumentListProps = {}) {
                   Chat
                 </button>
                 <button
-                  onClick={() => setSelectedDocumentForWhatNext(doc)}
-                  className="what-next-button"
-                  title="What should I do next? Risks, action, deadline, who should handle"
-                >
-                  <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  What Next?
-                </button>
-                <button
-                  onClick={() => handleExplainDocument(doc)}
-                  className="explain-button"
-                  title="Listen to document explanation"
-                  disabled={loadingExplanation}
-                >
-                  {loadingExplanation ? (
-                    <>
-                      <svg className="button-icon spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <circle cx="12" cy="12" r="10" strokeWidth="2" strokeDasharray="32" strokeDashoffset="32">
-                          <animate attributeName="stroke-dasharray" values="0 32;16 16;0 32;0 32" dur="1.5s" repeatCount="indefinite"/>
-                          <animate attributeName="stroke-dashoffset" values="0;-16;-32;-32" dur="1.5s" repeatCount="indefinite"/>
-                        </circle>
-                      </svg>
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07" strokeWidth="2"/>
-                      </svg>
-                      Explain
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => handleShareDocument(doc)}
-                  className="share-button"
-                  title="Share document"
-                >
-                  <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Share
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedDocumentForWhatIf(doc);
-                    setIsWhatIfOpen(true);
-                  }}
-                  className="what-if-button"
-                  title="What If Simulator"
-                >
-                  <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="12" cy="12" r="10" strokeWidth="2"/>
-                    <path d="M12 16v-4M12 8h.01" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                  What If
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedDocumentsForVoice([doc]);
-                    setIsVoiceModeOpen(true);
-                  }}
-                  className="voice-button"
-                  title="Voice-First Mode"
-                >
-                  <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" strokeWidth="2"/>
-                  </svg>
-                  Voice
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedDocumentForTrustScore(doc);
-                    setIsTrustScoreOpen(true);
-                  }}
-                  className="trust-score-button"
-                  title="Document Trust Score"
-                >
-                  <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M3 3v18h18M7 16l4-4 4 4 6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Trust Score
-                </button>
-                <button
                   onClick={() => {
                     setSelectedDocumentForAgentSwarm(doc);
                     setIsAgentSwarmOpen(true);
                   }}
                   className="agent-swarm-button"
-                  title="Autonomous Agent Swarm"
+                  title="Due Diligence Report (NBFC-ready)"
                 >
                   <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  Agent Swarm
+                  Due Diligence Report
                 </button>
-                {(doc.riskLevel === 'Critical' || (doc.riskCategory && doc.riskCategory !== 'None')) && (
-                  <button
-                    onClick={() => handleShowProviders(doc)}
-                    className="provider-button"
-                    title="Find solution providers"
-                  >
-                    <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    Solution Providers
-                  </button>
-                )}
                 <button
-                  onClick={() => {
-                    setSelectedDocumentForFeatures(doc);
-                    setDocumentFeaturesInitialTab('deadlines');
-                    setIsDocumentFeaturesOpen(true);
-                  }}
-                  className="more-features-button"
-                  title="Deadlines, Financial Impact, Why Risky?, Share Summary, Scam Score, Drafts, Comments"
+                  onClick={() => handleShowProviders(doc)}
+                  className="provider-button"
+                  title="NBFC, CA, or DPDP consultants"
                 >
                   <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="12" cy="12" r="1" strokeWidth="2"/>
-                    <circle cx="19" cy="12" r="1" strokeWidth="2"/>
-                    <circle cx="5" cy="12" r="1" strokeWidth="2"/>
+                    <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  More
+                  NBFC / CA / DPDP
                 </button>
               </div>
             </div>

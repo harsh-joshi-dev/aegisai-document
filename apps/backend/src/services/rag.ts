@@ -155,35 +155,19 @@ export async function queryRAG(
           const doc = documents[0];
           // Show providers for Critical documents OR if category is set
           if (doc.risk_level === 'Critical' || (doc.risk_category && doc.risk_category !== 'None')) {
-            // Determine category: use document category if available, otherwise infer from risk level
-            let category: 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' = 'Legal';
-            
-            if (doc.risk_category && doc.risk_category !== 'None') {
-              category = doc.risk_category as 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical';
-            } else if (doc.risk_level === 'Critical') {
-              // For Critical documents without category, try to infer from document content or default to Legal
-              // Check filename for hints
-              const filename = doc.filename?.toLowerCase() || '';
-              if (filename.includes('prescription') || filename.includes('medical') || filename.includes('doctor') || filename.includes('health')) {
-                category = 'Medical';
-              } else if (filename.includes('contract') || filename.includes('legal') || filename.includes('agreement')) {
-                category = 'Legal';
-              } else if (filename.includes('financial') || filename.includes('tax') || filename.includes('invoice')) {
-                category = 'Financial';
-              } else {
-                category = 'Legal'; // Default for Critical documents
-              }
+            const filename = doc.filename?.toLowerCase() || '';
+            let category: 'NBFC' | 'CharteredAccountant' | 'DPDPConsultant' = 'NBFC';
+            if (filename.includes('gst') || filename.includes('itr') || filename.includes('tax') || filename.includes('bank')) {
+              category = 'CharteredAccountant';
+            } else if (filename.includes('consent') || filename.includes('dpdp') || filename.includes('audit')) {
+              category = 'DPDPConsultant';
             }
-            
-            const providers = await getServiceProviders(category, userLocation, 3); // Get top 3
-            
+            const providers = await getServiceProviders(category, userLocation, 3);
             if (providers.length > 0) {
               const categoryMessages: Record<string, string> = {
-                Legal: 'I recommend reaching out to qualified legal professionals who can review this document and provide expert guidance.',
-                Financial: 'I suggest consulting with financial experts who can help you understand and address the financial aspects of this document.',
-                Compliance: 'I recommend contacting compliance consultants who specialize in regulatory matters and can assist with compliance requirements.',
-                Operational: 'I suggest reaching out to business consultants who can help you address operational concerns and optimize your processes.',
-                Medical: 'I recommend consulting with healthcare professionals who can review this medical document and provide expert guidance.',
+                NBFC: 'I recommend connecting with an NBFC or microfinance institution for loan-related next steps.',
+                CharteredAccountant: 'I suggest a Chartered Accountant for GST/ITR verification and due diligence.',
+                DPDPConsultant: 'I recommend a DPDP compliance consultant for consent audit and data principal rights.',
               };
               
               serviceProvidersInfo = {

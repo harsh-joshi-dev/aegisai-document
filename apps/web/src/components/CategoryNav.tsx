@@ -71,9 +71,9 @@ export default function CategoryNav() {
         onMouseEnter={() => featuresByCategory[0] && handleCategoryEnter(featuresByCategory[0])}
         aria-expanded={isOpen}
         aria-haspopup="true"
-        aria-label="Features by category"
+        aria-label="ULI & DPDP"
       >
-        Features
+        ULI & DPDP
         <span className="category-nav-chevron" aria-hidden>▼</span>
       </button>
 

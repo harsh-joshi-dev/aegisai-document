@@ -50,16 +50,6 @@ export default function ServiceProviderModal({
 
   const getCategoryIcon = (cat: string) => {
     switch (cat) {
-      case 'Legal':
-        return '⚖️';
-      case 'Financial':
-        return '💰';
-      case 'Compliance':
-        return '✅';
-      case 'Operational':
-        return '⚙️';
-      case 'Medical':
-        return '🏥';
       case 'NBFC':
         return '🏦';
       case 'CharteredAccountant':
@@ -73,16 +63,6 @@ export default function ServiceProviderModal({
 
   const getCategoryDescription = (cat: string) => {
     switch (cat) {
-      case 'Legal':
-        return 'Find qualified lawyers and legal advocates in your area';
-      case 'Financial':
-        return 'Connect with accountants and financial advisors nearby';
-      case 'Compliance':
-        return 'Locate compliance consultants and experts';
-      case 'Operational':
-        return 'Discover business consultants and operational advisors';
-      case 'Medical':
-        return 'Healthcare and medical providers';
       case 'NBFC':
         return 'NBFCs and microfinance institutions by location';
       case 'CharteredAccountant':
