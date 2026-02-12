@@ -382,8 +382,8 @@ export default function LandingPage() {
                 <div className="bento-icon-wrapper blue">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /></svg>
                 </div>
-                <h3>Autonomous Agent Swarms</h3>
-                <p>Five specialized AI agents collaborate to handle different aspects of document review simultaneously—privacy, finance, and legal.</p>
+                <h3>ULI + Due Diligence</h3>
+                <p>Fetch GST, ITR, bank statements & Aadhaar via ULI; run consistency checks and NBFC-ready due diligence reports with full DPDP audit.</p>
               </div>
               <div className="bento-visual swarm-visual">
                 <div className="agent-node a1">🔍</div>
@@ -398,8 +398,8 @@ export default function LandingPage() {
                 <div className="bento-icon-wrapper purple">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                 </div>
-                <h3>Risk Heatmaps</h3>
-                <p>Instantly visualize liability exposure across your entire contract database.</p>
+                <h3>Consistency Score</h3>
+                <p>GST vs ITR revenue mismatch, employment continuity, address verification, and bank velocity rules.</p>
               </div>
             </div>
 
@@ -408,8 +408,8 @@ export default function LandingPage() {
                 <div className="bento-icon-wrapper green">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                 </div>
-                <h3>Auto-Redlining</h3>
-                <p>Accept or reject AI-suggested edits that align with your company playbook.</p>
+                <h3>DPDP Consent Log</h3>
+                <p>Immutable audit trail for every ULI fetch: data principal, purpose, timestamp (IST).</p>
               </div>
             </div>
 
@@ -439,8 +439,8 @@ export default function LandingPage() {
                   <div className="bento-icon-wrapper orange">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
                   </div>
-                  <h3>Global Jurisdictions</h3>
-                  <p>Compliance checks against GDPR, CCPA, and laws in 50+ countries. Never miss a local regulation again.</p>
+                  <h3>DPDP & Data Localisation</h3>
+                  <p>India-only compliance: consent logging, 90-day auto-deletion, data principal rights, transfer blocker (no US/EU).</p>
                 </div>
                 <div className="bento-visual map-visual">
                   <div className="map-dot d1"></div>
@@ -457,29 +457,29 @@ export default function LandingPage() {
       <section className="use-cases-section section-padding">
         <div className="section-container">
           <div className="section-header reveal fade-up">
-            <h2 className="section-title">Perfect for Every Team</h2>
-            <p className="section-subtitle">See how different teams use Aegis to streamline their workflows</p>
+            <h2 className="section-title">Built for ULI & DPDP</h2>
+            <p className="section-subtitle">SME lending and data protection only</p>
           </div>
           <div className="use-cases-grid reveal fade-up">
             <div className="use-case-card">
-              <div className="use-case-icon">⚖️</div>
-              <h3>Legal Teams</h3>
-              <p>Review contracts 10x faster with AI-powered risk detection and clause analysis.</p>
+              <div className="use-case-icon">🏦</div>
+              <h3>NBFCs & MFIs</h3>
+              <p>Fetch borrower documents via ULI, run consistency checks, and generate due diligence reports for credit committees.</p>
             </div>
             <div className="use-case-card">
-              <div className="use-case-icon">💼</div>
-              <h3>Sales Teams</h3>
-              <p>Get instant feedback on NDAs and MSAs to close deals faster without legal bottlenecks.</p>
+              <div className="use-case-icon">📒</div>
+              <h3>Chartered Accountants</h3>
+              <p>Verify GST/ITR consistency and support audit trails with DPDP-compliant consent logs.</p>
             </div>
             <div className="use-case-card">
-              <div className="use-case-icon">🏢</div>
-              <h3>Compliance Teams</h3>
-              <p>Ensure all documents meet regulatory requirements across multiple jurisdictions.</p>
+              <div className="use-case-icon">🔒</div>
+              <h3>DPDP Compliance</h3>
+              <p>Consent logging, 30-day data principal rights, auto-deletion, and cross-border transfer controls.</p>
             </div>
             <div className="use-case-card">
-              <div className="use-case-icon">📊</div>
-              <h3>Finance Teams</h3>
-              <p>Identify financial risks and obligations in contracts before signing.</p>
+              <div className="use-case-icon">📄</div>
+              <h3>Loan Officers</h3>
+              <p>One flow: consent → ULI fetch → consistency score → due diligence report → audit trail.</p>
             </div>
           </div>
         </div>
@@ -523,19 +523,19 @@ export default function LandingPage() {
               <div className="col-header aegis">Aegis AI</div>
             </div>
             <div className="comparison-row">
-              <div className="row-label">Time per contract</div>
+              <div className="row-label">Time per loan file</div>
               <div className="row-val">2-4 Hours</div>
-              <div className="row-val highlight">5 Minutes</div>
+              <div className="row-val highlight">Minutes (ULI + consistency)</div>
             </div>
             <div className="comparison-row">
-              <div className="row-label">Cost per review</div>
-              <div className="row-val">$400+</div>
-              <div className="row-val highlight">$10</div>
+              <div className="row-label">Cost per file</div>
+              <div className="row-val">₹2,000+</div>
+              <div className="row-val highlight">₹149</div>
             </div>
             <div className="comparison-row">
-              <div className="row-label">Risk detection</div>
-              <div className="row-val">Prone to human error</div>
-              <div className="row-val highlight">99.9% accuracy</div>
+              <div className="row-label">DPDP audit</div>
+              <div className="row-val">Manual logs</div>
+              <div className="row-val highlight">100% consent trail</div>
             </div>
             <div className="comparison-row">
               <div className="row-label">Availability</div>
@@ -686,7 +686,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="testimonial-card reveal fade-up delay-200">
-              <div className="quote">"The agent swarm concept is real. It feels like having 5 extra lawyers in the room."</div>
+              <div className="quote">"Consistency score and due diligence report in minutes. Our credit committee loves it."</div>
               <div className="author">
                 <div className="avatar">MR</div>
                 <div>
@@ -696,7 +696,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="testimonial-card reveal fade-up delay-300">
-              <div className="quote">"Finally, legal tech that actually looks good and works fast. The UI is incredible."</div>
+              <div className="quote">"ULI fetch plus DPDP consent log in one place. Exactly what we needed for India SME lending."</div>
               <div className="author">
                 <div className="avatar">AL</div>
                 <div>
@@ -714,8 +714,8 @@ export default function LandingPage() {
         <div className="section-container reveal zoom-in">
           <div className="cta-box">
             <div className="cta-content">
-              <h2>Ready to modernize your legal stack?</h2>
-              <p>Join 500+ companies using Aegis AI today.</p>
+              <h2>Ready for ULI + DPDP?</h2>
+              <p>India SME Lending Intelligence — consent-based document fetch and full audit trail.</p>
               <div className="cta-buttons">
                 <button onClick={handleGetStarted} className="btn btn-primary btn-lg">Get Started Now</button>
                 <Link to="/contact" className="btn btn-outline btn-lg">Contact Sales</Link>
@@ -751,7 +751,7 @@ export default function LandingPage() {
               <a href="#">Blog</a>
             </div>
             <div className="link-col">
-              <h4>Legal</h4>
+              <h4>DPDP & Legal</h4>
               <Link to="/privacy">Privacy</Link>
               <Link to="/terms">Terms</Link>
             </div>

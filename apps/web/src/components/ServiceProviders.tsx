@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from '../contexts/LocationContext';
-import { getServiceProviders, ServiceProvider, Location as APILocation } from '../api/client';
+import { getServiceProviders, ServiceProvider, Location as APILocation, type ServiceProviderCategory } from '../api/client';
 import './ServiceProviders.css';
 
 interface ServiceProvidersProps {
-  category: 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' | 'None';
+  category: ServiceProviderCategory;
   riskExplanation?: string;
   onLocationDetected?: (location: APILocation) => void;
 }
@@ -51,6 +51,12 @@ export default function ServiceProviders({
 
   const getCategoryIcon = (cat: string) => {
     switch (cat) {
+      case 'NBFC':
+        return '🏦';
+      case 'CharteredAccountant':
+        return '📒';
+      case 'DPDPConsultant':
+        return '🔒';
       case 'Legal':
         return '⚖️';
       case 'Financial':

@@ -97,7 +97,7 @@ export default function FinancialHealthDashboard() {
       </div>
       {showCA && (
         <ServiceProviderModal
-          category="Financial"
+          category="CharteredAccountant"
           riskExplanation="Tax or compliance support"
           isOpen={showCA}
           onClose={() => setShowCA(false)}

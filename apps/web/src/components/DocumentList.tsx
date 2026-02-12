@@ -63,7 +63,7 @@ export default function DocumentList(props: DocumentListProps = {}) {
     riskCategory?: string;
   } | null>(null);
   const [explainLevel, setExplainLevel] = useState<'simple' | 'detailed' | 'professional'>('detailed');
-  const [loadingExplanation, setLoadingExplanation] = useState(false);
+  const [, setLoadingExplanation] = useState(false);
   const [isWhatIfOpen, setIsWhatIfOpen] = useState(false);
   const [selectedDocumentForWhatIf, setSelectedDocumentForWhatIf] = useState<Document | null>(null);
   const [isVoiceModeOpen, setIsVoiceModeOpen] = useState(false);
@@ -310,11 +310,6 @@ export default function DocumentList(props: DocumentListProps = {}) {
     if (filename.includes('gst') || filename.includes('itr') || filename.includes('tax') || filename.includes('bank')) return 'CharteredAccountant';
     if (filename.includes('consent') || filename.includes('dpdp') || filename.includes('audit')) return 'DPDPConsultant';
     return 'NBFC'; // Default for loan/ULI context
-  };
-
-  const handleShareDocument = (document: Document) => {
-    setSelectedDocumentForShare(document);
-    setIsShareModalOpen(true);
   };
 
   const handleExplainDocument = async (doc: Document, level?: 'simple' | 'detailed' | 'professional') => {
