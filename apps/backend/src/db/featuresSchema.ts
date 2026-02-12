@@ -93,7 +93,29 @@ export async function initializeFeaturesSchema() {
       );
     `);
 
-    console.log('✅ Features schema (deadlines, comments, risk clauses, cases, policies) initialized');
+    // India SME Lending: Loan applications (ULI + DPDP)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS loan_applications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        uli_consent_id VARCHAR(255) NOT NULL,
+        data_principal_id VARCHAR(100) NOT NULL,
+        documents JSONB NOT NULL DEFAULT '{}',
+        consistency_score INTEGER,
+        risk_flags JSONB DEFAULT '[]',
+        deletion_due_date DATE NOT NULL,
+        audit_trail JSONB DEFAULT '[]',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_loan_applications_user ON loan_applications(user_id);
+      CREATE INDEX IF NOT EXISTS idx_loan_applications_deletion ON loan_applications(deletion_due_date);
+      CREATE INDEX IF NOT EXISTS idx_loan_applications_data_principal ON loan_applications(data_principal_id);
+    `);
+
+    console.log('✅ Features schema (deadlines, comments, risk clauses, cases, policies, loan_applications) initialized');
   } catch (error) {
     console.error('Error initializing features schema:', error);
     throw error;

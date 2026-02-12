@@ -28,11 +28,15 @@ const CATEGORY_TO_SEARCH_TERMS: Record<string, string[]> = {
   Compliance: ['compliance consultant', 'regulatory consultant', 'compliance services'],
   Operational: ['business consultant', 'operations consultant', 'business advisor'],
   Medical: ['doctor', 'physician', 'clinic', 'medical center', 'hospital', 'healthcare provider', 'pharmacy'],
+  // India SME Lending
+  NBFC: ['NBFC', 'microfinance', 'small finance bank', 'lending company', 'loan office'],
+  CharteredAccountant: ['chartered accountant', 'CA firm', 'CA office', 'audit firm'],
+  DPDPConsultant: ['data protection consultant', 'privacy consultant', 'DPDP compliance'],
 };
 
 // Get service providers from Google Places API
 async function getProvidersFromGooglePlaces(
-  category: 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical',
+  category: string,
   location: Location,
   radius: number = 5000 // 5km default
 ): Promise<ServiceProvider[]> {
@@ -104,7 +108,8 @@ async function getProvidersFromGooglePlaces(
           const provider: ServiceProvider = {
             id: place.place_id,
             name: place.name,
-            category: category,
+            category: (category === 'NBFC' || category === 'CharteredAccountant' || category === 'DPDPConsultant'
+              ? 'Financial' : category) as ServiceProvider['category'],
             type: place.types?.[0]?.replace(/_/g, ' ') || term,
             phone: phone,
             address: place.formatted_address || '',
@@ -335,8 +340,12 @@ export interface Location {
   country?: string;
 }
 
+export type ServiceProviderCategory =
+  | 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' | 'None'
+  | 'NBFC' | 'CharteredAccountant' | 'DPDPConsultant';
+
 export async function getServiceProviders(
-  category: 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical' | 'None',
+  category: ServiceProviderCategory,
   userLocation: Location,
   limit: number = 5
 ): Promise<ServiceProvider[]> {
@@ -344,8 +353,8 @@ export async function getServiceProviders(
     return [];
   }
 
-  // Try to get real data from Google Places API first
-  const realProviders = await getProvidersFromGooglePlaces(category as 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical', userLocation);
+  const placesCategory = category as 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'Medical';
+  const realProviders = await getProvidersFromGooglePlaces(placesCategory, userLocation);
   
   if (realProviders.length > 0) {
     console.log(`✅ Found ${realProviders.length} real providers from Google Places API`);

@@ -12,6 +12,7 @@ const voiceRequestSchema = z.object({
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
   }).optional(),
+  language: z.string().optional(), // e.g. 'hi', 'ta', 'en' - 22 Indian languages (Sarvam Saaras v3)
 });
 
 // This endpoint processes voice input (transcribed text) and returns text response
@@ -20,7 +21,8 @@ router.post('/query', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const validated = voiceRequestSchema.parse(req.body);
-    const { question, language = 'en' } = req.body;
+    const { question, language: bodyLang } = req.body;
+    const language = bodyLang ?? validated.language ?? 'en';
 
     if (!question || typeof question !== 'string' || question.trim().length === 0) {
       return res.status(400).json({

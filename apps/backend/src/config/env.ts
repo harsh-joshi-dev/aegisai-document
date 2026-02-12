@@ -34,4 +34,18 @@ export const config = {
     password: process.env.SMTP_PASSWORD || process.env.SMTP_PASS || process.env.MAIL_PASSWORD || '',
     fromEmail: (process.env.FROM_EMAIL || process.env.MAIL_FROM || process.env.SENDER_EMAIL || '').trim(),
   },
+  // India SME Lending / ULI
+  uli: {
+    baseUrl: process.env.ULI_BASE_URL || 'https://sandbox.uli.org.in',
+    clientId: process.env.ULI_CLIENT_ID || '',
+    clientSecret: process.env.ULI_CLIENT_SECRET || '',
+  },
+  dpdp: {
+    approvedCountries: (process.env.DPDP_APPROVED_COUNTRIES || 'IN').split(',').map((c) => c.trim()),
+  },
+  sarvam: {
+    apiKey: process.env.SARVAM_API_KEY || '',
+    visionUrl: process.env.SARVAM_VISION_URL || 'https://api.sarvam.ai/vision',
+    voiceUrl: process.env.SARVAM_VOICE_URL || 'https://api.sarvam.ai/voice',
+  },
 } as const;

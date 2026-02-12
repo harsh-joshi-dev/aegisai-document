@@ -44,6 +44,10 @@ import policyMatcherRouter from './api/policyMatcher.js';
 import shareSummaryRouter from './api/shareSummary.js';
 import scamScoreRouter from './api/scamScore.js';
 import draftsRouter from './api/drafts.js';
+import uliRouter from './api/uli.js';
+import loanApplicationsRouter from './api/loanApplications.js';
+import indicRouter from './api/indic.js';
+import pricingRouter from './api/pricing.js';
 
 const app = express();
 
@@ -138,6 +142,10 @@ app.use('/api/policy-matcher', policyMatcherRouter);
 app.use('/api/share-summary', shareSummaryRouter);
 app.use('/api/scam-score', scamScoreRouter);
 app.use('/api/drafts', draftsRouter);
+app.use('/api/uli', uliRouter);
+app.use('/api/loan-applications', loanApplicationsRouter);
+app.use('/api/indic', indicRouter);
+app.use('/api/pricing', pricingRouter);
 
 // Risk clauses per document (nested under documents in some clients; mount as /api/risk-clauses/:documentId)
 // Already mounted as riskClausesRouter with GET /:documentId
@@ -170,6 +178,10 @@ async function start() {
     } else {
       console.warn('📧 SMTP not configured. Missing:', emailStatus.missing.join(', '), '— welcome and document emails will be skipped.');
     }
+
+    const { setupAlertCron, setupDPDPCron } = await import('./alerts/cron.js');
+    setupAlertCron();
+    setupDPDPCron();
     
     app.listen(config.server.port, '0.0.0.0', () => {
       console.log(`🚀 Server running on http://localhost:${config.server.port}`);

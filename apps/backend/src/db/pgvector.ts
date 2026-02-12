@@ -185,9 +185,19 @@ export async function initializeDatabase() {
     const { initializeFolders } = await import('../api/folders.js');
     await initializeFolders();
 
-    // Initialize feature tables (deadlines, comments, risk clauses, cases, policies)
+    // Initialize feature tables (deadlines, comments, risk clauses, cases, policies, loan_applications)
     const { initializeFeaturesSchema } = await import('./featuresSchema.js');
     await initializeFeaturesSchema();
+
+    // ULI consent log + encrypted document cache (India SME Lending)
+    const { initializeConsentLog } = await import('../integrations/uli/consentStore.js');
+    await initializeConsentLog();
+    const { initializeDocumentStore } = await import('../integrations/uli/documentStore.js');
+    await initializeDocumentStore();
+
+    // DPDP tables (rights requests, etc.)
+    const { initializeDPDPTables } = await import('../compliance/dpdp.js');
+    await initializeDPDPTables();
     
     // Check if pgvector is available
     const hasPgvector = await checkPgvectorAvailable();

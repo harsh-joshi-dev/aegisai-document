@@ -203,4 +203,68 @@ router.post('/evaluate', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * India SME Lending: Run consistency check rules (GST vs ITR, employment, address, bank velocity)
+ */
+router.post('/consistency', async (req: Request, res: Response) => {
+  try {
+    const { runAllConsistencyRules } = await import('../rules/indiaConsistencyRules.js');
+    const body = z.object({
+      gstReturns: z.array(z.object({
+        type: z.enum(['GSTR-1', 'GSTR-3B']),
+        period: z.string(),
+        taxableValue: z.number().optional(),
+        taxAmount: z.number().optional(),
+        fetchedAt: z.string().optional(),
+      })).optional().default([]),
+      itrForms: z.array(z.object({
+        type: z.enum(['ITR-V', 'Form 16']),
+        assessmentYear: z.string(),
+        grossReceipts: z.number().optional(),
+        fetchedAt: z.string().optional(),
+      })).optional().default([]),
+      bankStatements: z.array(z.object({
+        accountId: z.string(),
+        fromDate: z.string(),
+        toDate: z.string(),
+        transactions: z.array(z.object({
+          date: z.string(),
+          description: z.string(),
+          amount: z.number(),
+          type: z.enum(['credit', 'debit']),
+        })),
+        fetchedAt: z.string().optional(),
+      })).optional().default([]),
+      aadhaarXml: z.object({
+        maskedUid: z.string(),
+        addressLine1: z.string().optional(),
+        state: z.string().optional(),
+        pincode: z.string().optional(),
+        fetchedAt: z.string().optional(),
+      }).optional(),
+    }).parse(req.body);
+    const result = runAllConsistencyRules({
+      gstReturns: body.gstReturns,
+      itrForms: body.itrForms,
+      bankStatements: body.bankStatements,
+      aadhaarXml: body.aadhaarXml,
+    });
+    res.json({
+      success: true,
+      consistencyScore: result.consistencyScore,
+      riskFlags: result.riskFlags,
+      count: result.riskFlags.length,
+    });
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid request', details: e.errors });
+    }
+    console.error('Consistency rules error:', e);
+    res.status(500).json({
+      error: 'Failed to run consistency rules',
+      message: e instanceof Error ? e.message : 'Unknown error',
+    });
+  }
+});
+
 export default router;

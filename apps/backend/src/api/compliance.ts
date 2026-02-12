@@ -205,4 +205,126 @@ router.post('/retention/enforce', async (req: Request, res: Response) => {
   }
 });
 
+// --- DPDP (India Digital Personal Data Protection Act) ---
+const {
+  createRightsRequest,
+  getRightsRequests,
+  runDPDPAutoDeletion,
+  isTransferAllowed,
+  getApprovedCountries,
+  executeErasure,
+  fulfillAccessRequest,
+} = await import('../compliance/dpdp.js');
+const { logConsent, getConsentsByDataPrincipal } = await import('../integrations/uli/index.js');
+
+/**
+ * POST /api/compliance/consent/log
+ * Log explicit consent (called after ULI consent; immutable audit trail).
+ */
+router.post('/consent/log', async (req: Request, res: Response) => {
+  try {
+    const body = z.object({
+      consentId: z.string().min(1),
+      dataPrincipalId: z.string().min(1),
+      purpose: z.string().min(1),
+      uliConsentHandle: z.string().optional(),
+      dataTypes: z.array(z.string()),
+      expiresAt: z.string().datetime().optional(),
+    }).parse(req.body);
+    const timestamp = new Date().toISOString();
+    await logConsent({
+      consentId: body.consentId,
+      dataPrincipalId: body.dataPrincipalId,
+      purpose: body.purpose,
+      timestamp,
+      uliConsentHandle: body.uliConsentHandle,
+      dataTypes: body.dataTypes,
+      expiresAt: body.expiresAt,
+    });
+    res.json({ success: true, consentId: body.consentId, timestamp });
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Invalid request', details: e.errors });
+    console.error('Consent log error:', e);
+    res.status(500).json({ error: 'Failed to log consent', message: e instanceof Error ? e.message : 'Unknown' });
+  }
+});
+
+/**
+ * POST /api/compliance/dpdp/delete
+ * Cron: auto-delete personal data after retention (default 90 days).
+ */
+router.post('/dpdp/delete', async (req: Request, res: Response) => {
+  try {
+    const retentionDays = req.body?.retentionDays ?? 90;
+    const result = await runDPDPAutoDeletion(retentionDays);
+    res.json({
+      success: true,
+      uliDeleted: result.uliDeleted,
+      loansDeleted: result.loansDeleted,
+      message: `DPDP auto-deletion completed. ULI cache: ${result.uliDeleted}, loan applications: ${result.loansDeleted}.`,
+    });
+  } catch (e) {
+    console.error('DPDP delete error:', e);
+    res.status(500).json({ error: 'Failed to run auto-deletion', message: e instanceof Error ? e.message : 'Unknown' });
+  }
+});
+
+/**
+ * POST /api/compliance/dpdp/rights
+ * Data principal rights: access, correction, erasure (30-day SLA).
+ */
+router.post('/dpdp/rights', async (req: Request, res: Response) => {
+  try {
+    const body = z.object({
+      dataPrincipalId: z.string().min(1),
+      right: z.enum(['access', 'correction', 'erasure']),
+      details: z.record(z.unknown()).optional(),
+    }).parse(req.body);
+    const response = await createRightsRequest(body.dataPrincipalId, body.right, body.details);
+    res.json({ success: true, request: response });
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Invalid request', details: e.errors });
+    console.error('DPDP rights error:', e);
+    res.status(500).json({ error: 'Failed to create rights request', message: e instanceof Error ? e.message : 'Unknown' });
+  }
+});
+
+/**
+ * GET /api/compliance/dpdp/rights?dataPrincipalId=xxx
+ * Get status of data principal rights requests.
+ */
+router.get('/dpdp/rights', async (req: Request, res: Response) => {
+  try {
+    const dataPrincipalId = req.query.dataPrincipalId as string;
+    if (!dataPrincipalId) return res.status(400).json({ error: 'dataPrincipalId required' });
+    const requests = await getRightsRequests(dataPrincipalId);
+    res.json({ success: true, requests });
+  } catch (e) {
+    console.error('DPDP rights list error:', e);
+    res.status(500).json({ error: 'Failed to list rights requests', message: e instanceof Error ? e.message : 'Unknown' });
+  }
+});
+
+/**
+ * POST /api/compliance/dpdp/transfer-blocker
+ * Check if transfer to destination country is allowed (block US/EU by default).
+ */
+router.post('/dpdp/transfer-blocker', async (req: Request, res: Response) => {
+  try {
+    const body = z.object({
+      destinationCountryCode: z.string().length(2),
+    }).parse(req.body);
+    const allowed = isTransferAllowed(body.destinationCountryCode);
+    res.json({
+      success: true,
+      allowed,
+      destinationCountryCode: body.destinationCountryCode.toUpperCase(),
+      approvedCountries: getApprovedCountries(),
+    });
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Invalid request', details: e.errors });
+    res.status(500).json({ error: 'Transfer check failed', message: e instanceof Error ? e.message : 'Unknown' });
+  }
+});
+
 export default router;

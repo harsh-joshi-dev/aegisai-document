@@ -1,21 +1,14 @@
 /**
- * Cron job setup for alert checking
+ * Cron job setup for alert checking and DPDP auto-deletion
  */
 import cron from 'node-cron';
 import { checkAllAlerts, storeAlerts } from './scheduler.js';
+import { runDPDPAutoDeletion } from '../compliance/dpdp.js';
 
 /**
- * Setup alert checking cron job
- * Runs daily at 9 AM
+ * Setup alert checking cron job - runs daily at 9 AM
  */
 export function setupAlertCron(): void {
-  // In production, install: npm install node-cron
-  // Then uncomment the code below
-  
-  /*
-  const cron = require('node-cron');
-  
-  // Run daily at 9 AM
   cron.schedule('0 9 * * *', async () => {
     console.log('🔔 Running scheduled alert check...');
     try {
@@ -26,9 +19,23 @@ export function setupAlertCron(): void {
       console.error('❌ Alert check failed:', error);
     }
   });
-  */
+  console.log('✅ Alert cron: daily 9 AM');
+}
 
-  console.log('✅ Alert cron job ready (install node-cron to enable)');
-  console.log('   To enable: npm install node-cron');
-  console.log('   Then uncomment code in alerts/cron.ts');
+const DPDP_RETENTION_DAYS = parseInt(process.env.DPDP_RETENTION_DAYS || '90', 10);
+
+/**
+ * DPDP auto-deletion cron - runs daily at 2 AM IST; deletes expired ULI cache and loan data
+ */
+export function setupDPDPCron(): void {
+  cron.schedule('0 2 * * *', async () => {
+    console.log('🔒 Running DPDP auto-deletion...');
+    try {
+      const result = await runDPDPAutoDeletion(DPDP_RETENTION_DAYS);
+      console.log(`✅ DPDP deletion: ULI cache ${result.uliDeleted}, loan applications ${result.loansDeleted}`);
+    } catch (error) {
+      console.error('❌ DPDP auto-deletion failed:', error);
+    }
+  });
+  console.log('✅ DPDP cron: daily 2 AM (retention ' + DPDP_RETENTION_DAYS + ' days)');
 }
