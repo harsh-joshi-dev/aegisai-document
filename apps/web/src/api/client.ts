@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-// Use backend origin so the session cookie (set by backend) is sent with requests.
-// With the proxy, requests go to 5173 and the cookie for 3001 isn't sent, so login appears to fail.
+// All API calls use relative URLs so they go through the Vite dev proxy (same origin).
+// This ensures session cookies set by the backend are sent with every request.
 export const API_BASE_URL =
-  import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+  import.meta.env.VITE_API_URL ?? '';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -17,6 +17,16 @@ export const apiClient = axios.create({
 // If offline, we can enqueue certain JSON requests and retry later.
 // Uploads (multipart) are not queued here.
 import { enqueue } from '../mobile/offlineQueue';
+
+// Attach JWT Bearer token from localStorage to every request
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers = config.headers || {};
+    (config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
+});
 
 apiClient.interceptors.request.use((config) => {
   // Never queue multipart/form-data (file uploads) - they must go through when online.
@@ -108,6 +118,9 @@ export interface Document {
   riskLevel: 'Critical' | 'Warning' | 'Normal';
   riskCategory?: 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'None';
   riskConfidence?: number;
+  riskScore?: number | null;
+  summary?: string | null;
+  extractedData?: Record<string, any> | null;
   versionNumber?: number;
   folderId?: string | null;
   metadata?: Record<string, any>;
@@ -173,6 +186,55 @@ export async function uploadFile(file: File): Promise<UploadResponse> {
   return response.data;
 }
 
+export interface FinancialCompareRequest {
+  docIds: string[];
+}
+
+export interface FinancialCompareResponse {
+  success: boolean;
+  comparisonId: string | null;
+  documents: Array<{
+    id: string;
+    filename: string;
+    extractedData: Record<string, any>;
+    summary?: string | null;
+    riskScore?: number | null;
+    riskLevel?: string | null;
+  }>;
+  mismatches: Array<{
+    field: string;
+    message: string;
+    severity: 'LOW' | 'MEDIUM' | 'HIGH';
+    explanation?: string | null;
+    docs?: any;
+  }>;
+  riskScore: number;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+  summary: string;
+}
+
+export async function compareFinancialDocuments(request: FinancialCompareRequest): Promise<FinancialCompareResponse> {
+  const response = await apiClient.post<FinancialCompareResponse>('/api/compare', request);
+  return response.data;
+}
+
+export interface GenerateReportRequest {
+  documentIds: string[];
+}
+
+export interface GenerateReportResponse {
+  success: boolean;
+  reportId: string | null;
+  report: string;
+  documentIds: string[];
+  createdAt: string;
+}
+
+export async function generateAuditReport(request: GenerateReportRequest): Promise<GenerateReportResponse> {
+  const response = await apiClient.post<GenerateReportResponse>('/api/report', request);
+  return response.data;
+}
+
 export async function uploadTextDocument(title: string, content: string): Promise<UploadResponse> {
   const response = await apiClient.post<UploadResponse>('/api/upload/text', {
     title,
@@ -233,6 +295,16 @@ export async function getDocumentContent(documentId: string): Promise<DocumentCo
   return response.data;
 }
 
+export interface DocumentDetailsResponse {
+  success: boolean;
+  document: Document;
+}
+
+export async function getDocument(documentId: string): Promise<DocumentDetailsResponse> {
+  const response = await apiClient.get<DocumentDetailsResponse>(`/api/documents/${documentId}`);
+  return response.data;
+}
+
 export async function getDocuments(filters?: {
   riskLevel?: 'Critical' | 'Warning' | 'Normal';
   riskCategory?: 'Legal' | 'Financial' | 'Compliance' | 'Operational' | 'None';
@@ -246,6 +318,17 @@ export async function getDocuments(filters?: {
   }
 
   const response = await apiClient.get<DocumentsResponse>(`/api/documents?${params.toString()}`);
+  return response.data;
+}
+
+export interface DeleteDocumentResponse {
+  success: boolean;
+  message: string;
+  documentId: string;
+}
+
+export async function deleteDocument(documentId: string): Promise<DeleteDocumentResponse> {
+  const response = await apiClient.delete<DeleteDocumentResponse>(`/api/documents/${documentId}`);
   return response.data;
 }
 
@@ -296,23 +379,6 @@ export async function getServiceProviders(
     longitude: location.longitude,
     limit: 5,
   });
-  return response.data;
-}
-
-export async function compareDocuments(
-  v1File: File,
-  v2File: File,
-  documentId?: string
-): Promise<ComparisonResponse> {
-  const formData = new FormData();
-  formData.append('v1', v1File);
-  formData.append('v2', v2File);
-  if (documentId) formData.append('documentId', documentId);
-
-  const response = await apiClient.post<ComparisonResponse>('/api/compare', formData, {
-    // Do not set Content-Type so browser sets multipart boundary
-  });
-
   return response.data;
 }
 
@@ -575,6 +641,11 @@ export async function removeDocumentFromFolder(folderId: string, documentId: str
 
 export async function organizeFoldersByYear(): Promise<{ success: boolean; message: string; moved: number; total: number }> {
   const response = await apiClient.post<{ success: boolean; message: string; moved: number; total: number }>('/api/folders/organize-by-year', {});
+  return response.data;
+}
+
+export async function organizeFoldersByVendor(): Promise<{ success: boolean; message: string; moved: number; total: number; vendors: number }> {
+  const response = await apiClient.post<{ success: boolean; message: string; moved: number; total: number; vendors: number }>('/api/folders/organize-by-vendor', {});
   return response.data;
 }
 

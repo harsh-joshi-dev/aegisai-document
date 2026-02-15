@@ -7,6 +7,7 @@ import {
   moveDocumentToFolder,
   removeDocumentFromFolder,
   organizeFoldersByYear,
+  organizeFoldersByVendor,
   Folder,
 } from '../api/client';
 import './FolderManager.css';
@@ -29,6 +30,7 @@ export default function FolderManager({ documents, onDocumentMoved, onOpenFolder
   const [_draggedDocument, _setDraggedDocument] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [organizingByYear, setOrganizingByYear] = useState(false);
+  const [organizingByVendor, setOrganizingByVendor] = useState(false);
 
   useEffect(() => {
     loadFolders();
@@ -208,6 +210,21 @@ export default function FolderManager({ documents, onDocumentMoved, onOpenFolder
     }
   };
 
+  const handleOrganizeByVendor = async () => {
+    setOrganizingByVendor(true);
+    setError(null);
+    try {
+      const res = await organizeFoldersByVendor();
+      await loadFolders();
+      if (onDocumentMoved) onDocumentMoved();
+      if (res.moved > 0) setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Failed to organize by vendor');
+    } finally {
+      setOrganizingByVendor(false);
+    }
+  };
+
   return (
     <div className="folder-manager">
       <div className="folder-manager-header">
@@ -221,6 +238,15 @@ export default function FolderManager({ documents, onDocumentMoved, onOpenFolder
             title="Sort all documents into FY folders (e.g. FY 2024-25)"
           >
             {organizingByYear ? 'Organizing…' : 'Organize by year'}
+          </button>
+          <button
+            type="button"
+            className={`organize-by-year-button ${organizingByVendor ? 'active' : ''}`}
+            onClick={handleOrganizeByVendor}
+            disabled={organizingByVendor || documents.length === 0}
+            title="Sort all documents into vendor folders"
+          >
+            {organizingByVendor ? 'Organizing…' : 'Organize by vendor'}
           </button>
           <button
             className="add-folder-button"

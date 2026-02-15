@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getDocuments, Document, getFolders, Folder, renameDocument, type FinanceToolId } from '../api/client';
+import { deleteDocument, getDocuments, Document, getFolders, Folder, renameDocument, type FinanceToolId } from '../api/client';
 import { formatConfidence } from '../utils/confidence';
 import ServiceProviderModal from './ServiceProviderModal';
 import DocumentExplanationModal from './DocumentExplanationModal';
@@ -92,6 +92,7 @@ export default function DocumentList(props: DocumentListProps = {}) {
   const [documentFeaturesInitialTab, setDocumentFeaturesInitialTab] = useState<TabId>('deadlines');
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const [viewMode, setViewMode] = useState<'grid' | 'grouped'>('grid');
 
   useEffect(() => {
     if (props.openFinanceTool?.documentIds?.length && props.openFinanceTool?.toolId) {
@@ -251,6 +252,27 @@ export default function DocumentList(props: DocumentListProps = {}) {
     return visibleDocuments;
   }, [visibleDocuments, selectedFolderFilter]);
 
+  const groupedByFolder = useMemo(() => {
+    if (viewMode !== 'grouped') return null;
+    
+    const groups: Record<string, typeof displayDocuments> = {};
+    
+    for (const doc of displayDocuments) {
+      const folderName = doc.folderId ? getFolderName(doc.folderId) : 'Uncategorized';
+      if (!groups[folderName]) {
+        groups[folderName] = [];
+      }
+      groups[folderName].push(doc);
+    }
+    
+    // Sort by risk level within each folder
+    Object.keys(groups).forEach(folderName => {
+      groups[folderName].sort((a, b) => (RISK_ORDER[a.riskLevel] ?? 2) - (RISK_ORDER[b.riskLevel] ?? 2));
+    });
+    
+    return groups;
+  }, [displayDocuments, viewMode]);
+
   const handleStartRename = (document: Document) => {
     setEditingDocumentId(document.id);
     setEditingFilename(document.filename);
@@ -287,6 +309,17 @@ export default function DocumentList(props: DocumentListProps = {}) {
       setError(err.response?.data?.error || err.message || 'Failed to load documents');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (doc: Document) => {
+    const ok = window.confirm(`Delete "${doc.filename}"? This will remove the document and its processed chunks.`);
+    if (!ok) return;
+    try {
+      await deleteDocument(doc.id);
+      await loadDocuments();
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Failed to delete document');
     }
   };
 
@@ -574,6 +607,30 @@ export default function DocumentList(props: DocumentListProps = {}) {
           </div>
           {!props.compact && (
             <>
+              <button
+                onClick={() => setViewMode(viewMode === 'grid' ? 'grouped' : 'grid')}
+                className="view-mode-button"
+                title={viewMode === 'grid' ? 'Show grouped by folder' : 'Show grid view'}
+              >
+                {viewMode === 'grid' ? (
+                  <>
+                    <svg className="view-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Group by Folder
+                  </>
+                ) : (
+                  <>
+                    <svg className="view-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <rect x="3" y="3" width="7" height="7" strokeWidth="2"/>
+                      <rect x="14" y="3" width="7" height="7" strokeWidth="2"/>
+                      <rect x="3" y="14" width="7" height="7" strokeWidth="2"/>
+                      <rect x="14" y="14" width="7" height="7" strokeWidth="2"/>
+                    </svg>
+                    Grid View
+                  </>
+                )}
+              </button>
               <button onClick={loadDocuments} className="refresh-button" title="Refresh list">
                 <svg className="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path d="M3 12a9 9 0 0118 0M21 12a9 9 0 00-18 0" strokeWidth="2" strokeLinecap="round"/>
@@ -868,7 +925,190 @@ export default function DocumentList(props: DocumentListProps = {}) {
           <p>{documents.length === 0 ? 'No documents uploaded yet.' : 'No results.'}</p>
           <p className="hint">{documents.length === 0 ? 'Upload a file to get started!' : 'Try a different search.'}</p>
         </div>
+      ) : viewMode === 'grouped' && groupedByFolder ? (
+        // Grouped by folder view
+        <div className="documents-grouped" ref={documentsGridRef}>
+          {Object.entries(groupedByFolder).map(([folderName, docs]) => (
+            <div key={folderName} className="folder-group">
+              <div className="folder-group-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <h4 className="folder-group-name">{folderName}</h4>
+                <span className="folder-group-count">{docs.length} document{docs.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="folder-group-documents">
+                {docs.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="document-card"
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', doc.id);
+                    }}
+                  >
+                    <div className="document-card-header">
+                      {editingDocumentId === doc.id ? (
+                        <div className="document-card-title-block">
+                        <div className="document-rename-input-wrapper">
+                          <input
+                            type="text"
+                            value={editingFilename}
+                            onChange={(e) => setEditingFilename(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleSaveRename(doc.id);
+                              } else if (e.key === 'Escape') {
+                                handleCancelRename();
+                              }
+                            }}
+                            onBlur={() => handleSaveRename(doc.id)}
+                            className="document-rename-input"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleSaveRename(doc.id)}
+                            className="rename-save-btn"
+                            title="Save"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </button>
+                          <button
+                            onClick={handleCancelRename}
+                            className="rename-cancel-btn"
+                            title="Cancel"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <line x1="18" y1="6" x2="6" y2="18" strokeLinecap="round"/>
+                              <line x1="6" y1="6" x2="18" y2="18" strokeLinecap="round"/>
+                            </svg>
+                          </button>
+                        </div>
+                        </div>
+                      ) : (
+                        <div className="document-card-title-block">
+                          <div className="document-filename-wrapper">
+                            <div 
+                              className="document-filename" 
+                              title={doc.filename}
+                              onDoubleClick={() => handleStartRename(doc)}
+                            >
+                              {doc.filename.length > 40 
+                                ? doc.filename.substring(0, 40) + '...' 
+                                : doc.filename}
+                            </div>
+                            <button
+                              onClick={() => handleStartRename(doc)}
+                              className="rename-button"
+                              title="Rename document"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </button>
+                          </div>
+                          {doc.riskLevel === 'Critical' && (
+                            <p className="document-card-risk-line" title={getStatusExplanation(doc)}>High priority – review recommended</p>
+                          )}
+                          {doc.riskLevel === 'Warning' && (
+                            <p className="document-card-risk-line">Review suggested</p>
+                          )}
+                          {doc.riskLevel === 'Normal' && doc.riskCategory && doc.riskCategory !== 'None' && (
+                            <p className="document-card-risk-line">Classified as {doc.riskCategory}</p>
+                          )}
+                        </div>
+                      )}
+                      <span className={`risk-badge ${getRiskBadgeClass(doc.riskLevel)}`}>
+                        {doc.riskLevel}
+                      </span>
+                    </div>
+                    
+                    <div className="document-card-body">
+                      <p className="document-status-explanation">{getStatusExplanation(doc)}</p>
+                      <div className="document-meta">
+                        {doc.folderId && (
+                          <div className="meta-item folder-meta">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span className="meta-label">Folder:</span>
+                            <span className="meta-value folder-name">{getFolderName(doc.folderId)}</span>
+                          </div>
+                        )}
+                        <div className="meta-item">
+                          <span className="meta-label">Uploaded:</span>
+                          <span className="meta-value">{formatDate(doc.uploadedAt)}</span>
+                        </div>
+                        {doc.riskCategory && doc.riskCategory !== 'None' && (
+                          <div className="meta-item">
+                            <span className="meta-label">Category:</span>
+                            <span className="meta-value">{doc.riskCategory}</span>
+                          </div>
+                        )}
+                        {doc.riskConfidence !== undefined && (
+                          <div className="meta-item">
+                            <span className="meta-label">Confidence:</span>
+                            <span className="meta-value">{formatConfidence(doc.riskConfidence)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="document-card-actions">
+                      <button
+                        onClick={() => handleChatWithDocument(doc)}
+                        className="chat-button"
+                        title="Chat with this document"
+                      >
+                        <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" strokeWidth="2"/>
+                        </svg>
+                        Chat
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedDocumentForAgentSwarm(doc);
+                          setIsAgentSwarmOpen(true);
+                        }}
+                        className="agent-swarm-button"
+                        title="Due Diligence Report (NBFC-ready)"
+                      >
+                        <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        Due Diligence Report
+                      </button>
+                      <button
+                        onClick={() => handleShowProviders(doc)}
+                        className="provider-button"
+                        title="NBFC, CA, or DPDP consultants"
+                      >
+                        <svg className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        NBFC / CA / DPDP
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDocument(doc)}
+                        className="provider-button"
+                        title="Delete document"
+                        style={{ borderColor: 'rgba(239, 68, 68, 0.35)', color: 'var(--error)' }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
+        // Grid view
         <div className="documents-grid" ref={documentsGridRef}>
           {displayDocuments.map((doc) => (
             <div
@@ -1023,6 +1263,14 @@ export default function DocumentList(props: DocumentListProps = {}) {
                     <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                   NBFC / CA / DPDP
+                </button>
+                <button
+                  onClick={() => handleDeleteDocument(doc)}
+                  className="provider-button"
+                  title="Delete document"
+                  style={{ borderColor: 'rgba(239, 68, 68, 0.35)', color: 'var(--error)' }}
+                >
+                  Delete
                 </button>
               </div>
             </div>

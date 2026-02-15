@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
-import { pool, getDocuments, getOrCreateFolder, setDocumentFolder } from '../db/pgvector.js';
+import { requireAuth } from '../auth/middleware.js';
+import { pool, getDocuments, getOrCreateFolderByTenant, setDocumentFolderByTenant } from '../db/pgvector.js';
 import { getFinancialYearFromDate } from '../services/documentTypeClassifier.js';
 import { logAuditEvent } from '../compliance/auditLog.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ export async function initializeFolders() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS folders (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID REFERENCES tenants(id),
         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -20,6 +22,26 @@ export async function initializeFolders() {
         UNIQUE(user_id, name)
       );
     `);
+
+    try {
+      await client.query(`ALTER TABLE folders ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);`);
+    } catch {
+      // ignore
+    }
+    try {
+      await client.query(`CREATE INDEX IF NOT EXISTS folders_tenant_id_idx ON folders(tenant_id);`);
+    } catch {
+      // ignore
+    }
+    try {
+      await client.query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS folders_tenant_name_uq
+         ON folders(tenant_id, name)
+         WHERE tenant_id IS NOT NULL AND name IS NOT NULL;`
+      );
+    } catch {
+      // ignore
+    }
 
     // Add folder_id column to documents if it doesn't exist
     await client.query(`
@@ -50,22 +72,23 @@ export async function initializeFolders() {
 }
 
 // Auto year-wise organization: move documents into FY YYYY-YY folders
-router.post('/organize-by-year', requireAuth, async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
-  if (!authReq.user) {
+router.post('/organize-by-year', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin']), async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) {
     return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
   }
   const userId = authReq.user.id;
+  const tenantId = authReq.workspace.tenantId;
   try {
-    const docs = await getDocuments({ userId });
+    const docs = await getDocuments({ tenantId });
     let moved = 0;
     for (const doc of docs) {
       const meta = (doc as { metadata?: { financialYear?: string } }).metadata || {};
       const uploadedAt = (doc as { uploaded_at?: Date | string }).uploaded_at;
       const fy = meta.financialYear || getFinancialYearFromDate(new Date(uploadedAt || Date.now()));
-      const folderId = await getOrCreateFolder(userId, fy);
+      const folderId = await getOrCreateFolderByTenant({ tenantId, actorUserId: userId, folderName: fy });
       if (folderId) {
-        await setDocumentFolder(doc.id, userId, folderId);
+        await setDocumentFolderByTenant({ documentId: doc.id, tenantId, folderId });
         moved++;
       }
     }
@@ -79,18 +102,76 @@ router.post('/organize-by-year', requireAuth, async (req: Request, res: Response
   }
 });
 
-// Get all folders for user
-router.get('/', requireAuth, async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+// Auto vendor-wise organization: move documents into vendor folders
+router.post('/organize-by-vendor', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin']), async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+  }
+  const userId = authReq.user.id;
+  const tenantId = authReq.workspace.tenantId;
+  try {
+    const docs = await getDocuments({ tenantId });
+    let moved = 0;
+    const vendorFolders: Record<string, string> = {};
 
-  if (!authReq.user) {
+    for (const doc of docs) {
+      // Extract vendor name from extracted_data or metadata
+      const extractedData = (doc as { extracted_data?: any }).extracted_data || {};
+      const metadata = (doc as { metadata?: any }).metadata || {};
+      
+      let vendorName = extractedData.vendorName || metadata.vendorName || extractedData.vendor || metadata.vendor || 'Uncategorized';
+      
+      // Sanitize vendor name for folder name (remove special chars, limit length)
+      vendorName = String(vendorName).replace(/[^a-zA-Z0-9\s-_]/g, '').trim().substring(0, 100);
+      if (!vendorName) vendorName = 'Uncategorized';
+
+      // Get or create folder for this vendor
+      if (!vendorFolders[vendorName]) {
+        const folderId = await getOrCreateFolderByTenant({ tenantId, actorUserId: userId, folderName: vendorName });
+        if (folderId) {
+          vendorFolders[vendorName] = folderId;
+        } else {
+          continue; // Skip if folder couldn't be created
+        }
+      }
+
+      const folderId = vendorFolders[vendorName];
+      if (folderId) {
+        await setDocumentFolderByTenant({ documentId: doc.id, tenantId, folderId });
+        moved++;
+      }
+    }
+
+    const uniqueVendors = Object.keys(vendorFolders).length;
+    res.json({
+      success: true,
+      message: `Organized ${moved} documents into ${uniqueVendors} vendor folders.`,
+      moved,
+      total: docs.length,
+      vendors: uniqueVendors,
+    });
+  } catch (error) {
+    console.error('Organize by vendor error:', error);
+    res.status(500).json({
+      error: 'Failed to organize by vendor',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// Get all folders for user
+router.get('/', requireAuth, requireWorkspaceContext, async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
+
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) {
     return res.status(401).json({
       error: 'Unauthorized',
       message: 'Authentication required',
     });
   }
 
-  const userId = authReq.user.id;
+  const tenantId = authReq.workspace.tenantId;
 
   try {
     const client = await pool.connect();
@@ -99,9 +180,9 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         `SELECT id, name, created_at, updated_at,
          (SELECT COUNT(*) FROM documents WHERE folder_id = folders.id) as document_count
          FROM folders 
-         WHERE user_id = $1 
+         WHERE tenant_id = $1 
          ORDER BY name ASC`,
-        [userId]
+        [tenantId]
       );
 
       res.json({
@@ -121,10 +202,10 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 });
 
 // Create folder
-router.post('/', requireAuth, async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin']), async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
 
-  if (!authReq.user) {
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) {
     return res.status(401).json({
       error: 'Unauthorized',
       message: 'Authentication required',
@@ -132,6 +213,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
   }
 
   const userId = authReq.user.id;
+  const tenantId = authReq.workspace.tenantId;
   const { name } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -155,8 +237,8 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     try {
       // Check if folder with same name already exists
       const existing = await client.query(
-        `SELECT id FROM folders WHERE user_id = $1 AND name = $2`,
-        [userId, folderName]
+        `SELECT id FROM folders WHERE tenant_id = $1 AND name = $2`,
+        [tenantId, folderName]
       );
 
       if (existing.rows.length > 0) {
@@ -168,10 +250,10 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 
       // Create folder
       const result = await client.query(
-        `INSERT INTO folders (user_id, name) 
-         VALUES ($1, $2) 
+        `INSERT INTO folders (tenant_id, user_id, name) 
+         VALUES ($1, $2, $3) 
          RETURNING id, name, created_at, updated_at`,
-        [userId, folderName]
+        [tenantId, userId, folderName]
       );
 
       const folder = result.rows[0] as { id: string; name: string; created_at: Date; updated_at: Date };
@@ -184,6 +266,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
         folder.id,
         {
           folderName: folder.name,
+          tenantId,
         },
         req.ip,
         req.get('user-agent'),
@@ -211,9 +294,9 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 
 // Update folder name
 router.put('/:folderId', requireAuth, async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as WorkspaceRequest;
 
-  if (!authReq.user) {
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) {
     return res.status(401).json({
       error: 'Unauthorized',
       message: 'Authentication required',
@@ -221,6 +304,7 @@ router.put('/:folderId', requireAuth, async (req: Request, res: Response) => {
   }
 
   const userId = authReq.user.id;
+  const tenantId = authReq.workspace.tenantId;
   const { folderId } = req.params;
   const { name } = req.body;
 
@@ -238,8 +322,8 @@ router.put('/:folderId', requireAuth, async (req: Request, res: Response) => {
     try {
       // Verify ownership
       const folder = await client.query(
-        `SELECT id, name FROM folders WHERE id = $1 AND user_id = $2`,
-        [folderId, userId]
+        `SELECT id, name FROM folders WHERE id = $1 AND tenant_id = $2`,
+        [folderId, tenantId]
       );
 
       if (folder.rows.length === 0) {
@@ -251,8 +335,8 @@ router.put('/:folderId', requireAuth, async (req: Request, res: Response) => {
 
       // Check if another folder with same name exists
       const existing = await client.query(
-        `SELECT id FROM folders WHERE user_id = $1 AND name = $2 AND id != $3`,
-        [userId, folderName, folderId]
+        `SELECT id FROM folders WHERE tenant_id = $1 AND name = $2 AND id != $3`,
+        [tenantId, folderName, folderId]
       );
 
       if (existing.rows.length > 0) {
@@ -266,9 +350,9 @@ router.put('/:folderId', requireAuth, async (req: Request, res: Response) => {
       const result = await client.query(
         `UPDATE folders 
          SET name = $1, updated_at = CURRENT_TIMESTAMP 
-         WHERE id = $2 AND user_id = $3
+         WHERE id = $2 AND tenant_id = $3
          RETURNING id, name, created_at, updated_at`,
-        [folderName, folderId, userId]
+        [folderName, folderId, tenantId]
       );
 
       // Log audit event
@@ -280,6 +364,7 @@ router.put('/:folderId', requireAuth, async (req: Request, res: Response) => {
         {
           oldName: (folder.rows[0] as Record<string, unknown>).name as string,
           newName: folderName,
+          tenantId,
         },
         req.ip,
         req.get('user-agent'),
@@ -303,10 +388,10 @@ router.put('/:folderId', requireAuth, async (req: Request, res: Response) => {
 });
 
 // Delete folder
-router.delete('/:folderId', requireAuth, async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+router.delete('/:folderId', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin']), async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
 
-  if (!authReq.user) {
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) {
     return res.status(401).json({
       error: 'Unauthorized',
       message: 'Authentication required',
@@ -314,6 +399,7 @@ router.delete('/:folderId', requireAuth, async (req: Request, res: Response) => 
   }
 
   const userId = authReq.user.id;
+  const tenantId = authReq.workspace.tenantId;
   const { folderId } = req.params;
 
   try {
@@ -321,8 +407,8 @@ router.delete('/:folderId', requireAuth, async (req: Request, res: Response) => 
     try {
       // Verify ownership
       const folder = await client.query(
-        `SELECT id, name FROM folders WHERE id = $1 AND user_id = $2`,
-        [folderId, userId]
+        `SELECT id, name FROM folders WHERE id = $1 AND tenant_id = $2`,
+        [folderId, tenantId]
       );
 
       if (folder.rows.length === 0) {
@@ -334,8 +420,8 @@ router.delete('/:folderId', requireAuth, async (req: Request, res: Response) => 
 
       // Delete folder (documents will have folder_id set to NULL due to ON DELETE SET NULL)
       await client.query(
-        `DELETE FROM folders WHERE id = $1 AND user_id = $2`,
-        [folderId, userId]
+        `DELETE FROM folders WHERE id = $1 AND tenant_id = $2`,
+        [folderId, tenantId]
       );
 
       // Log audit event
@@ -346,6 +432,7 @@ router.delete('/:folderId', requireAuth, async (req: Request, res: Response) => 
         folderId,
         {
           folderName: (folder.rows[0] as Record<string, unknown>).name as string,
+          tenantId,
         },
         req.ip,
         req.get('user-agent'),
@@ -369,10 +456,15 @@ router.delete('/:folderId', requireAuth, async (req: Request, res: Response) => 
 });
 
 // Move document to folder
-router.post('/:folderId/documents/:documentId', requireAuth, async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+router.post(
+  '/:folderId/documents/:documentId',
+  requireAuth,
+  requireWorkspaceContext,
+  requireWorkspaceRole(['owner', 'admin']),
+  async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
 
-  if (!authReq.user) {
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) {
     return res.status(401).json({
       error: 'Unauthorized',
       message: 'Authentication required',
@@ -380,6 +472,7 @@ router.post('/:folderId/documents/:documentId', requireAuth, async (req: Request
   }
 
   const userId = authReq.user.id;
+  const tenantId = authReq.workspace.tenantId;
   const { folderId, documentId } = req.params;
 
   try {
@@ -387,8 +480,8 @@ router.post('/:folderId/documents/:documentId', requireAuth, async (req: Request
     try {
       // Verify folder ownership
       const folder = await client.query(
-        `SELECT id FROM folders WHERE id = $1 AND user_id = $2`,
-        [folderId, userId]
+        `SELECT id FROM folders WHERE id = $1 AND tenant_id = $2`,
+        [folderId, tenantId]
       );
 
       if (folder.rows.length === 0) {
@@ -400,8 +493,8 @@ router.post('/:folderId/documents/:documentId', requireAuth, async (req: Request
 
       // Verify document ownership
       const document = await client.query(
-        `SELECT id, filename FROM documents WHERE id = $1 AND user_id = $2`,
-        [documentId, userId]
+        `SELECT id, filename FROM documents WHERE id = $1 AND tenant_id = $2`,
+        [documentId, tenantId]
       );
 
       if (document.rows.length === 0) {
@@ -412,10 +505,7 @@ router.post('/:folderId/documents/:documentId', requireAuth, async (req: Request
       }
 
       // Move document to folder
-      await client.query(
-        `UPDATE documents SET folder_id = $1 WHERE id = $2 AND user_id = $3`,
-        [folderId, documentId, userId]
-      );
+      await setDocumentFolderByTenant({ documentId, tenantId, folderId });
 
       // Log audit event
       await logAuditEvent(
@@ -426,6 +516,7 @@ router.post('/:folderId/documents/:documentId', requireAuth, async (req: Request
         {
           filename: (document.rows[0] as Record<string, unknown>).filename as string,
           folderId: folderId,
+          tenantId,
         },
         req.ip,
         req.get('user-agent'),
@@ -449,10 +540,15 @@ router.post('/:folderId/documents/:documentId', requireAuth, async (req: Request
 });
 
 // Remove document from folder (move to root)
-router.delete('/:folderId/documents/:documentId', requireAuth, async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+router.delete(
+  '/:folderId/documents/:documentId',
+  requireAuth,
+  requireWorkspaceContext,
+  requireWorkspaceRole(['owner', 'admin']),
+  async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
 
-  if (!authReq.user) {
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) {
     return res.status(401).json({
       error: 'Unauthorized',
       message: 'Authentication required',
@@ -460,6 +556,7 @@ router.delete('/:folderId/documents/:documentId', requireAuth, async (req: Reque
   }
 
   const userId = authReq.user.id;
+  const tenantId = authReq.workspace.tenantId;
   const { folderId, documentId } = req.params;
 
   try {
@@ -467,8 +564,8 @@ router.delete('/:folderId/documents/:documentId', requireAuth, async (req: Reque
     try {
       // Verify folder ownership
       const folder = await client.query(
-        `SELECT id FROM folders WHERE id = $1 AND user_id = $2`,
-        [folderId, userId]
+        `SELECT id FROM folders WHERE id = $1 AND tenant_id = $2`,
+        [folderId, tenantId]
       );
 
       if (folder.rows.length === 0) {
@@ -480,8 +577,8 @@ router.delete('/:folderId/documents/:documentId', requireAuth, async (req: Reque
 
       // Verify document ownership and that it's in this folder
       const document = await client.query(
-        `SELECT id, filename FROM documents WHERE id = $1 AND user_id = $2 AND folder_id = $3`,
-        [documentId, userId, folderId]
+        `SELECT id, filename FROM documents WHERE id = $1 AND tenant_id = $2 AND folder_id = $3`,
+        [documentId, tenantId, folderId]
       );
 
       if (document.rows.length === 0) {
@@ -492,10 +589,7 @@ router.delete('/:folderId/documents/:documentId', requireAuth, async (req: Reque
       }
 
       // Remove document from folder (set folder_id to NULL)
-      await client.query(
-        `UPDATE documents SET folder_id = NULL WHERE id = $1 AND user_id = $2`,
-        [documentId, userId]
-      );
+      await setDocumentFolderByTenant({ documentId, tenantId, folderId: null });
 
       // Log audit event
       await logAuditEvent(
@@ -506,6 +600,7 @@ router.delete('/:folderId/documents/:documentId', requireAuth, async (req: Reque
         {
           filename: (document.rows[0] as Record<string, unknown>).filename as string,
           folderId: folderId,
+          tenantId,
         },
         req.ip,
         req.get('user-agent'),
