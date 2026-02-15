@@ -4,8 +4,9 @@
  */
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { requireAuth } from '../auth/middleware.js';
 import { requestULIDocuments, getStoredDocuments, getConsentsByDataPrincipal, getRemainingCalls } from '../integrations/uli/index.js';
+import { requireWorkspaceContext, requireWorkspaceRole } from '../workspace/middleware.js';
 
 const router = Router();
 
@@ -18,7 +19,7 @@ const fetchSchema = z.object({
   retentionDays: z.number().int().min(1).max(365).optional().default(90),
 });
 
-router.post('/fetch', requireAuth, async (req: Request, res: Response) => {
+router.post('/fetch', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer']), async (req: Request, res: Response) => {
   try {
     const body = fetchSchema.parse(req.body);
     const result = await requestULIDocuments(
@@ -50,7 +51,7 @@ router.post('/fetch', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/cached/:consentId', requireAuth, async (req: Request, res: Response) => {
+router.get('/cached/:consentId', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer']), async (req: Request, res: Response) => {
   try {
     const { consentId } = req.params;
     const cached = await getStoredDocuments(consentId);
@@ -67,7 +68,7 @@ router.get('/cached/:consentId', requireAuth, async (req: Request, res: Response
   }
 });
 
-router.get('/consents', requireAuth, async (req: Request, res: Response) => {
+router.get('/consents', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer']), async (req: Request, res: Response) => {
   try {
     const dataPrincipalId = req.query.dataPrincipalId as string;
     if (!dataPrincipalId) {
@@ -84,7 +85,7 @@ router.get('/consents', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/rate-limit', requireAuth, async (_req: Request, res: Response) => {
+router.get('/rate-limit', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (_req: Request, res: Response) => {
   res.json({ success: true, remainingCallsPerMinute: getRemainingCalls() });
 });
 

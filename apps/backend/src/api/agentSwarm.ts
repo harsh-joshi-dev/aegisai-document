@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { requireAuth } from '../auth/middleware.js';
 import { getDocuments } from '../db/pgvector.js';
 import { executeAgentSwarm } from '../agents/orchestrator.js';
 import { runAllConsistencyRules } from '../rules/indiaConsistencyRules.js';
 import { generateDueDiligenceReport } from '../agents/dueDiligenceReportAgent.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
@@ -44,25 +45,29 @@ const financialConsistencySchema = z.object({
   }).optional(),
 });
 
-router.post('/', requireAuth, async (req: Request, res: Response) => {
+router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const tenantId = authReq.workspace.tenantId;
     const validated = agentSwarmRequestSchema.parse(req.body);
 
-    // Verify user owns this document
-    const userDocuments = await getDocuments({
-      userId: authReq.user!.id,
+    // Verify document belongs to tenant
+    const tenantDocuments = await getDocuments({
+      tenantId,
       documentIds: [validated.documentId],
     });
 
-    if (userDocuments.length === 0) {
+    if (tenantDocuments.length === 0) {
       return res.status(404).json({
         error: 'Document not found',
         message: 'The requested document does not exist or you do not have access to it.',
       });
     }
 
-    const document = userDocuments[0];
+    const document = tenantDocuments[0];
 
     // Execute agent swarm
     console.log(`[API] Starting agent swarm for document ${validated.documentId}`);
@@ -97,7 +102,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
  * POST /api/agent-swarm/financial-consistency
  * India SME Lending: Run consistency rules + Due Diligence Report for NBFC credit committees
  */
-router.post('/financial-consistency', requireAuth, async (req: Request, res: Response) => {
+router.post('/financial-consistency', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer']), async (req: Request, res: Response) => {
   try {
     const body = financialConsistencySchema.parse(req.body);
     const { riskFlags, consistencyScore } = runAllConsistencyRules({

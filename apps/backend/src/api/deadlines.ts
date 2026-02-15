@@ -1,36 +1,41 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { requireAuth } from '../auth/middleware.js';
 import { getDocuments } from '../db/pgvector.js';
 import {
   insertDeadline,
   getDeadlinesByDocument,
-  getDeadlinesByUser,
+  getDeadlinesByTenant,
   markDeadlineReminderSent,
   markDeadlineCalendarSynced,
   deleteDeadline,
 } from '../db/deadlines.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
-router.get('/', requireAuth, async (req: Request, res: Response) => {
+router.get('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user!.id;
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const tenantId = authReq.workspace.tenantId;
+    const userId = authReq.user.id;
     const documentId = req.query.documentId as string | undefined;
     const from = req.query.from as string | undefined;
     const to = req.query.to as string | undefined;
 
     if (documentId) {
-      const docs = await getDocuments({ userId, documentIds: [documentId] });
+      const docs = await getDocuments({ tenantId, documentIds: [documentId] });
       if (docs.length === 0) {
         return res.status(404).json({ error: 'Document not found' });
       }
-      const deadlines = await getDeadlinesByDocument(documentId, userId);
+      const deadlines = await getDeadlinesByDocument(tenantId, documentId);
       return res.json({ success: true, deadlines });
     }
 
-    const deadlines = await getDeadlinesByUser(userId, { from, to });
+    const deadlines = await getDeadlinesByTenant(tenantId, { from, to });
     res.json({ success: true, deadlines });
   } catch (e) {
     console.error('Deadlines list error:', e);
@@ -48,18 +53,22 @@ const createSchema = z.object({
   assignee_type: z.string().optional(),
 });
 
-router.post('/', requireAuth, async (req: Request, res: Response) => {
+router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user!.id;
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const tenantId = authReq.workspace.tenantId;
+    const userId = authReq.user.id;
     const body = createSchema.parse(req.body);
 
-    const docs = await getDocuments({ userId, documentIds: [body.documentId] });
+    const docs = await getDocuments({ tenantId, documentIds: [body.documentId] });
     if (docs.length === 0) {
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    const deadline = await insertDeadline(body.documentId, userId, {
+    const deadline = await insertDeadline(tenantId, body.documentId, userId, {
       title: body.title,
       description: body.description,
       due_date: body.due_date,
@@ -78,30 +87,39 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.post('/:id/reminder-sent', requireAuth, async (req: Request, res: Response) => {
+router.post('/:id/reminder-sent', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    await markDeadlineReminderSent(req.params.id, authReq.user!.id);
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    await markDeadlineReminderSent(authReq.workspace.tenantId, req.params.id, authReq.user.id);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Failed to update', message: e instanceof Error ? e.message : 'Unknown error' });
   }
 });
 
-router.post('/:id/calendar-synced', requireAuth, async (req: Request, res: Response) => {
+router.post('/:id/calendar-synced', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    await markDeadlineCalendarSynced(req.params.id, authReq.user!.id);
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    await markDeadlineCalendarSynced(authReq.workspace.tenantId, req.params.id, authReq.user.id);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Failed to update', message: e instanceof Error ? e.message : 'Unknown error' });
   }
 });
 
-router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    const deleted = await deleteDeadline(req.params.id, authReq.user!.id);
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const deleted = await deleteDeadline(authReq.workspace.tenantId, req.params.id, authReq.user.id);
     if (!deleted) return res.status(404).json({ error: 'Deadline not found' });
     res.json({ success: true });
   } catch (e) {
@@ -109,13 +127,16 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-/** Calendar export (iCal-style) for user's deadlines */
-router.get('/export/ical', requireAuth, async (req: Request, res: Response) => {
+/** Calendar export (iCal-style) for tenant's deadlines */
+router.get('/export/ical', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
     const from = (req.query.from as string) || new Date().toISOString().slice(0, 10);
     const to = (req.query.to as string) || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const deadlines = await getDeadlinesByUser(authReq.user!.id, { from, to });
+    const deadlines = await getDeadlinesByTenant(authReq.workspace.tenantId, { from, to });
 
     let ical = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Aegis//Deadlines//EN\n';
     for (const d of deadlines) {

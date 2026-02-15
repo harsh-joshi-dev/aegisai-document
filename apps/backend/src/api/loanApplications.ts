@@ -4,8 +4,9 @@
  */
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { requireAuth } from '../auth/middleware.js';
 import { pool } from '../db/pgvector.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
@@ -23,9 +24,14 @@ const createSchema = z.object({
   auditTrail: z.array(z.record(z.unknown())).optional().default([]),
 });
 
-router.post('/', requireAuth, async (req: Request, res: Response) => {
+router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const tenantId = authReq.workspace.tenantId;
+    const userId = authReq.user.id;
     const body = createSchema.parse(req.body);
     const deletionDueDate = new Date();
     deletionDueDate.setDate(deletionDueDate.getDate() + (body.retentionDays ?? 90));
@@ -33,11 +39,12 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     try {
       const r = await client.query(
         `INSERT INTO loan_applications
-         (user_id, uli_consent_id, data_principal_id, documents, consistency_score, risk_flags, deletion_due_date, audit_trail)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         (tenant_id, user_id, uli_consent_id, data_principal_id, documents, consistency_score, risk_flags, deletion_due_date, audit_trail)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id, uli_consent_id, data_principal_id, consistency_score, risk_flags, deletion_due_date, created_at`,
         [
-          authReq.user!.id,
+          tenantId,
+          userId,
           body.uliConsentId,
           body.dataPrincipalId,
           JSON.stringify(body.documents),
@@ -75,15 +82,19 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/', requireAuth, async (req: Request, res: Response) => {
+router.get('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const tenantId = authReq.workspace.tenantId;
     const client = await pool.connect();
     try {
       const r = await client.query(
         `SELECT id, uli_consent_id, data_principal_id, consistency_score, risk_flags, deletion_due_date, created_at
-         FROM loan_applications WHERE user_id = $1 ORDER BY created_at DESC`,
-        [authReq.user!.id]
+         FROM loan_applications WHERE tenant_id = $1 ORDER BY created_at DESC`,
+        [tenantId]
       );
       res.json({
         success: true,
@@ -109,15 +120,19 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/:id', requireAuth, async (req: Request, res: Response) => {
+router.get('/:id', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const tenantId = authReq.workspace.tenantId;
     const client = await pool.connect();
     try {
       const r = await client.query(
         `SELECT id, uli_consent_id, data_principal_id, documents, consistency_score, risk_flags, deletion_due_date, audit_trail, created_at
-         FROM loan_applications WHERE id = $1 AND user_id = $2`,
-        [req.params.id, authReq.user!.id]
+         FROM loan_applications WHERE id = $1 AND tenant_id = $2`,
+        [req.params.id, tenantId]
       );
       if (r.rows.length === 0) {
         return res.status(404).json({ error: 'Loan application not found' });

@@ -111,7 +111,7 @@ export default function UploadPage() {
       {lastUploadedDocumentIds.length > 0 && (
         <div className="upload-universal-cta">
           <p className="upload-universal-cta-text">
-            Ask anything from your uploaded documents — answers can come from any of them.
+            Ask anything from your uploaded documents — with citations.
           </p>
           <div className="upload-universal-cta-actions">
             <Link to={chatUrl} className="upload-universal-cta-btn primary">
@@ -131,10 +131,10 @@ export default function UploadPage() {
               className="upload-universal-cta-btn secondary"
               onClick={() => setOpenStatementsAnalysis(true)}
             >
-              Analyze Bank &amp; Credit Card Statements
+              Analyze Statements
             </button>
             <span className="upload-universal-cta-hint">
-              Explain, Share, What If, Voice, Trust Score, Agent Swarm, Deadlines, and more for each document below.
+              Upload invoices, bank statements, and GST files — then compare to catch mismatches.
             </span>
           </div>
           <button

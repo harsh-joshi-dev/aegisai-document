@@ -6,6 +6,9 @@ export const config = {
   database: {
     url: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/aegis_ai',
   },
+  redis: {
+    url: process.env.REDIS_URL || 'redis://127.0.0.1:6379',
+  },
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
   },

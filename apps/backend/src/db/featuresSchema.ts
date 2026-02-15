@@ -10,6 +10,7 @@ export async function initializeFeaturesSchema() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS document_deadlines (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID REFERENCES tenants(id),
         document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         title VARCHAR(500) NOT NULL,
@@ -28,11 +29,31 @@ export async function initializeFeaturesSchema() {
       CREATE INDEX IF NOT EXISTS idx_document_deadlines_document_id ON document_deadlines(document_id);
       CREATE INDEX IF NOT EXISTS idx_document_deadlines_user_due ON document_deadlines(user_id, due_date);
     `);
+    try {
+      await client.query(`ALTER TABLE document_deadlines ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);`);
+    } catch {
+      // ignore
+    }
+    try {
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_document_deadlines_tenant_id ON document_deadlines(tenant_id);`);
+    } catch {
+      // ignore
+    }
+    try {
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_document_deadlines_tenant_document_id
+         ON document_deadlines(tenant_id, document_id)
+         WHERE tenant_id IS NOT NULL AND document_id IS NOT NULL;`
+      );
+    } catch {
+      // ignore
+    }
 
     // Internal comments/notes on documents
     await client.query(`
       CREATE TABLE IF NOT EXISTS document_comments (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID REFERENCES tenants(id),
         document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         content TEXT NOT NULL,
@@ -44,6 +65,25 @@ export async function initializeFeaturesSchema() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_document_comments_document_id ON document_comments(document_id);
     `);
+    try {
+      await client.query(`ALTER TABLE document_comments ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);`);
+    } catch {
+      // ignore
+    }
+    try {
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_document_comments_tenant_id ON document_comments(tenant_id);`);
+    } catch {
+      // ignore
+    }
+    try {
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_document_comments_tenant_document_id
+         ON document_comments(tenant_id, document_id)
+         WHERE tenant_id IS NOT NULL AND document_id IS NOT NULL;`
+      );
+    } catch {
+      // ignore
+    }
 
     // Risk clauses (red/amber/green) per document - stored after analysis
     await client.query(`

@@ -17,6 +17,7 @@ export interface DeadlineRow {
 }
 
 export async function insertDeadline(
+  tenantId: string,
   documentId: string,
   userId: string,
   data: {
@@ -29,10 +30,11 @@ export async function insertDeadline(
   }
 ): Promise<DeadlineRow | null> {
   const result = await pool.query(
-    `INSERT INTO document_deadlines (document_id, user_id, title, description, due_date, due_type, severity, assignee_type)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO document_deadlines (tenant_id, document_id, user_id, title, description, due_date, due_type, severity, assignee_type)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
     [
+      tenantId,
       documentId,
       userId,
       data.title,
@@ -46,17 +48,17 @@ export async function insertDeadline(
   return ((result.rows[0] as unknown) as DeadlineRow) || null;
 }
 
-export async function getDeadlinesByDocument(documentId: string, userId: string): Promise<DeadlineRow[]> {
+export async function getDeadlinesByDocument(tenantId: string, documentId: string): Promise<DeadlineRow[]> {
   const result = await pool.query(
-    `SELECT * FROM document_deadlines WHERE document_id = $1 AND user_id = $2 ORDER BY due_date ASC`,
-    [documentId, userId]
+    `SELECT * FROM document_deadlines WHERE tenant_id = $1 AND document_id = $2 ORDER BY due_date ASC`,
+    [tenantId, documentId]
   );
   return (result.rows as unknown) as DeadlineRow[];
 }
 
-export async function getDeadlinesByUser(userId: string, options?: { from?: string; to?: string }): Promise<DeadlineRow[]> {
-  let query = `SELECT * FROM document_deadlines WHERE user_id = $1`;
-  const params: (string | number)[] = [userId];
+export async function getDeadlinesByTenant(tenantId: string, options?: { from?: string; to?: string }): Promise<DeadlineRow[]> {
+  let query = `SELECT * FROM document_deadlines WHERE tenant_id = $1`;
+  const params: (string | number)[] = [tenantId];
   if (options?.from) {
     params.push(options.from);
     query += ` AND due_date >= $${params.length}`;
@@ -70,24 +72,24 @@ export async function getDeadlinesByUser(userId: string, options?: { from?: stri
   return (result.rows as unknown) as DeadlineRow[];
 }
 
-export async function markDeadlineReminderSent(id: string, userId: string): Promise<void> {
+export async function markDeadlineReminderSent(tenantId: string, id: string, userId: string): Promise<void> {
   await pool.query(
-    `UPDATE document_deadlines SET reminder_sent = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND user_id = $2`,
-    [id, userId]
+    `UPDATE document_deadlines SET reminder_sent = true, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2 AND user_id = $3`,
+    [tenantId, id, userId]
   );
 }
 
-export async function markDeadlineCalendarSynced(id: string, userId: string): Promise<void> {
+export async function markDeadlineCalendarSynced(tenantId: string, id: string, userId: string): Promise<void> {
   await pool.query(
-    `UPDATE document_deadlines SET calendar_synced = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND user_id = $2`,
-    [id, userId]
+    `UPDATE document_deadlines SET calendar_synced = true, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2 AND user_id = $3`,
+    [tenantId, id, userId]
   );
 }
 
-export async function deleteDeadline(id: string, userId: string): Promise<boolean> {
+export async function deleteDeadline(tenantId: string, id: string, userId: string): Promise<boolean> {
   const result = await pool.query(
-    `DELETE FROM document_deadlines WHERE id = $1 AND user_id = $2`,
-    [id, userId]
+    `DELETE FROM document_deadlines WHERE tenant_id = $1 AND id = $2 AND user_id = $3`,
+    [tenantId, id, userId]
   );
   return (result.rowCount ?? 0) > 0;
 }

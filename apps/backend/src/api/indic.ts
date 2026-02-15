@@ -5,10 +5,11 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../auth/middleware.js';
 import { sarvamVision, getSupportedIndicLanguages } from '../integrations/sarvam.js';
+import { requireWorkspaceContext, requireWorkspaceRole } from '../workspace/middleware.js';
 
 const router = Router();
 
-router.post('/vision', requireAuth, async (req: Request, res: Response) => {
+router.post('/vision', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (req: Request, res: Response) => {
   try {
     const body = z.object({
       imageBase64: z.string().min(1),

@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { requireAuth } from '../auth/middleware.js';
 import { getDocuments } from '../db/pgvector.js';
 import { ChatOpenAI } from '@langchain/openai';
 import { config } from '../config/env.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
@@ -35,15 +36,19 @@ function getLLM(): ChatOpenAI {
 /**
  * Generate document explanation in selected language
  */
-router.post('/', requireAuth, async (req: Request, res: Response) => {
+router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const tenantId = authReq.workspace.tenantId;
     const validated = explainRequestSchema.parse(req.body);
 
     // Get document
     const documents = await getDocuments({
       documentIds: [validated.documentId],
-      userId: authReq.user!.id,
+      tenantId,
     });
 
     if (documents.length === 0) {

@@ -1,14 +1,15 @@
 import { Router, Request, Response } from 'express';
-import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { requireAuth } from '../auth/middleware.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
 // Minimal endpoints to support mobile-web "push + biometrics" UX.
 // These are intentionally simple stubs so the web app can work end-to-end.
 
-router.post('/push/subscribe', requireAuth, async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
-  if (!authReq.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+router.post('/push/subscribe', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
   // In production: persist subscription in DB keyed by user.
   // Here: accept and acknowledge.
@@ -20,9 +21,9 @@ router.post('/push/subscribe', requireAuth, async (req: Request, res: Response) 
   return res.json({ success: true });
 });
 
-router.post('/webauthn/challenge', requireAuth, async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
-  if (!authReq.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+router.post('/webauthn/challenge', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
   // In production: generate cryptographically secure challenge, store in session.
   // For now: simple base64url random-ish string.
@@ -30,7 +31,7 @@ router.post('/webauthn/challenge', requireAuth, async (req: Request, res: Respon
   return res.json({ success: true, challenge });
 });
 
-router.post('/webauthn/verify', requireAuth, async (_req: Request, res: Response) => {
+router.post('/webauthn/verify', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (_req: Request, res: Response) => {
   // In production: verify attestation/assertion.
   // For now: accept and return enabled.
   return res.json({ success: true, enabled: true });

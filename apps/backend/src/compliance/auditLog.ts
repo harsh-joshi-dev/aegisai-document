@@ -26,6 +26,7 @@ export async function initializeAuditLogs(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS audit_logs (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID,
         user_id VARCHAR(255) NOT NULL,
         action VARCHAR(100) NOT NULL,
         resource_type VARCHAR(50) NOT NULL,
@@ -38,7 +39,16 @@ export async function initializeAuditLogs(): Promise<void> {
       );
     `);
 
+    // Ensure tenant_id column exists (for existing tables)
+    await client.query(`
+      ALTER TABLE audit_logs 
+      ADD COLUMN IF NOT EXISTS tenant_id UUID;
+    `);
+
     // Create indexes for compliance queries
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_id ON audit_logs(tenant_id);
+    `);
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
     `);
@@ -76,11 +86,13 @@ export async function logAuditEvent(
 ): Promise<void> {
   const client = await pool.connect();
   try {
+    const tenantId = typeof details?.tenantId === 'string' ? details.tenantId : null;
     await client.query(
       `INSERT INTO audit_logs 
-       (user_id, action, resource_type, resource_id, details, ip_address, user_agent, compliance_flags)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+       (tenant_id, user_id, action, resource_type, resource_id, details, ip_address, user_agent, compliance_flags)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
+        tenantId,
         userId,
         action,
         resourceType,

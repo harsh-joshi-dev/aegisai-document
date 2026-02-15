@@ -4,7 +4,7 @@
    - Stale-while-revalidate for static assets
 */
 
-const CACHE_VERSION = "aegis-web-mobile-v1";
+const CACHE_VERSION = "aegis-web-mobile-v2";
 const APP_SHELL = [
   "/",
   "/m",
@@ -44,7 +44,7 @@ self.addEventListener("fetch", (event) => {
   // API: network-first with better error handling
   if (isApiRequest(request)) {
     event.respondWith(
-      fetch(request)
+      fetch(request, { credentials: "include" })
         .then((resp) => {
           // Only cache successful responses
           if (resp.ok) {

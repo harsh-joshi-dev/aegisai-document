@@ -5,6 +5,7 @@ import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
 import { getDocuments, getDocumentContent } from '../db/pgvector.js';
 import { ChatOpenAI } from '@langchain/openai';
 import { config } from '../config/env.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
@@ -21,17 +22,27 @@ const chatRequestSchema = z.object({
   viewAs: z.enum(['user', 'manager', 'auditor']).optional(),
 });
 
-router.post('/', requireAuth, async (req: Request, res: Response) => {
+router.post(
+  '/',
+  requireAuth,
+  requireWorkspaceContext,
+  requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']),
+  async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
+    const authReq = req as WorkspaceRequest;
     const validated = chatRequestSchema.parse(req.body);
+
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const tenantId = authReq.workspace.tenantId;
     
     // Filter documentIds to only include user's documents
     let userDocumentIds = validated.documentIds;
     if (userDocumentIds && userDocumentIds.length > 0) {
-      const userDocs = await getDocuments({ userId: authReq.user!.id });
-      const userDocIds = new Set(userDocs.map((d: { id: string }) => d.id));
-      userDocumentIds = userDocumentIds.filter(id => userDocIds.has(id));
+      const tenantDocs = await getDocuments({ tenantId });
+      const tenantDocIds = new Set(tenantDocs.map((d: { id: string }) => d.id));
+      userDocumentIds = userDocumentIds.filter((id) => tenantDocIds.has(id));
     }
     
     const result = await queryRAG(
@@ -61,22 +72,33 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
-});
+  }
+);
 
 // Generate quick questions based on document content
 const quickQuestionsSchema = z.object({
   documentId: z.string().uuid(),
 });
 
-router.post('/quick-questions', requireAuth, async (req: Request, res: Response) => {
+router.post(
+  '/quick-questions',
+  requireAuth,
+  requireWorkspaceContext,
+  requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']),
+  async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
+    const authReq = req as WorkspaceRequest;
     const validated = quickQuestionsSchema.parse(req.body);
+
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const tenantId = authReq.workspace.tenantId;
 
     // Get document
     const documents = await getDocuments({
       documentIds: [validated.documentId],
-      userId: authReq.user!.id,
+      tenantId,
     });
 
     if (documents.length === 0) {

@@ -116,15 +116,75 @@ router.post('/organize-by-vendor', requireAuth, requireWorkspaceContext, require
     const vendorFolders: Record<string, string> = {};
 
     for (const doc of docs) {
-      // Extract vendor name from extracted_data or metadata
-      const extractedData = (doc as { extracted_data?: any }).extracted_data || {};
-      const metadata = (doc as { metadata?: any }).metadata || {};
+      let vendorName = 'Uncategorized';
       
-      let vendorName = extractedData.vendorName || metadata.vendorName || extractedData.vendor || metadata.vendor || 'Uncategorized';
+      try {
+        // Extract vendor name from various possible locations
+        const extractedData = (doc as any).extracted_data;
+        const metadata = (doc as any).metadata;
+        const filename = (doc as any).filename || '';
+        const existingVendorName = (doc as any).vendor_name;
+
+        // Use existing vendor_name if available
+        if (existingVendorName && existingVendorName.trim()) {
+          vendorName = existingVendorName;
+        } else {
+          // Try multiple sources for vendor name
+          if (extractedData) {
+            const parsedExtracted = typeof extractedData === 'string' ? JSON.parse(extractedData) : extractedData;
+            vendorName = parsedExtracted?.vendorName || 
+                        parsedExtracted?.vendor || 
+                        parsedExtracted?.supplierName ||
+                        parsedExtracted?.supplier ||
+                        parsedExtracted?.billedBy ||
+                        vendorName;
+          }
+
+          // Fallback to metadata
+          if (vendorName === 'Uncategorized' && metadata) {
+            const parsedMetadata = typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
+            vendorName = parsedMetadata?.vendorName || 
+                        parsedMetadata?.vendor || 
+                        parsedMetadata?.supplier ||
+                        vendorName;
+          }
+
+          // Extract from filename as last resort (e.g., "invoice_acme_corp.pdf" -> "acme_corp")
+          if (vendorName === 'Uncategorized') {
+            const nameParts = filename.toLowerCase().split(/[\s_-]+/);
+            if (nameParts.length > 1) {
+              // Take the first meaningful part after document type
+              const docTypes = ['invoice', 'receipt', 'bill', 'po', 'purchase', 'order', 'statement', 'document', 'pdf', 'doc'];
+              const meaningfulPart = nameParts.find(part => part && !docTypes.includes(part));
+              if (meaningfulPart) {
+                vendorName = meaningfulPart.charAt(0).toUpperCase() + meaningfulPart.slice(1);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // If parsing fails, use uncategorized
+        console.error(`Error extracting vendor for doc ${doc.id}:`, e);
+      }
       
       // Sanitize vendor name for folder name (remove special chars, limit length)
-      vendorName = String(vendorName).replace(/[^a-zA-Z0-9\s-_]/g, '').trim().substring(0, 100);
+      vendorName = String(vendorName)
+        .replace(/[^a-zA-Z0-9\s-_]/g, '')
+        .trim()
+        .substring(0, 100)
+        .replace(/\s+/g, ' ');
+      
       if (!vendorName) vendorName = 'Uncategorized';
+
+      // Update vendor_name in document if different
+      try {
+        await pool.query(
+          `UPDATE documents SET vendor_name = $1 WHERE id = $2 AND tenant_id = $3`,
+          [vendorName, doc.id, tenantId]
+        );
+      } catch (e) {
+        console.error(`Error updating vendor_name for doc ${doc.id}:`, e);
+      }
 
       // Get or create folder for this vendor
       if (!vendorFolders[vendorName]) {

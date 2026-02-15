@@ -26,60 +26,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const checkAuth = async () => {
+    // If no JWT token in localStorage, skip the API call (user is not logged in)
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await apiClient.get('/api/auth/me', {
-        withCredentials: true,
-      });
+      const response = await apiClient.get('/api/auth/me');
       if (response.data.success) {
         setUser(response.data.user);
       } else {
         setUser(null);
+        localStorage.removeItem('auth_token');
       }
     } catch (error) {
       setUser(null);
+      localStorage.removeItem('auth_token');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const login = () => {
-    try {
-      // Must redirect to the backend origin (e.g. localhost:3001), not the frontend.
-      // Otherwise the browser stays on the app and React Router shows "No routes matched /api/auth/google".
-      const backendOrigin =
-        import.meta.env.VITE_BACKEND_URL ||
-        import.meta.env.VITE_API_URL ||
-        (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
-      const authUrl = `${backendOrigin.replace(/\/$/, '')}/api/auth/google`;
-      console.log('Initiating Google Login to:', authUrl);
-      window.location.replace(authUrl);
-    } catch (error) {
-      console.error('Login error:', error);
-      alert('Failed to initiate login. Please check your configuration.');
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await apiClient.post('/api/auth/logout', {}, { withCredentials: true });
-      setUser(null);
-      // Do not full-reload: let React re-render so mobile viewport is preserved.
-      // App will redirect /m -> / when unauthenticated via routes.
-    } catch (error) {
-      console.error('Logout error:', error);
-      setUser(null);
-    }
-  };
-
-  // Handle OAuth callback and error params
+  // Handle OAuth callback, error params, and initial auth check in one effect
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
-    const authSuccess = urlParams.get('auth') === 'success';
+    const authToken = urlParams.get('auth_token');
 
     if (error) {
       setAuthError(error);
@@ -88,18 +62,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (authSuccess) {
-      window.history.replaceState({}, '', '/');
-      checkAuth()
-        .then(() => {})
+    if (authToken) {
+      // Exchange the one-time token for a JWT (via Vite proxy)
+      window.history.replaceState({}, '', '/dashboard');
+      apiClient.post('/api/auth/token-exchange', { token: authToken })
+        .then((response) => {
+          if (response.data.success && response.data.token) {
+            // Store JWT in localStorage — all subsequent API calls will use it
+            localStorage.setItem('auth_token', response.data.token);
+            setUser(response.data.user);
+          } else {
+            setAuthError('auth_failed');
+          }
+        })
         .catch((err) => {
-          console.error('Auth check error:', err);
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
+          console.error('Token exchange failed:', err);
+          setAuthError('auth_failed');
+        })
+        .finally(() => setLoading(false));
+      return;
     }
+
+    // Normal page load — check if already authenticated
+    checkAuth();
   }, []);
+
+  const login = () => {
+    // Go directly to backend for Google OAuth (callback URL is registered on backend origin).
+    // After OAuth, backend redirects to frontend with a one-time token.
+    // The frontend exchanges the token for a session via the Vite proxy.
+    const backendOrigin = import.meta.env.VITE_BACKEND_URL ||
+      (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
+    window.location.href = `${backendOrigin}/api/auth/google`;
+  };
+
+  const logout = async () => {
+    try {
+      await apiClient.post('/api/auth/logout', {});
+      localStorage.removeItem('auth_token');
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+      localStorage.removeItem('auth_token');
+      setUser(null);
+    }
+  };
 
   return (
     <AuthContext.Provider value={{ user, loading, authError, clearAuthError: () => setAuthError(null), login, logout, checkAuth }}>

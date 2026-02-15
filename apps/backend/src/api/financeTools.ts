@@ -5,10 +5,11 @@
  */
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { requireAuth } from '../auth/middleware.js';
 import { getDocuments } from '../db/pgvector.js';
 import { runFinanceTool } from '../services/financeTools/runner.js';
 import { getAllToolConfigs, FINANCE_TOOL_IDS, type FinanceToolId } from '../services/financeTools/prompts.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
@@ -22,28 +23,28 @@ router.get('/list', requireAuth, (_req: Request, res: Response) => {
   res.json({ success: true, tools: list });
 });
 
-router.post('/run', requireAuth, async (req: Request, res: Response) => {
+router.post('/run', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id;
-    if (!userId) {
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
       return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
     }
+    const tenantId = authReq.workspace.tenantId;
 
     const validated = runSchema.parse(req.body);
 
-    const userDocs = await getDocuments({ userId, documentIds: validated.documentIds });
-    const allowedIds = new Set(userDocs.map((d: { id: string }) => d.id));
+    const tenantDocs = await getDocuments({ tenantId, documentIds: validated.documentIds });
+    const allowedIds = new Set(tenantDocs.map((d: { id: string }) => d.id));
     const documentIds = validated.documentIds.filter((id) => allowedIds.has(id));
 
     if (documentIds.length === 0) {
       return res.status(400).json({
         error: 'No accessible documents',
-        message: 'Select documents that belong to you.',
+        message: 'Select documents that belong to your workspace.',
       });
     }
 
-    const idToFilename = new Map(userDocs.map((d: { id: string; filename: string }) => [d.id, d.filename]));
+    const idToFilename = new Map(tenantDocs.map((d: { id: string; filename: string }) => [d.id, d.filename]));
     const result = await runFinanceTool(validated.toolId as FinanceToolId, documentIds, { idToFilename });
     res.json({ success: true, result });
   } catch (err) {

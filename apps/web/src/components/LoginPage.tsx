@@ -1,4 +1,4 @@
-import { useAuth } from '../contexts/AuthContext';
+import { useState, useEffect } from 'react';
 import './LoginPage.css';
 
 const AUTH_ERROR_MESSAGES: Record<string, { title: string; body: string }> = {
@@ -13,7 +13,24 @@ const AUTH_ERROR_MESSAGES: Record<string, { title: string; body: string }> = {
 };
 
 export default function LoginPage() {
-  const { login, authError, clearAuthError } = useAuth();
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    if (error) {
+      setAuthError(error);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  const handleLogin = () => {
+    // Go directly to backend for Google OAuth (callback URL is registered on backend origin)
+    const backendOrigin = import.meta.env.VITE_BACKEND_URL || 
+      (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
+    window.location.href = `${backendOrigin}/api/auth/google`;
+  };
+
   const errorInfo = authError ? AUTH_ERROR_MESSAGES[authError] : null;
 
   return (
@@ -23,7 +40,7 @@ export default function LoginPage() {
           <div className="login-error-banner" role="alert">
             <strong>{errorInfo.title}</strong>
             <p>{errorInfo.body}</p>
-            <button type="button" onClick={clearAuthError} className="login-error-dismiss">
+            <button type="button" onClick={() => setAuthError(null)} className="login-error-dismiss">
               Dismiss
             </button>
           </div>
@@ -37,16 +54,16 @@ export default function LoginPage() {
               </svg>
               <h1>Aegis AI</h1>
             </div>
-            <p className="login-subtitle">Intelligent Document & Ops Assistant</p>
+            <p className="login-subtitle">Financial Document Intelligence</p>
           </div>
 
           <div className="login-content">
             <h2>Welcome Back</h2>
             <p className="login-description">
-              Sign in with Google to access your documents and get intelligent insights.
+              Sign in with Google to upload financial documents, detect mismatches, and review risk before approval.
             </p>
 
-            <button onClick={login} className="google-login-button">
+            <button onClick={handleLogin} className="google-login-button">
               <svg className="google-icon" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"

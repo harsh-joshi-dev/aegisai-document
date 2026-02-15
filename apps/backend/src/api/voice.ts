@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { requireAuth } from '../auth/middleware.js';
 import { queryRAG } from '../services/rag.js';
 import { getDocuments } from '../db/pgvector.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
@@ -17,9 +18,13 @@ const voiceRequestSchema = z.object({
 
 // This endpoint processes voice input (transcribed text) and returns text response
 // The actual speech-to-text happens on the frontend using Web Speech API
-router.post('/query', requireAuth, async (req: Request, res: Response) => {
+router.post('/query', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const tenantId = authReq.workspace.tenantId;
     const validated = voiceRequestSchema.parse(req.body);
     const { question, language: bodyLang } = req.body;
     const language = bodyLang ?? validated.language ?? 'en';
@@ -31,12 +36,12 @@ router.post('/query', requireAuth, async (req: Request, res: Response) => {
       });
     }
 
-    // Filter documentIds to only include user's documents
+    // Filter documentIds to only include tenant's documents
     let userDocumentIds = validated.documentIds;
     if (userDocumentIds && userDocumentIds.length > 0) {
-      const userDocs = await getDocuments({ userId: authReq.user!.id });
-      const userDocIds = new Set(userDocs.map((d: { id: string }) => d.id));
-      userDocumentIds = userDocumentIds.filter(id => userDocIds.has(id));
+      const tenantDocs = await getDocuments({ tenantId });
+      const tenantDocIds = new Set(tenantDocs.map((d: { id: string }) => d.id));
+      userDocumentIds = userDocumentIds.filter(id => tenantDocIds.has(id));
     }
 
     // Use existing RAG system to answer the question

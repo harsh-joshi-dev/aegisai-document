@@ -19,6 +19,27 @@ import serviceProvidersRouter from './api/serviceProviders.js';
 import voiceRouter from './api/voice.js';
 import chatRouter from './api/chat.js';
 import mobileRouter from './api/mobile.js';
+import compareFinancialRouter from './api/compareFinancial.js';
+import reportRouter from './api/report.js';
+import insightsRouter from './api/insights.js';
+import workspacesRouter from './api/workspaces.js';
+import dashboardRouter from './api/dashboard.js';
+import foldersRouter from './api/folders.js';
+import geocodeRouter from './api/geocode.js';
+import explainRouter from './api/explain.js';
+import whatIfRouter from './api/whatIf.js';
+import trustScoreRouter from './api/trustScore.js';
+import financeToolsRouter from './api/financeTools.js';
+import actionIntelligenceRouter from './api/actionIntelligence.js';
+import deadlinesRouter from './api/deadlines.js';
+import financialImpactRouter from './api/financialImpact.js';
+import commentsRouter from './api/comments.js';
+import policyMatcherRouter from './api/policyMatcher.js';
+import shareSummaryRouter from './api/shareSummary.js';
+import scamScoreRouter from './api/scamScore.js';
+import draftsRouter from './api/drafts.js';
+import negotiationRouter from './api/negotiation.js';
+import riskAnalyzeRouter from './api/riskAnalyze.js';
 
 const app = express();
 
@@ -45,7 +66,7 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: 'lax' as const,
       maxAge: 30 * 24 * 60 * 60 * 1000,
     },
   })
@@ -77,8 +98,29 @@ app.use('/api/service-providers', serviceProvidersRouter);
 app.use('/api/voice', voiceRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/mobile', mobileRouter);
+app.use('/api/compare', compareFinancialRouter);
+app.use('/api/report', reportRouter);
+app.use('/api/insights', insightsRouter);
+app.use('/api/workspaces', workspacesRouter);
+app.use('/api/dashboard', dashboardRouter);
+app.use('/api/folders', foldersRouter);
+app.use('/api/geocode', geocodeRouter);
+app.use('/api/explain', explainRouter);
+app.use('/api/what-if', whatIfRouter);
+app.use('/api/trust-score', trustScoreRouter);
+app.use('/api/finance-tools', financeToolsRouter);
+app.use('/api/action-intelligence', actionIntelligenceRouter);
+app.use('/api/deadlines', deadlinesRouter);
+app.use('/api/financial-impact', financialImpactRouter);
+app.use('/api/comments', commentsRouter);
+app.use('/api/policy-matcher', policyMatcherRouter);
+app.use('/api/share-summary', shareSummaryRouter);
+app.use('/api/scam-score', scamScoreRouter);
+app.use('/api/drafts', draftsRouter);
+app.use('/api/negotiation', negotiationRouter);
+app.use('/api/risk', riskAnalyzeRouter);
 
-console.log('✅ ULI + DPDP routes: auth, upload, documents, compliance, uli, loan-applications, rules, agent-swarm, indic, pricing, service-providers, voice, chat, mobile');
+console.log('✅ All API routes registered');
 
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err);

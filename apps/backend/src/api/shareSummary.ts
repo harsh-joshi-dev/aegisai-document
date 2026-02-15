@@ -7,6 +7,7 @@ import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
 import { getDocuments, getDocumentContent } from '../db/pgvector.js';
 import { ChatOpenAI } from '@langchain/openai';
 import { config } from '../config/env.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
@@ -19,7 +20,8 @@ function getLLM() {
       openAIApiKey: config.openai.apiKey,
       modelName: 'gpt-4o-mini',
       temperature: 0.2,
-    });
+      }
+);
   }
   return llm;
 }
@@ -29,12 +31,21 @@ const schema = z.object({
   title: z.string().optional(), // e.g. "Summary of Rent Agreement"
 });
 
-router.post('/generate', requireAuth, async (req: Request, res: Response) => {
+router.post(
+  '/generate',
+  requireAuth,
+  requireWorkspaceContext,
+  requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']),
+  async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
+    const authReq = req as WorkspaceRequest;
     const { documentId, title } = schema.parse(req.body);
 
-    const docs = await getDocuments({ userId: authReq.user!.id, documentIds: [documentId] });
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+
+    const docs = await getDocuments({ tenantId: authReq.workspace.tenantId, documentIds: [documentId] });
     if (docs.length === 0) {
       return res.status(404).json({ error: 'Document not found' });
     }

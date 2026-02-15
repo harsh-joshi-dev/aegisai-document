@@ -1,21 +1,23 @@
 import { Router, Request, Response } from 'express';
-import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { requireAuth } from '../auth/middleware.js';
 import { getDocumentContent, pool } from '../db/pgvector.js';
 import { analyzeDocumentCompleteness } from '../services/documentCompleteness.js';
 import { logAuditEvent } from '../compliance/auditLog.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
-router.post('/:documentId', requireAuth, async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+router.post('/:documentId', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer', 'viewer']), async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
 
-  if (!authReq.user) {
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) {
     return res.status(401).json({
       error: 'Unauthorized',
       message: 'Authentication required',
     });
   }
 
+  const tenantId = authReq.workspace.tenantId;
   const userId = authReq.user.id;
   const { documentId } = req.params;
   const { documentType } = req.body;
@@ -26,8 +28,8 @@ router.post('/:documentId', requireAuth, async (req: Request, res: Response) => 
     let document: any;
     try {
       const result = await client.query(
-        `SELECT id, filename, metadata, user_id FROM documents WHERE id = $1`,
-        [documentId]
+        `SELECT id, filename, metadata, tenant_id FROM documents WHERE id = $1 AND tenant_id = $2`,
+        [documentId, tenantId]
       );
       document = result.rows[0];
     } finally {
@@ -38,14 +40,6 @@ router.post('/:documentId', requireAuth, async (req: Request, res: Response) => 
       return res.status(404).json({
         error: 'Document not found',
         message: 'The specified document does not exist',
-      });
-    }
-
-    // Verify ownership
-    if (document.user_id !== userId) {
-      return res.status(403).json({
-        error: 'Forbidden',
-        message: 'You do not have access to this document',
       });
     }
 
@@ -65,7 +59,7 @@ router.post('/:documentId', requireAuth, async (req: Request, res: Response) => 
       documentType
     );
 
-    // Log audit event
+    // Log audit event with tenant context
     await logAuditEvent(
       userId,
       'document_completeness_check',
@@ -76,6 +70,7 @@ router.post('/:documentId', requireAuth, async (req: Request, res: Response) => 
         completenessScore: analysis.completenessScore,
         missingCount: analysis.missingElements.length,
         status: analysis.overallStatus,
+        tenantId,
       },
       req.ip,
       req.get('user-agent'),

@@ -10,19 +10,35 @@ import {
   getOrCreateFolder,
   setDocumentFolder,
   updateDocumentMetadata,
+  updateDocumentMetadataByTenant,
+  getOrCreateFolderByTenant,
+  setDocumentFolderByTenant,
+  updateDocumentFinancialFields,
+  updateDocumentFinancialFieldsByTenant,
+  updateDocumentProcessing,
+  updateDocumentRiskLevelByTenant,
   type DocumentRow,
+  pool,
 } from '../db/pgvector.js';
 import { classifyDocumentRisk } from '../services/classifier.js';
 import { classifyDocumentType, getFinancialYearFromDate } from '../services/documentTypeClassifier.js';
+import { extractFinancialData } from '../services/financialExtraction.js';
+import { generateFinancialSummary } from '../services/financialSummary.js';
+import { computeRiskScore } from '../services/financialRiskScore.js';
 import { sanitizeForAnalysis } from '../redaction/sanitizer.js';
 import { evaluateRules } from '../rules/ruleEngine.js';
 import { getEnabledRules } from '../rules/rulesStorage.js';
 import { logAuditEvent } from '../compliance/auditLog.js';
 import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
 import { checkDocumentLimit, MAX_DOCUMENTS_PER_USER } from '../db/userLimits.js';
+import { getDocumentProcessingQueue } from '../queue/documentProcessingQueue.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+const BULK_MIN_FILES = 10;
+const BULK_MAX_FILES = 100;
 
 // Shared helper to enforce per-user document limit
 async function ensureDocumentLimit(userId: string, res: Response) {
@@ -39,8 +55,8 @@ async function ensureDocumentLimit(userId: string, res: Response) {
   return true;
 }
 
-router.post('/', requireAuth, upload.single('file') as unknown as import('express').RequestHandler, async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin']), upload.single('file') as unknown as import('express').RequestHandler, async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
   
   if (!authReq.user) {
     return res.status(401).json({
@@ -50,6 +66,7 @@ router.post('/', requireAuth, upload.single('file') as unknown as import('expres
   }
 
   const userId = authReq.user.id;
+  const tenantId = authReq.workspace!.tenantId;
 
   // Check document limit
   const allowed = await ensureDocumentLimit(userId, res);
@@ -210,14 +227,57 @@ router.post('/', requireAuth, upload.single('file') as unknown as import('expres
       return res.status(500).json({ error: 'Failed to insert document' });
     }
 
+    // Stamp workspace ownership (tenant) + uploader (created_by)
+    try {
+      await pool.query(
+        `UPDATE documents SET tenant_id = $1, created_by = $2 WHERE id = $3`,
+        [tenantId, userId, document.id]
+      );
+    } catch (e) {
+      console.warn('Failed to stamp tenant_id/created_by on document:', e);
+    }
+
+    let extractedDataForResponse: Record<string, unknown> | undefined = undefined;
+    let summaryForResponse: string | undefined = undefined;
+    let riskScoreForResponse: number | undefined = undefined;
+
+    // Financial extraction + summary + risk score (MVP)
+    try {
+      const extracted = extractFinancialData({ text: textForAnalysis, filename: req.file.originalname });
+      const summary = await generateFinancialSummary({ extracted, text: textForAnalysis, filename: req.file.originalname });
+      const riskScore = computeRiskScore({ extracted, classification: riskAnalysis });
+
+      extractedDataForResponse = extracted as unknown as Record<string, unknown>;
+      summaryForResponse = summary;
+      riskScoreForResponse = riskScore.score;
+
+      await updateDocumentFinancialFieldsByTenant({
+        documentId: document.id,
+        tenantId,
+        extractedData: extracted as unknown as Record<string, unknown>,
+        riskScore: riskScore.score,
+        summary,
+      });
+
+      await updateDocumentMetadataByTenant(document.id, tenantId, {
+        financial: {
+          extracted,
+          riskHighlights: riskScore.highlights,
+        },
+      });
+    } catch (finErr) {
+      console.warn('Financial extraction/summary failed (document still uploaded):', finErr);
+    }
+
     // Update risk level
     try {
-      await updateDocumentRiskLevel(
-        document.id, 
-        riskAnalysis.riskLevel,
-        riskAnalysis.riskCategory || 'None',
-        riskAnalysis.confidence || 0.5
-      );
+      await updateDocumentRiskLevelByTenant({
+        documentId: document.id,
+        tenantId,
+        riskLevel: riskAnalysis.riskLevel,
+        riskCategory: riskAnalysis.riskCategory || 'None',
+        riskConfidence: riskAnalysis.confidence || 0.5,
+      });
     } catch (error) {
       console.warn('Error updating document risk level:', error);
       // Continue - document is already inserted
@@ -272,13 +332,13 @@ router.post('/', requireAuth, upload.single('file') as unknown as import('expres
     try {
       const typeResult = await classifyDocumentType(textForAnalysis, req.file.originalname);
       const financialYear = typeResult.financialYear ?? getFinancialYearFromDate(new Date(document.uploaded_at || undefined));
-      await updateDocumentMetadata(document.id, userId, {
+      await updateDocumentMetadataByTenant(document.id, tenantId, {
         documentType: typeResult.documentType,
         financialYear,
       });
-      const folderId = await getOrCreateFolder(userId, typeResult.folderName);
+      const folderId = await getOrCreateFolderByTenant({ tenantId, actorUserId: userId, folderName: typeResult.folderName });
       if (folderId) {
-        await setDocumentFolder(document.id, userId, folderId);
+        await setDocumentFolderByTenant({ documentId: document.id, tenantId, folderId });
         autoFolderName = typeResult.folderName;
       }
     } catch (folderErr) {
@@ -325,6 +385,7 @@ router.post('/', requireAuth, upload.single('file') as unknown as import('expres
         riskLevel: riskAnalysis.riskLevel,
         numPages: parsed.numPages,
         numChunks: chunksWithEmbeddings.length,
+        tenantId,
       },
       req.ip,
       req.get('user-agent'),
@@ -344,6 +405,9 @@ router.post('/', requireAuth, upload.single('file') as unknown as import('expres
         recommendations: riskAnalysis.recommendations,
         numPages: parsed.numPages,
         numChunks: chunksWithEmbeddings.length,
+        riskScore: riskScoreForResponse,
+        summary: summaryForResponse,
+        extractedData: extractedDataForResponse,
         customRuleMatches: customRuleMatches.length > 0 ? customRuleMatches : undefined,
         redactionSummary: redactionSummary,
         autoFolderName,
@@ -363,6 +427,128 @@ router.post('/', requireAuth, upload.single('file') as unknown as import('expres
     });
   }
 });
+
+/**
+ * Bulk upload multiple documents and process asynchronously.
+ * POST /api/upload/bulk
+ * multipart/form-data: files[]
+ */
+router.post(
+  '/bulk',
+  requireAuth,
+  requireWorkspaceContext,
+  requireWorkspaceRole(['owner', 'admin']),
+  upload.array('files', BULK_MAX_FILES) as unknown as import('express').RequestHandler,
+  async (req: Request, res: Response) => {
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+
+    const userId = authReq.user.id;
+    const tenantId = authReq.workspace!.tenantId;
+    const files = (req.files as Express.Multer.File[]) || [];
+
+    if (files.length < BULK_MIN_FILES || files.length > BULK_MAX_FILES) {
+      return res.status(400).json({
+        error: 'Invalid file count',
+        message: `Upload between ${BULK_MIN_FILES} and ${BULK_MAX_FILES} documents at a time.`,
+        receivedCount: files.length,
+      });
+    }
+
+    const limitCheck = await checkDocumentLimit(userId);
+    if (!limitCheck.allowed || limitCheck.remaining < files.length) {
+      return res.status(403).json({
+        error: 'Document limit reached',
+        message: `You can upload at most ${limitCheck.remaining} more documents. Please delete some documents to upload more.`,
+        currentCount: limitCheck.currentCount,
+        maxCount: limitCheck.maxCount,
+        remaining: limitCheck.remaining,
+      });
+    }
+
+    // Validate inputs before writing anything
+    for (const f of files) {
+      if (!isSupportedFileType(f.mimetype, f.originalname)) {
+        return res.status(400).json({
+          error: 'Unsupported file type',
+          message: 'Supported file types: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, JPEG, WEBP',
+          filename: f.originalname,
+          receivedType: f.mimetype || 'unknown',
+        });
+      }
+      if (f.size === 0) {
+        return res.status(400).json({ error: 'Empty file', filename: f.originalname });
+      }
+      if (f.size > 50 * 1024 * 1024) {
+        return res.status(400).json({
+          error: 'File too large',
+          message: 'Maximum file size is 50MB',
+          filename: f.originalname,
+        });
+      }
+    }
+
+    const queue = getDocumentProcessingQueue();
+
+    try {
+      const created: Array<{ documentId: string; filename: string; jobId: string | null }> = [];
+
+      for (const f of files) {
+        const document = await insertDocument(
+          f.originalname,
+          userId,
+          {
+            source: 'bulk',
+          },
+          'None',
+          0.5,
+          1,
+          undefined,
+          f.buffer,
+          f.mimetype
+        );
+
+        if (!document) {
+          created.push({ documentId: 'unknown', filename: f.originalname, jobId: null });
+          continue;
+        }
+
+        await updateDocumentProcessing({
+          documentId: document.id,
+          userId,
+          status: 'UPLOADED',
+          progress: 0,
+          error: null,
+        });
+
+        // Stamp workspace ownership
+        try {
+          await pool.query(
+            `UPDATE documents SET tenant_id = $1, created_by = $2 WHERE id = $3`,
+            [tenantId, userId, document.id]
+          );
+        } catch {}
+
+        const job = await queue.add('process', { documentId: document.id, userId, tenantId });
+        created.push({ documentId: document.id, filename: f.originalname, jobId: job.id ? String(job.id) : null });
+      }
+
+      res.json({
+        success: true,
+        mode: 'async',
+        documents: created,
+      });
+    } catch (error) {
+      console.error('Bulk upload error:', error);
+      res.status(500).json({
+        error: 'Failed to bulk upload documents',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
 
 /**
  * Upload raw text as a virtual document

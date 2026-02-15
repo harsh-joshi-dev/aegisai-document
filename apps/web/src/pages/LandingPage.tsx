@@ -1,766 +1,690 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
-import { featuresByCategory } from '../config/featuresByCategory';
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Shield,
+  Brain,
+  FileSearch,
+  AlertTriangle,
+  CheckCircle,
+  Zap,
+  BarChart3,
+  Eye,
+  Play,
+  Sparkles,
+  Database,
+  GitBranch,
+  Clock,
+  Award,
+  Users,
+  Globe,
+  Server,
+  ArrowRight,
+  Star,
+  Quote,
+  ChevronDown,
+  X,
+  User,
+} from 'lucide-react';
 import './LandingPage.css';
 
-// Hook for scroll animations
-const useScrollReveal = () => {
+// Animated counter component
+function AnimatedCounter({ end, duration = 2, suffix = '' }: { end: number; duration?: number; suffix?: string }) {
+  const [count, setCount] = useState(0);
+  
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
+    let startTime: number;
+    let animationFrame: number;
+    
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
+      setCount(Math.floor(progress * end));
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+    
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [end, duration]);
+  
+  return <span>{count.toLocaleString()}{suffix}</span>;
+}
 
-    document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+// Feature Card Component
+function FeatureCard({ icon: Icon, title, description, color, delay }: any) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, delay }}
+      whileHover={{ y: -8, scale: 1.02 }}
+      className="feature-card-modern"
+    >
+      <div className={`feature-icon-wrapper ${color}`}>
+        <Icon size={28} strokeWidth={1.5} />
+      </div>
+      <h3 className="feature-title">{title}</h3>
+      <p className="feature-description">{description}</p>
+    </motion.div>
+  );
+}
+
+// Risk Signal Demo Component
+function RiskSignalDemo() {
+  const [activeSignal, setActiveSignal] = useState(0);
+  
+  const signals = [
+    { type: 'critical', label: 'Amount Mismatch', message: 'Invoice ₹1,00,000 ≠ Bank ₹80,000', icon: AlertTriangle },
+    { type: 'high', label: 'Missing GST', message: 'Vendor GSTIN not found in document', icon: Shield },
+    { type: 'medium', label: 'Pattern Detected', message: 'Repeated amount across vendors', icon: GitBranch },
+    { type: 'low', label: 'Time Check', message: 'Document older than 90 days', icon: Clock },
+  ];
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSignal((prev) => (prev + 1) % signals.length);
+    }, 3000);
+    return () => clearInterval(timer);
   }, []);
-};
+  
+  return (
+    <div className="risk-signal-demo">
+      <div className="risk-signal-header">
+        <div className="risk-badge">
+          <Shield size={14} />
+          Risk Intelligence
+        </div>
+        <div className="risk-score">
+          <span className="score-value">68</span>
+          <span className="score-label">/ 100</span>
+        </div>
+      </div>
+      
+      <div className="risk-signals-list">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeSignal}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+            className={`risk-signal-item ${signals[activeSignal].type}`}
+          >
+            <div className="signal-icon">
+              {(() => {
+                const IconComponent = signals[activeSignal].icon;
+                return <IconComponent size={20} />;
+              })()}
+            </div>
+            <div className="signal-content">
+              <div className="signal-label">{signals[activeSignal].label}</div>
+              <div className="signal-message">{signals[activeSignal].message}</div>
+            </div>
+            <div className={`signal-severity ${signals[activeSignal].type}`}>
+              {signals[activeSignal].type}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      
+      <div className="risk-dots">
+        {signals.map((_, idx) => (
+          <button
+            key={idx}
+            className={`risk-dot ${idx === activeSignal ? 'active' : ''}`}
+            onClick={() => setActiveSignal(idx)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Video Modal Component
+function VideoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  if (!isOpen) return null;
+  
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="video-modal-overlay"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="video-modal-content"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button className="video-modal-close" onClick={onClose}>
+            <X size={24} />
+          </button>
+          <div className="video-placeholder">
+            <div className="video-placeholder-icon">
+              <Play size={48} />
+            </div>
+            <p>Product Demo Video</p>
+            <p className="video-placeholder-sub">See Risk Intelligence in action</p>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
 export default function LandingPage() {
-  const { } = useAuth();
-  const navigate = useNavigate();
-  useScrollReveal();
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  const handleGetStarted = () => {
-    navigate('/login');
-  };
-
-  const [activeTab, setActiveTab] = useState('upload');
-  const [activeFaq, setActiveFaq] = useState<number | null>(null);
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  const toggleFaq = (index: number) => {
-    setActiveFaq(activeFaq === index ? null : index);
-  };
-
-  // Image slider data — India SME Lending
-  const sliderImages = [
-    {
-      title: 'ULI Document Fetch',
-      description: 'GST returns, ITR, bank statements & Aadhaar with consent-based access',
-      image: '📄'
-    },
-    {
-      title: 'Consistency Score & Risk Flags',
-      description: 'GST vs ITR revenue mismatch, employment continuity, bank velocity rules',
-      image: '📊'
-    },
-    {
-      title: 'Due Diligence Report',
-      description: 'NBFC-ready credit committee report: Approve / Review / Decline',
-      image: '📋'
-    },
-    {
-      title: 'DPDP Compliance',
-      description: 'Immutable consent logs, 90-day auto-deletion, data principal rights',
-      image: '🔒'
-    },
-    {
-      title: 'Indic Language OCR',
-      description: 'Hindi, Gujarati, Tamil & more — Sarvam AI vision for regional documents',
-      image: '🌐'
-    }
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % sliderImages.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [sliderImages.length]);
-
-  // Animate stats numbers
-  useEffect(() => {
-    const animateNumbers = () => {
-      const statNumbers = document.querySelectorAll('.stat-number');
-      statNumbers.forEach((stat) => {
-        const target = parseInt(stat.getAttribute('data-target') || '0');
-        const duration = 2000;
-        const increment = target / (duration / 16);
-        let current = 0;
-
-        const updateNumber = () => {
-          current += increment;
-          if (current < target) {
-            stat.textContent = Math.floor(current).toString();
-            requestAnimationFrame(updateNumber);
-          } else {
-            stat.textContent = target.toString();
-          }
-        };
-
-        const observer = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              if (entry.isIntersecting && !stat.classList.contains('animated')) {
-                stat.classList.add('animated');
-                updateNumber();
-                observer.unobserve(stat);
-              }
-            });
-          },
-          { threshold: 0.5 }
-        );
-
-        observer.observe(stat);
-      });
-    };
-
-    animateNumbers();
+  const handleLogin = useCallback(() => {
+    const backendOrigin = import.meta.env.VITE_BACKEND_URL ||
+      (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
+    window.location.href = `${backendOrigin}/api/auth/google`;
   }, []);
 
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % sliderImages.length);
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + sliderImages.length) % sliderImages.length);
-  };
+  const features = [
+    {
+      icon: Brain,
+      title: 'Dynamic Rule Engine V2',
+      description: 'Tenant-scoped rules with threshold, required field, consistency, and time-based validations.',
+      color: 'blue',
+    },
+    {
+      icon: GitBranch,
+      title: 'Pattern Detection V2',
+      description: 'Cross-document intelligence detecting repeated amounts, vendor spikes, round payments, and rapid transactions.',
+      color: 'purple',
+    },
+    {
+      icon: Shield,
+      title: 'Unified Risk Scoring',
+      description: 'Standardized RiskSignals with severity weights, confidence scores, and explainable recommendations.',
+      color: 'green',
+    },
+    {
+      icon: Eye,
+      title: 'Explainable AI',
+      description: 'Every risk signal includes what triggered it, why it matters, and what action to take next.',
+      color: 'orange',
+    },
+    {
+      icon: Database,
+      title: 'Tenant-Scoped Data',
+      description: 'Complete data isolation with multi-tenant architecture and RBAC (owner, admin, reviewer, viewer).',
+      color: 'indigo',
+    },
+    {
+      icon: Zap,
+      title: 'Async Processing',
+      description: 'High-performance rule execution with stored results. No recomputation on every request.',
+      color: 'yellow',
+    },
+  ];
+
+  const stats = [
+    { value: 99.9, suffix: '%', label: 'Accuracy Rate', icon: TargetIcon },
+    { value: 50, suffix: '+', label: 'Rule Types', icon: CheckCircle },
+    { value: 1000, suffix: '+', label: 'Documents Processed', icon: FileSearch },
+    { value: 10, suffix: 'x', label: 'Faster Review', icon: Zap },
+  ];
+
+  function TargetIcon(props: any) {
+    return (
+      <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" />
+      </svg>
+    );
+  }
 
   return (
-    <div className="landing-page">
-      {/* Navigation Header */}
-      <nav className="landing-nav glass-nav">
+    <div className="landing-page-modern">
+      {/* Navigation */}
+      <nav className={`landing-nav-modern ${scrolled ? 'scrolled' : ''}`}>
         <div className="landing-nav-container">
-          <div className="landing-logo">
-            <div className="logo-box">
-              <svg className="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M9 12l2 2 4-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+          <Link to="/" className="landing-logo-modern">
+            <div className="logo-glow">
+              <Shield size={28} strokeWidth={2} />
             </div>
-            <span className="font-tracking-tight">Aegis AI</span>
-          </div>
+            <span className="logo-text">Aegis AI</span>
+            <span className="logo-badge">Risk Intelligence</span>
+          </Link>
+          
           <div className="landing-nav-links">
-            <a href="#features" className="nav-link">Features</a>
-            <a href="#how-it-works" className="nav-link">How it Works</a>
-            <Link to="/pricing" className="nav-link">Pricing (INR)</Link>
-            <a href="#security" className="nav-link">Security & DPDP</a>
-            <a href="#testimonials" className="nav-link">Testimonials</a>
-            <div className="nav-divider"></div>
-            <Link to="/login" className="nav-link">Log In</Link>
-            <button onClick={handleGetStarted} className="btn btn-primary btn-sm glow-effect">
-              Start Free Trial
+            <a href="#features" className="nav-link-modern">Features</a>
+            <a href="#how-it-works" className="nav-link-modern">How it Works</a>
+            <a href="#pricing" className="nav-link-modern">Pricing</a>
+            <button onClick={handleLogin} className="nav-link-modern" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Log In</button>
+            <button onClick={handleLogin} className="btn-primary-modern" style={{ border: 'none', cursor: 'pointer' }}>
+              Get Started
+              <ArrowRight size={16} />
             </button>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="hero-section">
-        <div className="hero-background-glow"></div>
-        <div className="hero-grid-lines"></div>
-        <div className="hero-container">
-          <div className="hero-content reveal fade-up">
-            <div className="hero-badge">
-              <span className="badge-dot"></span>
-              <span>India 2026 — ULI & DPDP Compliant</span>
-            </div>
-            <h1 className="hero-title">
-              SME Lending Intelligence <br />
-              <span className="gradient-text-primary">At The Speed of AI.</span>
-            </h1>
-            <p className="hero-description">
-              Connect to GST, ITR, bank statements & Aadhaar via <strong>ULI</strong>. Get <strong>consistency scores</strong>, risk flags, and NBFC-ready due diligence reports — with full <strong>DPDP</strong> consent logging and data localisation.
-            </p>
-            <div className="hero-cta-group">
-              <button onClick={handleGetStarted} className="btn btn-primary btn-lg">
-                Start Loan Analysis
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </button>
-              <Link to="/pricing" className="btn btn-secondary btn-lg">
-                View INR Pricing
-              </Link>
-            </div>
-            <div className="hero-trust">
-              <p>Trusted by NBFCs and microfinance institutions</p>
-              <div className="trust-logos">
-                {['GST–ITR Consistency', 'DPDP Audit Trail', 'Indic Language OCR', '90-Day Auto-Delete'].map((logo, i) => (
-                  <span key={i} className="trust-logo">{logo}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="hero-visual reveal zoom-in delay-200">
-            <div className="visual-glass-container">
-              <div className="app-mockup">
-                <div className="mockup-header">
-                  <div className="traffic-lights">
-                    <div className="light red"></div>
-                    <div className="light yellow"></div>
-                    <div className="light green"></div>
-                  </div>
-                  <div className="mockup-address">aegis.ai/loan-applications/uli-consent</div>
-                </div>
-                <div className="mockup-body">
-                  <div className="mockup-sidebar">
-                    <div className="sidebar-item active"></div>
-                    <div className="sidebar-item"></div>
-                    <div className="sidebar-item"></div>
-                  </div>
-                  <div className="mockup-main">
-                    <div className="doc-page">
-                      <div className="doc-line w-80"></div>
-                      <div className="doc-line w-60"></div>
-                      <div className="doc-line w-90"></div>
-                      <div className="doc-highlight danger">
-                        <div className="highlight-tag">Indemnity Risk</div>
-                      </div>
-                      <div className="doc-line w-70"></div>
-                      <div className="doc-line w-80"></div>
-                    </div>
-                    <div className="ai-popover">
-                      <div className="ai-avatar">🤖</div>
-                      <div className="ai-message">
-                        <strong>Revenue Mismatch Flag</strong>
-                        <p>GST taxable value 40% higher than ITR gross receipts. Review for credit committee.</p>
-                        <div className="ai-actions">
-                          <button className="btn-xs primary">Due Diligence Report</button>
-                          <button className="btn-xs secondary">View Consent Log</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      <section className="hero-section-modern">
+        <div className="hero-bg-effects">
+          <div className="hero-glow hero-glow-1"></div>
+          <div className="hero-glow hero-glow-2"></div>
+          <div className="hero-grid"></div>
         </div>
+        
+        <div className="hero-container-modern">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="hero-content-modern"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="hero-badge-modern"
+            >
+              <Sparkles size={16} />
+              <span>New: Risk Intelligence System V2</span>
+            </motion.div>
+            
+            <h1 className="hero-title-modern">
+              Intelligent Risk Detection
+              <br />
+              <span className="gradient-text">for Financial Documents</span>
+            </h1>
+            
+            <p className="hero-description-modern">
+              Aegis AI's unified Risk Intelligence System combines dynamic rule engines
+              with cross-document pattern detection to catch fraud, errors, and compliance
+              issues before they cost you money.
+            </p>
+            
+            <div className="hero-cta-modern">
+              <button onClick={handleLogin} className="btn-primary-large" style={{ border: 'none', cursor: 'pointer' }}>
+                Start Free Trial
+                <ArrowRight size={20} />
+              </button>
+              <button 
+                className="btn-video"
+                onClick={() => setIsVideoOpen(true)}
+              >
+                <div className="btn-video-icon">
+                  <Play size={16} fill="currentColor" />
+                </div>
+                Watch Demo
+              </button>
+            </div>
+            
+            <div className="hero-trust-modern">
+              <div className="trust-avatars">
+                <div className="trust-avatar avatar-1">
+                  <User size={18} />
+                </div>
+                <div className="trust-avatar avatar-2">
+                  <User size={18} />
+                </div>
+                <div className="trust-avatar avatar-3">
+                  <User size={18} />
+                </div>
+                <div className="trust-avatar avatar-4">
+                  <span>+</span>
+                </div>
+              </div>
+              <div className="trust-rating">
+                <div className="trust-stars">
+                  {[1,2,3,4,5].map(i => (
+                    <Star key={i} size={14} className="trust-star" fill="currentColor" />
+                  ))}
+                </div>
+                <span className="trust-text">Trusted by 500+ audit teams</span>
+              </div>
+            </div>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, rotateY: -15 }}
+            animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="hero-visual-modern"
+          >
+            <RiskSignalDemo />
+          </motion.div>
+        </div>
+        
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1, duration: 0.5 }}
+          className="hero-scroll-indicator"
+        >
+          <ChevronDown size={24} />
+        </motion.div>
       </section>
 
       {/* Stats Section */}
-      <section className="stats-section section-padding">
-        <div className="section-container">
-          <div className="stats-grid reveal fade-up">
-            <div className="stat-card">
-              <div className="stat-icon">📄</div>
-              <div className="stat-number" data-target="100">0</div>
-              <div className="stat-label">ULI API Calls / Min</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">✓</div>
-              <div className="stat-number" data-target="95">0</div>
-              <div className="stat-label">% GST–ITR Match Accuracy</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">🔒</div>
-              <div className="stat-number" data-target="90">0</div>
-              <div className="stat-label">Day DPDP Retention</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">🌐</div>
-              <div className="stat-number" data-target="22">0</div>
-              <div className="stat-label">Indian Languages (Voice)</div>
-            </div>
-          </div>
+      <section className="stats-section">
+        <div className="stats-container">
+          {stats.map((stat, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: idx * 0.1 }}
+              className="stat-item"
+            >
+              <div className="stat-icon">
+                <stat.icon size={24} />
+              </div>
+              <div className="stat-value">
+                <AnimatedCounter end={stat.value} suffix={stat.suffix} />
+              </div>
+              <div className="stat-label">{stat.label}</div>
+            </motion.div>
+          ))}
         </div>
       </section>
 
-      {/* Image Slider Section */}
-      <section id="slider" className="slider-section section-padding dark-section">
+      {/* Features Section */}
+      <section id="features" className="features-section-modern">
         <div className="section-container">
-          <div className="section-header reveal fade-up">
-            <h2 className="section-title">SME Lending in Action</h2>
-            <p className="section-subtitle">ULI integration, consistency checks, and DPDP-compliant workflows</p>
-          </div>
-          <div className="slider-container reveal zoom-in">
-            <div className="slider-wrapper">
-              {sliderImages.map((slide, index) => (
-                <div
-                  key={index}
-                  className={`slider-slide ${index === currentSlide ? 'active' : ''}`}
-                  style={{ transform: `translateX(${(index - currentSlide) * 100}%)` }}
-                >
-                  <div className="slide-content">
-                    <div className="slide-icon">{slide.image}</div>
-                    <h3 className="slide-title">{slide.title}</h3>
-                    <p className="slide-description">{slide.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="slider-controls">
-              <button className="slider-btn prev" onClick={prevSlide}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M15 18l-6-6 6-6" />
-                </svg>
-              </button>
-              <div className="slider-dots">
-                {sliderImages.map((_, index) => (
-                  <button
-                    key={index}
-                    className={`slider-dot ${index === currentSlide ? 'active' : ''}`}
-                    onClick={() => setCurrentSlide(index)}
-                  />
-                ))}
-              </div>
-              <button className="slider-btn next" onClick={nextSlide}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* End-to-end: Everything we do */}
-      <section id="product-end-to-end" className="section-padding end-to-end-section">
-        <div className="section-container">
-          <div className="section-header reveal fade-up">
-            <h2 className="section-title">Everything we do, <span className="text-gradient">end to end</span></h2>
-            <p className="section-subtitle">From upload to action—one place for all your document intelligence.</p>
-          </div>
-          <div className="e2e-flow">
-            <div className="e2e-step reveal fade-up">
-              <div className="e2e-step-icon">📤</div>
-              <h4>Upload & organize</h4>
-              <p>Drop documents, auto-categorize by risk, and manage with folders.</p>
-            </div>
-            <div className="e2e-arrow" aria-hidden>→</div>
-            <div className="e2e-step reveal fade-up">
-              <div className="e2e-step-icon">⚡</div>
-              <h4>What should I do next?</h4>
-              <p>Get one clear action, deadline, and who should handle it.</p>
-            </div>
-            <div className="e2e-arrow" aria-hidden>→</div>
-            <div className="e2e-step reveal fade-up">
-              <div className="e2e-step-icon">📋</div>
-              <h4>Explain, risk & trust</h4>
-              <p>Simple or professional explanations, risk clauses, trust & scam scores.</p>
-            </div>
-            <div className="e2e-arrow" aria-hidden>→</div>
-            <div className="e2e-step reveal fade-up">
-              <div className="e2e-step-icon">📊</div>
-              <h4>Financial & dashboard</h4>
-              <p>Financial impact, deadlines, risk trends, and health at a glance.</p>
-            </div>
-            <div className="e2e-arrow" aria-hidden>→</div>
-            <div className="e2e-step reveal fade-up">
-              <div className="e2e-step-icon">💬</div>
-              <h4>Chat & act</h4>
-              <p>Ask anything, get drafts, negotiate, share safe summaries, find experts.</p>
-            </div>
-          </div>
-          <div className="e2e-feature-grid">
-            {featuresByCategory.map((cat, ci) => (
-              <div key={cat.id} className="e2e-category reveal fade-up" style={{ transitionDelay: `${ci * 0.05}s` }}>
-                <h4 className="e2e-category-title">{cat.label}</h4>
-                <ul>
-                  {cat.features.slice(0, 6).map((f) => (
-                    <li key={f.id}>{f.label}</li>
-                  ))}
-                </ul>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="section-header"
+          >
+            <div className="section-badge">Features</div>
+            <h2 className="section-title">Everything You Need for<br />Document Risk Intelligence</h2>
+            <p className="section-description">
+              From dynamic rule engines to cross-document pattern detection,
+              Aegis AI provides complete risk visibility.
+            </p>
+          </motion.div>
+          
+          <div className="features-grid-modern">
+            {features.map((feature, idx) => (
+              <FeatureCard key={idx} {...feature} delay={idx * 0.1} />
             ))}
           </div>
         </div>
       </section>
 
-      {/* Bento Grid Features */}
-      <section id="features" className="section-padding bento-section">
+      {/* How It Works */}
+      <section id="how-it-works" className="how-it-works-section">
         <div className="section-container">
-          <div className="section-header reveal fade-up">
-            <h2 className="section-title">Everything you need to <span className="text-gradient">ship safer deals.</span></h2>
-            <p className="section-subtitle">Aegis replaces your entire manual review process with intelligent automation.</p>
-          </div>
-
-          <div className="bento-grid">
-            <div className="bento-card span-2 highlight-card reveal fade-up">
-              <div className="card-bg-glow"></div>
-              <div className="bento-content">
-                <div className="bento-icon-wrapper blue">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /></svg>
-                </div>
-                <h3>ULI + Due Diligence</h3>
-                <p>Fetch GST, ITR, bank statements & Aadhaar via ULI; run consistency checks and NBFC-ready due diligence reports with full DPDP audit.</p>
-              </div>
-              <div className="bento-visual swarm-visual">
-                <div className="agent-node a1">🔍</div>
-                <div className="agent-node a2">⚖️</div>
-                <div className="agent-node a3">🛡️</div>
-                <div className="connection-lines"></div>
-              </div>
-            </div>
-
-            <div className="bento-card reveal fade-up delay-100">
-              <div className="bento-content">
-                <div className="bento-icon-wrapper purple">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-                </div>
-                <h3>Consistency Score</h3>
-                <p>GST vs ITR revenue mismatch, employment continuity, address verification, and bank velocity rules.</p>
-              </div>
-            </div>
-
-            <div className="bento-card reveal fade-up delay-200">
-              <div className="bento-content">
-                <div className="bento-icon-wrapper green">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
-                </div>
-                <h3>DPDP Consent Log</h3>
-                <p>Immutable audit trail for every ULI fetch: data principal, purpose, timestamp (IST).</p>
-              </div>
-            </div>
-
-            <div className="bento-card reveal fade-up delay-100">
-              <div className="bento-content">
-                <div className="bento-icon-wrapper orange">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                </div>
-                <h3>Voice-First Mode</h3>
-                <p>Ask questions verbally and get AI-powered explanations in real-time.</p>
-              </div>
-            </div>
-
-            <div className="bento-card reveal fade-up delay-200">
-              <div className="bento-content">
-                <div className="bento-icon-wrapper blue">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18M7 16l4-4 4 4 6-6" /></svg>
-                </div>
-                <h3>Trust Score</h3>
-                <p>Get an overall document trustworthiness score based on multiple factors.</p>
-              </div>
-            </div>
-
-            <div className="bento-card span-3 horizontal reveal fade-up">
-              <div className="bento-row">
-                <div className="bento-content">
-                  <div className="bento-icon-wrapper orange">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
-                  </div>
-                  <h3>DPDP & Data Localisation</h3>
-                  <p>India-only compliance: consent logging, 90-day auto-deletion, data principal rights, transfer blocker (no US/EU).</p>
-                </div>
-                <div className="bento-visual map-visual">
-                  <div className="map-dot d1"></div>
-                  <div className="map-dot d2"></div>
-                  <div className="map-dot d3"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Use Cases Section */}
-      <section className="use-cases-section section-padding">
-        <div className="section-container">
-          <div className="section-header reveal fade-up">
-            <h2 className="section-title">Built for ULI & DPDP</h2>
-            <p className="section-subtitle">SME lending and data protection only</p>
-          </div>
-          <div className="use-cases-grid reveal fade-up">
-            <div className="use-case-card">
-              <div className="use-case-icon">🏦</div>
-              <h3>NBFCs & MFIs</h3>
-              <p>Fetch borrower documents via ULI, run consistency checks, and generate due diligence reports for credit committees.</p>
-            </div>
-            <div className="use-case-card">
-              <div className="use-case-icon">📒</div>
-              <h3>Chartered Accountants</h3>
-              <p>Verify GST/ITR consistency and support audit trails with DPDP-compliant consent logs.</p>
-            </div>
-            <div className="use-case-card">
-              <div className="use-case-icon">🔒</div>
-              <h3>DPDP Compliance</h3>
-              <p>Consent logging, 30-day data principal rights, auto-deletion, and cross-border transfer controls.</p>
-            </div>
-            <div className="use-case-card">
-              <div className="use-case-icon">📄</div>
-              <h3>Loan Officers</h3>
-              <p>One flow: consent → ULI fetch → consistency score → due diligence report → audit trail.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section id="how-it-works" className="section-padding">
-        <div className="section-container">
-          <div className="section-header reveal fade-up">
-            <h2 className="section-title">Workflow of the Future</h2>
-          </div>
-          <div className="steps-container">
-            <div className="step-card reveal fade-up">
-              <div className="step-number">01</div>
-              <h3>Upload</h3>
-              <p>Drag and drop your contract. We support PDF, DOCX, and scanned images via OCR.</p>
-            </div>
-            <div className="step-connector"></div>
-            <div className="step-card reveal fade-up delay-100">
-              <div className="step-number">02</div>
-              <h3>Agent Analysis</h3>
-              <p>Our agent swarm dissects the document into clauses, identifying risks and missing terms.</p>
-            </div>
-            <div className="step-connector"></div>
-            <div className="step-card reveal fade-up delay-200">
-              <div className="step-number">03</div>
-              <h3>Resolve & Sign</h3>
-              <p>Use AI to generate counter-proposals or auto-fix issues. Export clean versions instantly.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Comparison Section */}
-      <section className="section-padding dark-section">
-        <div className="section-container">
-          <div className="comparison-table reveal fade-up">
-            <div className="comparison-header">
-              <div className="col-blank"></div>
-              <div className="col-header manual">Old Way</div>
-              <div className="col-header aegis">Aegis AI</div>
-            </div>
-            <div className="comparison-row">
-              <div className="row-label">Time per loan file</div>
-              <div className="row-val">2-4 Hours</div>
-              <div className="row-val highlight">Minutes (ULI + consistency)</div>
-            </div>
-            <div className="comparison-row">
-              <div className="row-label">Cost per file</div>
-              <div className="row-val">₹2,000+</div>
-              <div className="row-val highlight">₹149</div>
-            </div>
-            <div className="comparison-row">
-              <div className="row-label">DPDP audit</div>
-              <div className="row-val">Manual logs</div>
-              <div className="row-val highlight">100% consent trail</div>
-            </div>
-            <div className="comparison-row">
-              <div className="row-label">Availability</div>
-              <div className="row-val">9-5 Business Days</div>
-              <div className="row-val highlight">24/7/365</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Security Section */}
-      <section id="security" className="section-padding">
-        <div className="section-container">
-          <h2 className="section-title text-center reveal fade-up" style={{ marginBottom: '60px' }}>Bank-Grade Security</h2>
-          <div className="security-badges reveal fade-up">
-            <div className="security-badge-item">
-              <div className="shield-icon">🔒</div>
-              <h3>SOC2 Type II</h3>
-              <p>Certified compliant</p>
-            </div>
-            <div className="security-badge-item">
-              <div className="shield-icon">🛡️</div>
-              <h3>End-to-End Encryption</h3>
-              <p>AES-256 Data Transport</p>
-            </div>
-            <div className="security-badge-item">
-              <div className="shield-icon">🏢</div>
-              <h3>Enterprise Grade</h3>
-              <p>SAML / SSO Ready</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Interactive Demo Section */}
-      <section id="demo" className="section-padding dark-section">
-        <div className="section-container">
-          <div className="section-header reveal fade-up">
-            <h2 className="section-title">See Aegis in action</h2>
-          </div>
-
-          <div className="demo-tabs reveal fade-up">
-            <button
-              className={`demo-tab ${activeTab === 'upload' ? 'active' : ''}`}
-              onClick={() => setActiveTab('upload')}
-            >
-              1. Upload
-            </button>
-            <button
-              className={`demo-tab ${activeTab === 'analysis' ? 'active' : ''}`}
-              onClick={() => setActiveTab('analysis')}
-            >
-              2. Analysis
-            </button>
-            <button
-              className={`demo-tab ${activeTab === 'chat' ? 'active' : ''}`}
-              onClick={() => setActiveTab('chat')}
-            >
-              3. Chat & Fix
-            </button>
-          </div>
-
-          <div className="demo-window reveal zoom-in">
-            <div className="window-bar">
-              <span className="dot red"></span>
-              <span className="dot yellow"></span>
-              <span className="dot green"></span>
-            </div>
-            <div className="window-content">
-              {activeTab === 'upload' && (
-                <div className="demo-view upload-view">
-                  <div className="upload-zone">
-                    <div className="upload-icon">📄</div>
-                    <h3>Drop your contract here</h3>
-                    <p>PDF, DOCX, or TXT</p>
-                  </div>
-                </div>
-              )}
-              {activeTab === 'analysis' && (
-                <div className="demo-view analysis-view">
-                  <div className="scanning-line"></div>
-                  <div className="analysis-item">
-                    <span className="check success">✓</span>
-                    <span>Parties Identified</span>
-                  </div>
-                  <div className="analysis-item">
-                    <span className="check warning">!</span>
-                    <span>Clause Detection (85%)</span>
-                  </div>
-                  <div className="analysis-item">
-                    <span className="check error">✕</span>
-                    <span>Unusual Indemnity Found</span>
-                  </div>
-                </div>
-              )}
-              {activeTab === 'chat' && (
-                <div className="demo-view chat-view">
-                  <div className="chat-bubble ai">
-                    Is this indemnity clause standard for a SaaS agreement?
-                  </div>
-                  <div className="chat-bubble user">
-                    No, it is highly unusual. Most SaaS agreements cap liability at 12 months fees.
-                  </div>
-                  <div className="suggestion-pill">Apply Fix</div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section className="section-padding">
-        <div className="section-container">
-          <h2 className="section-title text-center reveal fade-up">Frequently Asked Questions</h2>
-          <div className="faq-grid reveal fade-up">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="section-header"
+          >
+            <div className="section-badge">Process</div>
+            <h2 className="section-title">How Risk Intelligence Works</h2>
+            <p className="section-description">
+              Our unified system processes documents through multiple intelligence layers
+            </p>
+          </motion.div>
+          
+          <div className="process-steps">
             {[
-              { q: "Is my data secure?", a: "Yes. We use AES-256 for all data at rest and TLS 1.3 for data in transit. We are SOC2 Type II certified." },
-              { q: "Can I use custom playbooks?", a: "Absolutely. You can upload your own company playbook and Aegis will redline documents to match your specific standards." },
-              { q: "What file types are supported?", a: "We support PDF, DOCX, TXT, and scanned images (PNG/JPG) via our integrated OCR engine." },
-              { q: "Do you offer an API?", a: "Yes, our API allows you to integrate Aegis directly into your CLM or workflows. Contact sales for access." }
-            ].map((item, index) => (
-              <div key={index} className="faq-item" onClick={() => toggleFaq(index)}>
-                <div className="faq-question">
-                  <span>{item.q}</span>
-                  <span className={`faq-toggle ${activeFaq === index ? 'open' : ''}`}>+</span>
+              {
+                step: '01',
+                title: 'Document Ingestion',
+                description: 'Upload invoices, bank statements, contracts, and financial documents. Multi-format support with OCR.',
+                icon: FileSearch,
+              },
+              {
+                step: '02',
+                title: 'Dynamic Rule Execution',
+                description: 'Tenant-scoped rules validate thresholds, required fields, consistency checks, and time constraints.',
+                icon: Brain,
+              },
+              {
+                step: '03',
+                title: 'Pattern Detection',
+                description: 'Cross-document analysis detects repeated amounts, vendor frequency spikes, and suspicious patterns.',
+                icon: GitBranch,
+              },
+              {
+                step: '04',
+                title: 'Risk Aggregation',
+                description: 'All signals are aggregated into a unified risk score with severity-weighted calculations.',
+                icon: BarChart3,
+              },
+            ].map((item, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, x: idx % 2 === 0 ? -30 : 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.15 }}
+                className="process-step"
+              >
+                <div className="step-number">{item.step}</div>
+                <div className="step-content">
+                  <div className="step-icon">
+                    <item.icon size={24} />
+                  </div>
+                  <h3 className="step-title">{item.title}</h3>
+                  <p className="step-description">{item.description}</p>
                 </div>
-                {activeFaq === index && <div className="faq-answer">{item.a}</div>}
-              </div>
+                {idx < 3 && <div className="step-connector" />}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Risk Signal Types */}
+      <section className="risk-types-section">
+        <div className="section-container">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="section-header"
+          >
+            <div className="section-badge">Risk Signals</div>
+            <h2 className="section-title">Comprehensive Risk Detection</h2>
+          </motion.div>
+          
+          <div className="risk-types-grid">
+            {[
+              { type: 'Rule Violations', count: '4 Types', desc: 'Threshold, Required, Consistency, Time', color: 'blue', icon: Shield },
+              { type: 'Pattern Detection', count: '4 Patterns', desc: 'Repeated Amounts, Vendor Spike, Round Payments, Rapid TX', color: 'purple', icon: GitBranch },
+              { type: 'Missing Fields', count: 'Custom', desc: 'Configurable required field validation', color: 'orange', icon: FileSearch },
+              { type: 'Mismatches', count: 'Real-time', desc: 'Cross-document amount and data validation', color: 'red', icon: AlertTriangle },
+            ].map((risk, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
+                className={`risk-type-card ${risk.color}`}
+              >
+                <div className="risk-type-icon">
+                  <risk.icon size={24} />
+                </div>
+                <div className="risk-type-header">
+                  <span className="risk-type-name">{risk.type}</span>
+                  <span className="risk-type-count">{risk.count}</span>
+                </div>
+                <p className="risk-type-desc">{risk.desc}</p>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section id="testimonials" className="section-padding">
+      <section className="testimonials-section">
         <div className="section-container">
-          <h2 className="section-title text-center reveal fade-up">Loved by modern teams</h2>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="section-header"
+          >
+            <div className="section-badge">Testimonials</div>
+            <h2 className="section-title">Trusted by Audit Professionals</h2>
+          </motion.div>
+          
           <div className="testimonials-grid">
-            <div className="testimonial-card reveal fade-up delay-100">
-              <div className="quote">"Aegis cut our contract review time by 80%. It finds things our junior associates miss."</div>
-              <div className="author">
-                <div className="avatar">SJ</div>
-                <div>
-                  <div className="name">Sarah Jenkins</div>
-                  <div className="role">General Counsel, TechFlow</div>
+            {[
+              {
+                quote: "The Risk Intelligence System caught a ₹50L duplicate payment that our manual review missed. The pattern detection across vendors is game-changing.",
+                author: "Rajesh Kumar",
+                role: "Partner, Big Four Firm",
+                location: "Mumbai",
+              },
+              {
+                quote: "We reduced our document review time by 80%. The explainable AI feature helps our junior staff understand why something is flagged.",
+                author: "Priya Sharma",
+                role: "CA, Mid-size Practice",
+                location: "Delhi",
+              },
+              {
+                quote: "The tenant-scoped rules let us configure different risk profiles for each client. Multi-tenancy with data isolation is exactly what we needed.",
+                author: "Amit Patel",
+                role: "CFO, Manufacturing Co",
+                location: "Ahmedabad",
+              },
+            ].map((testimonial, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.15 }}
+                className="testimonial-card"
+              >
+                <Quote size={32} className="testimonial-quote-icon" />
+                <p className="testimonial-quote">{testimonial.quote}</p>
+                <div className="testimonial-author">
+                  <div className="testimonial-avatar">
+                    {testimonial.author.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <div className="testimonial-info">
+                    <div className="testimonial-name">{testimonial.author}</div>
+                    <div className="testimonial-role">{testimonial.role}</div>
+                    <div className="testimonial-location">{testimonial.location}</div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="testimonial-card reveal fade-up delay-200">
-              <div className="quote">"Consistency score and due diligence report in minutes. Our credit committee loves it."</div>
-              <div className="author">
-                <div className="avatar">MR</div>
-                <div>
-                  <div className="name">Mike Ross</div>
-                  <div className="role">Partner, Pearson Specter</div>
-                </div>
-              </div>
-            </div>
-            <div className="testimonial-card reveal fade-up delay-300">
-              <div className="quote">"ULI fetch plus DPDP consent log in one place. Exactly what we needed for India SME lending."</div>
-              <div className="author">
-                <div className="avatar">AL</div>
-                <div>
-                  <div className="name">Ada Lovelace</div>
-                  <div className="role">CTO, Babbage Inc</div>
-                </div>
-              </div>
-            </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Box */}
-      <section className="section-padding">
-        <div className="section-container reveal zoom-in">
-          <div className="cta-box">
-            <div className="cta-content">
-              <h2>Ready for ULI + DPDP?</h2>
-              <p>India SME Lending Intelligence — consent-based document fetch and full audit trail.</p>
-              <div className="cta-buttons">
-                <button onClick={handleGetStarted} className="btn btn-primary btn-lg">Get Started Now</button>
-                <Link to="/contact" className="btn btn-outline btn-lg">Contact Sales</Link>
-              </div>
-            </div>
-          </div>
+      {/* CTA Section */}
+      <section className="cta-section-modern">
+        <div className="cta-bg-effects">
+          <div className="cta-glow cta-glow-1"></div>
+          <div className="cta-glow cta-glow-2"></div>
         </div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="cta-container"
+        >
+          <h2 className="cta-title">Ready to Transform Your<br />Document Risk Management?</h2>
+          <p className="cta-description">
+            Join 500+ audit teams using Aegis AI's Risk Intelligence System
+to catch errors before they become costly mistakes.
+          </p>
+          
+          <div className="cta-buttons">
+            <button onClick={handleLogin} className="btn-primary-large" style={{ border: 'none', cursor: 'pointer' }}>
+              Start Free Trial
+              <ArrowRight size={20} />
+            </button>
+            <button onClick={handleLogin} className="btn-secondary-large" style={{ border: 'none', cursor: 'pointer' }}>
+              Schedule Demo
+            </button>
+          </div>
+          
+          <div className="cta-features">
+            {['No credit card required', '14-day free trial', 'Cancel anytime'].map((feature, idx) => (
+              <div key={idx} className="cta-feature">
+                <CheckCircle size={16} />
+                <span>{feature}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
       </section>
 
       {/* Footer */}
-      <footer className="site-footer">
+      <footer className="landing-footer-modern">
         <div className="footer-container">
           <div className="footer-brand">
-            <div className="landing-logo">
-              <svg className="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeWidth="2" />
-              </svg>
+            <div className="footer-logo">
+              <Shield size={24} />
               <span>Aegis AI</span>
             </div>
-            <p>Designed for the future of work.</p>
+            <p className="footer-tagline">
+              Intelligent Risk Detection for Financial Documents
+            </p>
+            <div className="footer-social">
+              {[Globe, Server, Users, Award].map((Icon, idx) => (
+                <a key={idx} href="#" className="social-link">
+                  <Icon size={18} />
+                </a>
+              ))}
+            </div>
           </div>
+          
           <div className="footer-links">
-            <div className="link-col">
+            <div className="footer-column">
               <h4>Product</h4>
-              <a href="#">Features</a>
-              <a href="#">Pricing</a>
-              <a href="#">Changelog</a>
+              <a href="#features">Features</a>
+              <a href="#pricing">Pricing</a>
+              <button onClick={handleLogin} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, font: 'inherit' }}>Get Started</button>
             </div>
-            <div className="link-col">
+            <div className="footer-column">
               <h4>Company</h4>
-              <a href="#">About</a>
-              <a href="#">Careers</a>
-              <a href="#">Blog</a>
-            </div>
-            <div className="link-col">
-              <h4>DPDP & Legal</h4>
+              <Link to="/contact">Contact</Link>
               <Link to="/privacy">Privacy</Link>
               <Link to="/terms">Terms</Link>
             </div>
+            <div className="footer-column">
+              <h4>Support</h4>
+              <a href="#">Documentation</a>
+              <a href="#">API Reference</a>
+              <a href="#">Status</a>
+            </div>
           </div>
         </div>
+        
         <div className="footer-bottom">
-          &copy; {new Date().getFullYear()} Aegis AI Inc. All rights reserved.
+          <p>© 2024 Aegis AI. All rights reserved.</p>
+          <p className="footer-built">Built for the future of audit intelligence</p>
         </div>
       </footer>
+
+      {/* Video Modal */}
+      <VideoModal isOpen={isVideoOpen} onClose={() => setIsVideoOpen(false)} />
     </div>
   );
 }

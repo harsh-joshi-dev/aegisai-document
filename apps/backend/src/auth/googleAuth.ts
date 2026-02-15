@@ -18,13 +18,18 @@ if (!config.google.clientId || !config.google.clientSecret) {
   console.error('   Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET. In production also set BACKEND_URL and add this redirect URI in Google Console:', `${config.backendUrl}/api/auth/google/callback`);
 }
 
+// Always use the backend URL for the Google OAuth callback.
+// Session is established later via token exchange through the Vite proxy.
+const callbackURL = `${config.backendUrl}/api/auth/google/callback`;
+console.log('[Auth] Google OAuth callback URL:', callbackURL);
+
 // Configure Google OAuth Strategy
 passport.use(
   new GoogleStrategy(
     {
       clientID: config.google.clientId,
       clientSecret: config.google.clientSecret,
-      callbackURL: `${config.backendUrl}/api/auth/google/callback`,
+      callbackURL,
     },
     async (accessToken: string, refreshToken: string, profile: import('passport-google-oauth20').Profile, done: VerifyCallback) => {
       try {

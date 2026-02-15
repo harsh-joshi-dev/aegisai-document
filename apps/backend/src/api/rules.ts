@@ -8,16 +8,24 @@ import {
   evaluateRules,
   CustomRule,
 } from '../rules/ruleEngine.js';
+import { requireAuth, AuthenticatedRequest } from '../auth/middleware.js';
+import { deleteCustomRule, insertCustomRule, listCustomRules, updateCustomRule } from '../db/pgvector.js';
+import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 import {
-  saveRule,
-  getRule,
-  getUserRules,
-  updateRule,
-  deleteRule,
-  getAllRules,
-} from '../rules/rulesStorage.js';
+  createDynamicRule,
+  getDynamicRulesByTenant,
+  getDynamicRuleById,
+  updateDynamicRule,
+  deleteDynamicRule,
+} from '../risk/db.js';
+import { ensureDefaultRules } from '../risk/service.js';
+import type { RuleType, Severity } from '../risk/types.js';
 
 const router = Router();
+
+// ============================================================================
+// Custom Rules (Original)
+// ============================================================================
 
 const createRuleSchema = z.object({
   name: z.string().min(1),
@@ -33,22 +41,33 @@ const createRuleSchema = z.object({
 /**
  * Create a new custom rule
  */
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin']), async (req: Request, res: Response) => {
   try {
     const validated = createRuleSchema.parse(req.body);
-    const userId = req.headers['x-user-id'] as string || 'anonymous';
+    const authReq = req as WorkspaceRequest;
+    const userId = authReq.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
 
-    const rule = createRule({
-      ...validated,
-      createdBy: userId,
+    if (!authReq.workspace?.tenantId) {
+      return res.status(500).json({ error: 'Workspace context missing' });
+    }
+
+    const created = await insertCustomRule({
+      userId,
+      tenantId: authReq.workspace.tenantId,
+      name: validated.name,
+      description: validated.description,
+      ruleType: validated.ruleType,
+      pattern: validated.pattern ?? null,
+      keywords: validated.keywords ?? null,
+      prompt: validated.prompt ?? null,
+      riskLevel: validated.riskLevel,
+      enabled: validated.enabled,
     });
 
-    await saveRule(rule);
-
-    res.json({
-      success: true,
-      rule,
-    });
+    res.json({ success: true, ruleId: created?.id ?? null });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -68,14 +87,29 @@ router.post('/', async (req: Request, res: Response) => {
 /**
  * Get all rules
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', requireAuth, requireWorkspaceContext, async (req: Request, res: Response) => {
   try {
-    const userId = req.headers['x-user-id'] as string;
-    const rules = userId ? await getUserRules(userId) : await getAllRules();
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const rules = await listCustomRules({ userId: authReq.user.id, tenantId: authReq.workspace.tenantId });
 
     res.json({
       success: true,
-      rules,
+      rules: rules.map((r) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        ruleType: r.rule_type,
+        pattern: r.pattern,
+        keywords: r.keywords,
+        prompt: r.prompt,
+        riskLevel: r.risk_level,
+        enabled: r.enabled,
+        createdBy: r.user_id,
+        createdAt: r.created_at,
+      })),
       count: rules.length,
     });
   } catch (error) {
@@ -90,42 +124,36 @@ router.get('/', async (req: Request, res: Response) => {
 /**
  * Get a specific rule
  */
-router.get('/:ruleId', async (req: Request, res: Response) => {
-  try {
-    const rule = await getRule(req.params.ruleId);
-    if (!rule) {
-      return res.status(404).json({ error: 'Rule not found' });
-    }
-
-    res.json({
-      success: true,
-      rule,
-    });
-  } catch (error) {
-    console.error('Get rule error:', error);
-    res.status(500).json({
-      error: 'Failed to get rule',
-      message: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
-
 /**
  * Update a rule
  */
-router.put('/:ruleId', async (req: Request, res: Response) => {
+router.put('/:ruleId', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin']), async (req: Request, res: Response) => {
   try {
     const updates = createRuleSchema.partial().parse(req.body);
-    const rule = await updateRule(req.params.ruleId, updates);
-
-    if (!rule) {
-      return res.status(404).json({ error: 'Rule not found' });
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
     }
 
-    res.json({
-      success: true,
-      rule,
+    const updated = await updateCustomRule({
+      userId: authReq.user.id,
+      tenantId: authReq.workspace.tenantId,
+      ruleId: req.params.ruleId,
+      patch: {
+        name: updates.name,
+        description: updates.description,
+        ruleType: updates.ruleType,
+        pattern: updates.pattern ?? null,
+        keywords: updates.keywords ?? null,
+        prompt: updates.prompt ?? null,
+        riskLevel: updates.riskLevel,
+        enabled: typeof updates.enabled === 'boolean' ? updates.enabled : undefined,
+      },
     });
+
+    if (!updated) return res.status(404).json({ error: 'Rule not found' });
+
+    res.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -145,12 +173,15 @@ router.put('/:ruleId', async (req: Request, res: Response) => {
 /**
  * Delete a rule
  */
-router.delete('/:ruleId', async (req: Request, res: Response) => {
+router.delete('/:ruleId', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin']), async (req: Request, res: Response) => {
   try {
-    const deleted = await deleteRule(req.params.ruleId);
-    if (!deleted) {
-      return res.status(404).json({ error: 'Rule not found' });
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
     }
+
+    const deleted = await deleteCustomRule({ userId: authReq.user.id, tenantId: authReq.workspace.tenantId, ruleId: req.params.ruleId });
+    if (!deleted) return res.status(404).json({ error: 'Rule not found' });
 
     res.json({
       success: true,
@@ -168,19 +199,38 @@ router.delete('/:ruleId', async (req: Request, res: Response) => {
 /**
  * Test/evaluate rules against document text
  */
-router.post('/evaluate', async (req: Request, res: Response) => {
+router.post('/evaluate', requireAuth, requireWorkspaceContext, async (req: Request, res: Response) => {
   try {
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+
     const { text, ruleIds } = z.object({
       text: z.string().min(1),
       ruleIds: z.array(z.string()).optional(),
     }).parse(req.body);
 
-    const allRules = await getAllRules();
+    const allRules = await listCustomRules({ userId: authReq.user.id, tenantId: authReq.workspace.tenantId });
     const rulesToEvaluate = ruleIds
-      ? allRules.filter(r => ruleIds.includes(r.id))
-      : allRules.filter(r => r.enabled);
+      ? allRules.filter((r) => ruleIds.includes(r.id))
+      : allRules.filter((r) => r.enabled);
 
-    const matches = await evaluateRules(text, rulesToEvaluate);
+    const engineRules: CustomRule[] = rulesToEvaluate.map((r) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      ruleType: r.rule_type as any,
+      pattern: r.pattern ?? undefined,
+      keywords: r.keywords ?? undefined,
+      prompt: r.prompt ?? undefined,
+      riskLevel: r.risk_level as any,
+      enabled: r.enabled,
+      createdBy: r.user_id,
+      createdAt: r.created_at,
+    }));
+
+    const matches = await evaluateRules(text, engineRules);
 
     res.json({
       success: true,
@@ -266,5 +316,282 @@ router.post('/consistency', async (req: Request, res: Response) => {
     });
   }
 });
+
+// ============================================================================
+// Dynamic Rules V2 (Rule Engine V2)
+// ============================================================================
+
+const ruleTypeSchema = z.enum(['threshold', 'required', 'consistency', 'time']);
+const severitySchemaV2 = z.enum(['low', 'medium', 'high', 'critical']);
+
+const thresholdConfigSchema = z.object({
+  field: z.string(),
+  operator: z.enum(['>', '<', '>=', '<=', '=', '!=']),
+  value: z.number(),
+  unit: z.string().optional(),
+});
+
+const requiredConfigSchema = z.object({
+  field: z.string(),
+  allow_empty: z.boolean().optional(),
+});
+
+const consistencyConfigSchema = z.object({
+  fields: z.array(z.string()).min(2),
+  tolerance: z.number(),
+  comparison_type: z.enum(['exact', 'percentage', 'absolute']).optional(),
+});
+
+const timeConfigSchema = z.object({
+  max_gap_days: z.number().int().positive(),
+  field: z.string().optional(),
+  reference_date: z.enum(['today', 'document_date', 'upload_date']).optional(),
+});
+
+const createDynamicRuleSchema = z.object({
+  name: z.string().min(1).max(100),
+  rule_type: ruleTypeSchema,
+  config: z.union([thresholdConfigSchema, requiredConfigSchema, consistencyConfigSchema, timeConfigSchema]),
+  severity: severitySchemaV2.default('medium'),
+  weight: z.number().positive().default(1.0),
+});
+
+const updateDynamicRuleSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  config: z.union([thresholdConfigSchema, requiredConfigSchema, consistencyConfigSchema, timeConfigSchema]).optional(),
+  severity: severitySchemaV2.optional(),
+  weight: z.number().positive().optional(),
+  is_active: z.boolean().optional(),
+});
+
+/**
+ * List all dynamic rules for tenant (V2)
+ * GET /api/rules/v2
+ */
+router.get('/v2', requireAuth, requireWorkspaceContext, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+
+    await ensureDefaultRules(authReq.workspace.tenantId);
+    const rules = await getDynamicRulesByTenant(authReq.workspace.tenantId);
+
+    res.json({
+      success: true,
+      rules: rules.map(r => ({
+        id: r.id,
+        name: r.name,
+        rule_type: r.rule_type,
+        config: r.config,
+        severity: r.severity,
+        weight: r.weight,
+        is_active: r.is_active,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+      })),
+    });
+  } catch (error) {
+    console.error('List dynamic rules error:', error);
+    res.status(500).json({
+      error: 'Failed to list dynamic rules',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * Get a single dynamic rule by ID (V2)
+ * GET /api/rules/v2/:ruleId
+ */
+router.get('/v2/:ruleId', requireAuth, requireWorkspaceContext, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as WorkspaceRequest;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+
+    const rule = await getDynamicRuleById(authReq.workspace.tenantId, req.params.ruleId);
+
+    if (!rule) {
+      return res.status(404).json({ error: 'Rule not found' });
+    }
+
+    res.json({
+      success: true,
+      rule: {
+        id: rule.id,
+        name: rule.name,
+        rule_type: rule.rule_type,
+        config: rule.config,
+        severity: rule.severity,
+        weight: rule.weight,
+        is_active: rule.is_active,
+        created_at: rule.created_at,
+        updated_at: rule.updated_at,
+      },
+    });
+  } catch (error) {
+    console.error('Get dynamic rule error:', error);
+    res.status(500).json({
+      error: 'Failed to get dynamic rule',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * Create a new dynamic rule (V2)
+ * POST /api/rules/v2
+ */
+router.post(
+  '/v2',
+  requireAuth,
+  requireWorkspaceContext,
+  requireWorkspaceRole(['owner', 'admin']),
+  async (req: Request, res: Response) => {
+    try {
+      const authReq = req as WorkspaceRequest;
+      if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+        return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+      }
+
+      const validated = createDynamicRuleSchema.parse(req.body);
+
+      const rule = await createDynamicRule({
+        tenant_id: authReq.workspace.tenantId,
+        name: validated.name,
+        rule_type: validated.rule_type as RuleType,
+        config: validated.config,
+        severity: validated.severity,
+        weight: validated.weight,
+      });
+
+      if (!rule) {
+        return res.status(409).json({
+          error: 'Rule creation failed',
+          message: 'A rule with this name may already exist',
+        });
+      }
+
+      res.status(201).json({
+        success: true,
+        rule: {
+          id: rule.id,
+          name: rule.name,
+          rule_type: rule.rule_type,
+          config: rule.config,
+          severity: rule.severity,
+          weight: rule.weight,
+          is_active: rule.is_active,
+          created_at: rule.created_at,
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: 'Invalid request',
+          details: error.errors,
+        });
+      }
+      console.error('Create dynamic rule error:', error);
+      res.status(500).json({
+        error: 'Failed to create dynamic rule',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
+ * Update a dynamic rule (V2)
+ * PUT /api/rules/v2/:ruleId
+ */
+router.put(
+  '/v2/:ruleId',
+  requireAuth,
+  requireWorkspaceContext,
+  requireWorkspaceRole(['owner', 'admin']),
+  async (req: Request, res: Response) => {
+    try {
+      const authReq = req as WorkspaceRequest;
+      if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+        return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+      }
+
+      const validated = updateDynamicRuleSchema.parse(req.body);
+
+      const rule = await updateDynamicRule(
+        authReq.workspace.tenantId,
+        req.params.ruleId,
+        validated
+      );
+
+      if (!rule) {
+        return res.status(404).json({ error: 'Rule not found' });
+      }
+
+      res.json({
+        success: true,
+        rule: {
+          id: rule.id,
+          name: rule.name,
+          rule_type: rule.rule_type,
+          config: rule.config,
+          severity: rule.severity,
+          weight: rule.weight,
+          is_active: rule.is_active,
+          updated_at: rule.updated_at,
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: 'Invalid request',
+          details: error.errors,
+        });
+      }
+      console.error('Update dynamic rule error:', error);
+      res.status(500).json({
+        error: 'Failed to update dynamic rule',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
+ * Delete a dynamic rule (V2)
+ * DELETE /api/rules/v2/:ruleId
+ */
+router.delete(
+  '/v2/:ruleId',
+  requireAuth,
+  requireWorkspaceContext,
+  requireWorkspaceRole(['owner', 'admin']),
+  async (req: Request, res: Response) => {
+    try {
+      const authReq = req as WorkspaceRequest;
+      if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+        return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+      }
+
+      const deleted = await deleteDynamicRule(authReq.workspace.tenantId, req.params.ruleId);
+
+      if (!deleted) {
+        return res.status(404).json({ error: 'Rule not found' });
+      }
+
+      res.json({ success: true, message: 'Rule deleted' });
+    } catch (error) {
+      console.error('Delete dynamic rule error:', error);
+      res.status(500).json({
+        error: 'Failed to delete dynamic rule',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
 
 export default router;
