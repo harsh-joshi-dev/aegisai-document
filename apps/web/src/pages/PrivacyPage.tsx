@@ -32,7 +32,7 @@ const sections = [
     {
         icon: Mail,
         title: '4. Contact Us',
-        content: 'If you have questions about this Privacy Policy, please contact us at support@aegisai.com.',
+        content: 'If you have questions about this Privacy Policy, please contact us at support@cadynamix.ai.',
         items: [],
     },
 ];

@@ -3,13 +3,16 @@ import {
   Globe, Cpu, FileText, Shield, ChevronRight, Star, Zap, TrendingUp,
   Brain, SearchCode, Database, RefreshCw, BarChart4,
   ArrowUpRight, Quote, ArrowRight, ShieldCheck, Users, Lock,
-  BarChart3, BadgeCheck, ShieldAlert, FileSearch
+  BarChart3, BadgeCheck, ShieldAlert, FileSearch,
+  Mail, Phone, MapPin, Send, Layout, Link2, IndianRupee
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DemoModal } from '../ui/DemoModal';
+import { ContactModal } from '../ui/ContactModal';
 import { Logo } from '../components/ui/Logo';
 import { BrandIcon } from '../components/ui/BrandIcon';
+import { useAuth } from '../state/auth';
 
 const featurePillars = [
   {
@@ -21,6 +24,7 @@ const featurePillars = [
     iconColor: '#60a5fa',
     iconBg: 'rgba(59,130,246,0.1)',
     glow: 'rgba(59,130,246,0.2)',
+    path: '/documents'
   },
   {
     title: 'Risk Intelligence Engine',
@@ -31,6 +35,7 @@ const featurePillars = [
     iconColor: '#818cf8',
     iconBg: 'rgba(99,102,241,0.1)',
     glow: 'rgba(99,102,241,0.2)',
+    path: '/rules'
   },
   {
     title: 'Vendor & Approval Workflow',
@@ -41,6 +46,7 @@ const featurePillars = [
     iconColor: '#c084fc',
     iconBg: 'rgba(168,85,247,0.1)',
     glow: 'rgba(168,85,247,0.2)',
+    path: '/vendor-links'
   },
   {
     title: 'Compliance & Governance',
@@ -51,6 +57,7 @@ const featurePillars = [
     iconColor: '#34d399',
     iconBg: 'rgba(16,185,129,0.1)',
     glow: 'rgba(16,185,129,0.2)',
+    path: '/reports'
   }
 ];
 
@@ -105,7 +112,7 @@ const caseStudies = [
     title: '₹4.2Cr Recovery for Petrochem Giant',
     category: 'GSTR-2B Matching',
     desc: 'Identified chronic GST ITC leakages and unclaimed credits spanning 24 months of historical filings.',
-    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800',
+    image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=1200',
     tags: ['Automated Audit', 'ITC Recovery'],
     result: '₹4.2 Cr Recovered'
   },
@@ -114,7 +121,7 @@ const caseStudies = [
     title: '120hrs/mo Saved for SME Audit Firm',
     category: 'Document Automation',
     desc: 'Automated invoice extraction and P&L validation for over 200 concurrent clients.',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800',
+    image: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=1200',
     tags: ['Efficiency', 'Scalability'],
     result: '120hrs saved/mo'
   },
@@ -123,7 +130,7 @@ const caseStudies = [
     title: 'Real-time Vendor Compliance',
     category: 'Risk Intelligence',
     desc: 'Eliminated manual vendor follow-ups through automated document collection and instant validation.',
-    image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=800',
+    image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=1200',
     tags: ['Monitoring', 'Compliance'],
     result: '100% On-time Filing'
   }
@@ -145,11 +152,53 @@ const steps = [
   { num: '04', title: 'Decision ROI', desc: 'Export verified reports and act on intelligently prioritized insights.', icon: TrendingUp },
 ];
 
+const systemModules = [
+  {
+    icon: IndianRupee,
+    title: 'GST & Compliance',
+    path: '/gst-compliance',
+    desc: 'Automated tax reconciliation, GSTR-2B matching, and real-time ITC leakage detection.',
+    color: '#4f46e5'
+  },
+  {
+    icon: Link2,
+    title: 'Vendor Portal',
+    path: '/vendor-links',
+    desc: 'Secure digital handshakes. Let vendors upload their own KYC and invoices directly into your workflow.',
+    color: '#a855f7'
+  },
+  {
+    icon: Layout,
+    title: 'Decision Dashboard',
+    path: '/dashboard',
+    desc: 'A unified operational command center for review, approval, and strategic insights.',
+    color: '#06b6d4'
+  },
+  {
+    icon: ShieldAlert,
+    title: 'Risk Rules Engine',
+    path: '/rules',
+    desc: 'Customizable heuristic and AI-driven rules to enforce firm-wide audit standards.',
+    color: '#f43f5e'
+  }
+];
+
 export default function HomePage() {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [demoOpen, setDemoOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const heroRef = useRef<HTMLDivElement | null>(null);
+
+  const handleCTA = () => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 30);
@@ -207,18 +256,31 @@ export default function HomePage() {
           </Link>
 
           {/* Nav links - hidden on small screens */}
-          <nav className="hidden md:flex" style={{ gap: 36, alignItems: 'center' }}>
+          <nav className="hidden md:flex" style={{ gap: 32, alignItems: 'center' }}>
             {[
               { label: 'Why CA.Dynamix', href: '#features' },
-              { label: 'Features', href: '#features' },
+              { label: 'Case Studies', href: '/case-studies', isRoute: true },
+              { label: 'Pricing', href: '/pricing', isRoute: true },
+              { label: 'About', href: '/about', isRoute: true },
               { label: 'Security', href: '#security' },
-              { label: 'Enterprise', href: '#enterprise' },
+              { label: 'Contact', onClick: () => setContactOpen(true) },
             ].map(item => (
-              <a key={item.label} href={item.href} style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', transition: 'color 0.2s', letterSpacing: '-0.01em' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}>
-                {item.label}
-              </a>
+              item.isRoute ? (
+                <Link key={item.label} to={item.href || '#'} style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', transition: 'color 0.2s', letterSpacing: '-0.02em' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}>
+                  {item.label}
+                </Link>
+              ) : (
+                <a key={item.label}
+                  href={item.href}
+                  onClick={item.onClick}
+                  style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', transition: 'color 0.2s', letterSpacing: '-0.02em', cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}>
+                  {item.label}
+                </a>
+              )
             ))}
           </nav>
 
@@ -425,13 +487,21 @@ export default function HomePage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
             {featurePillars.map((pillar, idx) => (
-              <motion.div key={pillar.title} initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1, ease: [0.16, 1, 0.3, 1] }}>
+              <motion.div
+                key={pillar.title}
+                initial={{ opacity: 0, y: 32 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                onClick={() => navigate(isAuthenticated ? pillar.path : '/auth')}
+                style={{ cursor: 'pointer' }}
+              >
                 <div style={{
                   background: 'rgba(10,10,14,0.6)',
                   backdropFilter: 'blur(20px)',
                   border: `1px solid rgba(255,255,255,0.06)`,
                   borderRadius: 24, padding: '36px 28px', height: '100%',
-                  transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)', cursor: 'default',
+                  transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)',
                   position: 'relative', overflow: 'hidden',
                 }}
                   onMouseEnter={e => {
@@ -516,7 +586,9 @@ export default function HomePage() {
               <h2 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: 'clamp(36px, 4vw, 54px)', letterSpacing: '-0.04em', lineHeight: 1.08, color: '#fff' }}>Case Studies</h2>
               <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.45)', lineHeight: 1.75, marginTop: 24 }}>Real-world impact across various financial sectors and firm sizes.</p>
             </div>
-            <button style={{ height: 48, padding: '0 24px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => navigate('/case-studies')}
+              style={{ height: 48, padding: '0 24px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8 }}>
               View All Insights <ArrowUpRight size={14} />
             </button>
           </div>
@@ -529,6 +601,7 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                onClick={() => navigate('/case-studies')}
                 style={{ cursor: 'pointer' }}
                 className="group"
               >
@@ -772,6 +845,71 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── CONTACT ── */}
+      <section id="enterprise" style={{ padding: '140px 0', borderTop: '1px solid rgba(255,255,255,0.04)', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 80 }}>
+            <div>
+              <div style={{ fontSize: 10, color: '#818cf8', fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 20 }}>Global Command</div>
+              <h2 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: 'clamp(36px, 4vw, 54px)', letterSpacing: '-0.04em', lineHeight: 1.08, color: '#fff', marginBottom: 32 }}>Let's Redefine Your <span style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Audit Standards</span></h2>
+              <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, marginBottom: 48, maxWidth: 480 }}>Schedule a strategic assessment with our intelligence officers and discover the future of cognitive accounting.</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
+                {[
+                  { icon: Mail, label: 'Transmission', value: 'hello@cadynamix.ai' },
+                  { icon: Phone, label: 'Direct Line', value: '+91 (0) 800-AUDIT-AI' },
+                  { icon: MapPin, label: 'Headquarters', value: 'Intelligence District, Bangalore' }
+                ].map(item => (
+                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
+                      <item.icon size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>{item.label}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{item.value}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'absolute', inset: -20, background: 'linear-gradient(135deg, #4f46e520, #a855f710)', borderRadius: 48, filter: 'blur(40px)', zIndex: -1 }} />
+              <div style={{ background: 'rgba(15,15,20,0.6)', backdropFilter: 'blur(32px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 40, padding: 48, boxShadow: '0 40px 80px rgba(0,0,0,0.4)' }}>
+                <form onSubmit={e => { e.preventDefault(); alert('Transmission Received. Intelligence officers will contact you shortly.'); }} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <label style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', marginLeft: 4 }}>Legal Name</label>
+                      <input required placeholder="John Doe" style={{ height: 52, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0 16px', color: '#fff', fontSize: 14, outline: 'none', transition: 'all 0.2s' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <label style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', marginLeft: 4 }}>Business Email</label>
+                      <input required type="email" placeholder="john@firm.com" style={{ height: 52, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0 16px', color: '#fff', fontSize: 14, outline: 'none', transition: 'all 0.2s' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', marginLeft: 4 }}>Practice Intelligence Needs</label>
+                    <select style={{ height: 52, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0 16px', color: '#fff', fontSize: 14, outline: 'none', appearance: 'none', cursor: 'pointer' }}>
+                      <option>Audit Automation</option>
+                      <option>GST Reconciliation</option>
+                      <option>Vendor Risk Management</option>
+                      <option>Full Practice Digitization</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', marginLeft: 4 }}>Briefing Details</label>
+                    <textarea placeholder="How can our AI help your firm?..." style={{ height: 120, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '16px', color: '#fff', fontSize: 14, outline: 'none', resize: 'none' }} />
+                  </div>
+                  <button type="submit" style={{ height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', fontWeight: 900, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.15em', cursor: 'pointer', border: 'none', marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, transition: 'all 0.3s' }}>
+                    Send Briefing <Send size={16} />
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── FOOTER ── */}
       <footer style={{ background: '#000', borderTop: '1px solid rgba(255,255,255,0.04)', padding: '80px 32px 40px', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -786,19 +924,19 @@ export default function HomePage() {
               </div>
             </div>
             {[
-              { title: 'Platform', links: ['Risk Engine', 'Document AI', 'Compliance', 'Integrations'] },
-              { title: 'Legal', links: ['Privacy Policy', 'Terms of Use', 'GDPR', 'DPDP'] },
-              { title: 'Company', links: ['About Us', 'Careers', 'Blog', 'Contact'] },
+              { title: 'Platform', links: [{ label: 'Risk Engine', path: '/rules' }, { label: 'Document AI', path: '/documents' }, { label: 'Compliance', path: '/gst-compliance' }, { label: 'Integrations', path: '/integrations' }, { label: 'Pricing', path: '/pricing' }] },
+              { title: 'Legal', links: [{ label: 'Privacy Policy', path: '/privacy' }, { label: 'Terms of Use', path: '/terms' }, { label: 'Audit Log', path: '/audit-log' }, { label: 'Case Studies', path: '/case-studies' }] },
+              { title: 'Company', links: [{ label: 'About Us', path: '/about' }, { label: 'Careers', path: '/careers' }, { label: 'Blog', path: '/blog' }, { label: 'Contact', path: '/contact' }] },
             ].map(col => (
               <div key={col.title}>
                 <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 20 }}>{col.title}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {col.links.map(link => (
-                    <a key={link} href="#" style={{ fontSize: 13, color: 'rgba(255,255,255,0.32)', textDecoration: 'none', fontWeight: 600, transition: 'color 0.2s' }}
+                    <Link key={link.label} to={link.path} style={{ fontSize: 13, color: 'rgba(255,255,255,0.32)', textDecoration: 'none', fontWeight: 600, transition: 'color 0.2s' }}
                       onMouseEnter={e => (e.currentTarget.style.color = '#818cf8')}
                       onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.32)')}>
-                      {link}
-                    </a>
+                      {link.label}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -807,12 +945,16 @@ export default function HomePage() {
           <div style={{ paddingTop: 32, borderTop: '1px solid rgba(255,255,255,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>© 2026 CA.Dynamix. All rights reserved.</p>
             <div style={{ display: 'flex', gap: 24 }}>
-              {['Terms', 'Privacy', 'Cookies'].map(link => (
-                <a key={link} href="#" style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', transition: 'color 0.2s' }}
+              {[
+                { label: 'Terms', path: '/terms' },
+                { label: 'Privacy', path: '/privacy' },
+                { label: 'Cookies', path: '#' }
+              ].map(link => (
+                <Link key={link.label} to={link.path} style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', transition: 'color 0.2s' }}
                   onMouseEnter={e => (e.currentTarget.style.color = '#818cf8')}
                   onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}>
-                  {link}
-                </a>
+                  {link.label}
+                </Link>
               ))}
             </div>
           </div>
@@ -820,6 +962,7 @@ export default function HomePage() {
       </footer>
 
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
+      <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} />
     </div>
   );
 }
