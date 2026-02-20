@@ -67,6 +67,8 @@ export interface DocumentRecord {
   linkedDocumentIds?: string[];
   /** Risk signals from engine (RULE | PATTERN | AI) */
   riskSignals?: RiskSignal[];
+  /** Plain English risk explanations */
+  riskExplanations?: string[];
 }
 
 export interface WorkspaceSettings {

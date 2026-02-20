@@ -1,4 +1,4 @@
-export type FinancialDocumentType = 'INVOICE' | 'BANK_STATEMENT' | 'GST' | 'UNKNOWN';
+export type FinancialDocumentType = 'INVOICE' | 'BANK_STATEMENT' | 'GST' | 'PNL' | 'BALANCE_SHEET' | 'ITR' | 'CANCELLED_CHEQUE' | 'PAN_CARD' | 'KYC_FORM' | 'CERTIFICATE' | 'AUDITOR_REPORT' | 'UNKNOWN';
 
 export interface ExtractedFinancialData {
   documentType: FinancialDocumentType;
@@ -11,6 +11,14 @@ export interface ExtractedFinancialData {
   totalAmount?: number | null;
   taxableAmount?: number | null;
   gstAmount?: number | null;
+  cgstAmount?: number | null;
+  sgstAmount?: number | null;
+  igstAmount?: number | null;
+  cgstRate?: number | null;
+  sgstRate?: number | null;
+  igstRate?: number | null;
+  hsnCode?: string | null;
+  placeOfSupply?: string | null;
   currency?: string | null;
   bankAccountLast4?: string | null;
   periodStart?: string | null;
@@ -94,27 +102,53 @@ function extractDates(text: string): string[] {
 }
 
 function detectDocType(text: string, filename: string): FinancialDocumentType {
-  const t = `${filename}\n${text}`.toLowerCase();
+  const fl = filename.toLowerCase();
+  const t = `${fl}\n${text.slice(0, 2000)}`.toLowerCase();
+
+  if ((fl.includes('cancel') && fl.includes('cheque')) || t.includes('cancelled cheque')) return 'CANCELLED_CHEQUE';
+  if ((fl.includes('pan') && fl.includes('card')) || t.includes('permanent account number') || (fl.includes('pan') && !fl.includes('company'))) return 'PAN_CARD';
+  if (fl.includes('kyc') || (fl.includes('vendor') && fl.includes('form'))) return 'KYC_FORM';
+  if ((fl.includes('certificate') && fl.includes('incorp')) || t.includes('certificate of incorporation')) return 'CERTIFICATE';
+  if (fl.includes('auditor') || fl.includes('independent') || (fl.includes('audit') && fl.includes('report'))) return 'AUDITOR_REPORT';
+  if (fl.includes('itr') || t.includes('income tax return') || (t.includes('assessment year') && t.includes('acknowledgement'))) return 'ITR';
+  if (fl.includes('profit') || fl.includes('p&l') || fl.includes('pnl') || t.includes('statement of profit and loss')) return 'PNL';
+  if ((fl.includes('balance') && fl.includes('sheet')) || t.includes('balance sheet as at')) return 'BALANCE_SHEET';
   if (t.includes('invoice') || t.includes('tax invoice')) return 'INVOICE';
   if (t.includes('bank statement') || t.includes('account statement') || t.includes('statement period')) return 'BANK_STATEMENT';
-  if (t.includes('gstr') || t.includes('gst return') || t.includes('gstin') && t.includes('gstr-')) return 'GST';
+  if (fl.includes('gst') && (fl.includes('registration') || fl.includes('certif'))) return 'CERTIFICATE';
+  if (t.includes('gstr') || t.includes('gst return')) return 'GST';
   return 'UNKNOWN';
 }
 
-function guessVendorName(text: string): string | null {
+function guessVendorName(text: string, docType: FinancialDocumentType): string | null {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
 
-  // Heuristic: first non-empty line that looks like an organization name (not 'Invoice', 'Tax Invoice', etc.)
+  // Skip lines that are document-type labels, not entity names
+  const skipPatterns = [
+    /^cancelled?\s*cheque/i, /^pan\s*card/i, /^aadhaa?r/i, /^kyc/i,
+    /^invoice/i, /^tax\s*invoice/i, /^bank\s*statement/i, /^statement\s*of/i,
+    /^profit\s*(and|&)\s*loss/i, /^balance\s*sheet/i, /^certificate/i,
+    /^income\s*tax/i, /^form\s*\d/i, /^auditor/i, /^independent/i,
+    /^bill\s*to/i, /^ship\s*to/i, /^date/i, /^assessment/i,
+    /^government\s*of/i, /^ministry/i, /^department/i,
+  ];
+
   for (const line of lines.slice(0, 30)) {
-    const lower = line.toLowerCase();
-    if (lower.includes('invoice') || lower.includes('tax invoice')) continue;
-    if (lower.startsWith('bill to') || lower.startsWith('ship to') || lower.startsWith('date')) continue;
-    if (line.length < 4) continue;
+    if (line.length < 4 || line.length > 120) continue;
     if (line.match(/\b\d{2}[A-Z]{5}\d{4}/)) continue;
     if (line.match(/^[0-9\s\-.,]+$/)) continue;
+    if (skipPatterns.some(p => p.test(line))) continue;
+    // For non-financial docs, look specifically for company/entity names
+    if (docType === 'CANCELLED_CHEQUE' || docType === 'PAN_CARD' || docType === 'KYC_FORM' || docType === 'CERTIFICATE') {
+      // Look for lines containing "Ltd", "Pvt", "Corp", "Inc", or proper names
+      if (/(?:ltd|pvt|corp|inc|llp|limited|company|enterprises|industries|solutions)/i.test(line)) {
+        return line.slice(0, 120);
+      }
+      continue;
+    }
     return line.slice(0, 120);
   }
 
@@ -151,6 +185,66 @@ function extractBestAmount(text: string): number | null {
   return candidates[0];
 }
 
+function extractGstBreakdown(text: string): {
+  cgstAmount: number | null;
+  sgstAmount: number | null;
+  igstAmount: number | null;
+  cgstRate: number | null;
+  sgstRate: number | null;
+  igstRate: number | null;
+  taxableAmount: number | null;
+  hsnCode: string | null;
+  placeOfSupply: string | null;
+} {
+  const result = {
+    cgstAmount: null as number | null,
+    sgstAmount: null as number | null,
+    igstAmount: null as number | null,
+    cgstRate: null as number | null,
+    sgstRate: null as number | null,
+    igstRate: null as number | null,
+    taxableAmount: null as number | null,
+    hsnCode: null as string | null,
+    placeOfSupply: null as string | null,
+  };
+
+  // CGST amount
+  const cgstAmtMatch = text.match(/CGST\s*(?:Amount)?[:\s@]*(?:₹|Rs\.?\s*)?([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?)/i);
+  if (cgstAmtMatch) result.cgstAmount = parseMoney(cgstAmtMatch[1]) ?? null;
+
+  // SGST amount
+  const sgstAmtMatch = text.match(/SGST\s*(?:Amount)?[:\s@]*(?:₹|Rs\.?\s*)?([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?)/i);
+  if (sgstAmtMatch) result.sgstAmount = parseMoney(sgstAmtMatch[1]) ?? null;
+
+  // IGST amount
+  const igstAmtMatch = text.match(/IGST\s*(?:Amount)?[:\s@]*(?:₹|Rs\.?\s*)?([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?)/i);
+  if (igstAmtMatch) result.igstAmount = parseMoney(igstAmtMatch[1]) ?? null;
+
+  // GST rates
+  const cgstRateMatch = text.match(/CGST\s*(?:Rate)?[:\s@]*([0-9]+(?:\.[0-9]+)?)\s*%/i);
+  if (cgstRateMatch) result.cgstRate = parseFloat(cgstRateMatch[1]);
+
+  const sgstRateMatch = text.match(/SGST\s*(?:Rate)?[:\s@]*([0-9]+(?:\.[0-9]+)?)\s*%/i);
+  if (sgstRateMatch) result.sgstRate = parseFloat(sgstRateMatch[1]);
+
+  const igstRateMatch = text.match(/IGST\s*(?:Rate)?[:\s@]*([0-9]+(?:\.[0-9]+)?)\s*%/i);
+  if (igstRateMatch) result.igstRate = parseFloat(igstRateMatch[1]);
+
+  // Taxable amount / value
+  const taxableMatch = text.match(/(?:taxable\s*(?:value|amount)|sub\s*total|net\s*amount)\s*[:\-]?\s*(?:₹|Rs\.?\s*)?([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?)/i);
+  if (taxableMatch) result.taxableAmount = parseMoney(taxableMatch[1]) ?? null;
+
+  // HSN code
+  const hsnMatch = text.match(/HSN\s*(?:code|no\.?|#)?[:\s]*([0-9]{4,8})/i);
+  if (hsnMatch) result.hsnCode = hsnMatch[1];
+
+  // Place of supply
+  const posMatch = text.match(/place\s*of\s*supply\s*[:\-]?\s*([A-Za-z][A-Za-z\s]{2,30})/i);
+  if (posMatch) result.placeOfSupply = posMatch[1].trim();
+
+  return result;
+}
+
 export function extractFinancialData(params: { text: string; filename: string }): ExtractedFinancialData {
   const { text, filename } = params;
 
@@ -165,25 +259,39 @@ export function extractFinancialData(params: { text: string; filename: string })
 
   const totalAmount = extractBestAmount(text);
 
-  // When multiple GSTINs present, we can't reliably label vendor/customer without more context.
-  // We store first as vendorGstin heuristically.
   const vendorGstin = gstins[0] ?? null;
   const customerGstin = gstins.length > 1 ? gstins[1] : null;
 
+  const isNonFinancial = ['CANCELLED_CHEQUE', 'PAN_CARD', 'KYC_FORM', 'CERTIFICATE', 'AUDITOR_REPORT'].includes(documentType);
+
+  const gstBreakdown = isNonFinancial ? null : extractGstBreakdown(text);
+
   return {
     documentType,
-    invoiceNumber,
-    invoiceDate,
-    dueDate,
-    vendorName: guessVendorName(text),
-    vendorGstin,
-    customerGstin,
-    totalAmount,
-    currency: text.includes('₹') || /\bINR\b/i.test(text) ? 'INR' : null,
+    invoiceNumber: isNonFinancial ? null : invoiceNumber,
+    invoiceDate: isNonFinancial ? null : invoiceDate,
+    dueDate: isNonFinancial ? null : dueDate,
+    vendorName: guessVendorName(text, documentType),
+    vendorGstin: isNonFinancial ? null : vendorGstin,
+    customerGstin: isNonFinancial ? null : customerGstin,
+    totalAmount: isNonFinancial ? null : totalAmount,
+    taxableAmount: gstBreakdown?.taxableAmount ?? null,
+    gstAmount: gstBreakdown
+      ? ((gstBreakdown.cgstAmount || 0) + (gstBreakdown.sgstAmount || 0) + (gstBreakdown.igstAmount || 0)) || null
+      : null,
+    cgstAmount: gstBreakdown?.cgstAmount ?? null,
+    sgstAmount: gstBreakdown?.sgstAmount ?? null,
+    igstAmount: gstBreakdown?.igstAmount ?? null,
+    cgstRate: gstBreakdown?.cgstRate ?? null,
+    sgstRate: gstBreakdown?.sgstRate ?? null,
+    igstRate: gstBreakdown?.igstRate ?? null,
+    hsnCode: gstBreakdown?.hsnCode ?? null,
+    placeOfSupply: gstBreakdown?.placeOfSupply ?? null,
+    currency: isNonFinancial ? null : (text.includes('₹') || /\bINR\b/i.test(text) ? 'INR' : null),
     rawMatches: {
-      gstins,
-      dates: allDates,
-      amountCandidatesDetected: totalAmount != null,
+      gstins: isNonFinancial ? [] : gstins,
+      dates: isNonFinancial ? [] : allDates,
+      amountCandidatesDetected: isNonFinancial ? false : totalAmount != null,
     },
   };
 }

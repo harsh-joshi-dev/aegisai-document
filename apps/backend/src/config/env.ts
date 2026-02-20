@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 export const config = {
   database: {
@@ -26,9 +29,9 @@ export const config = {
     // In production use CORS_ORIGIN or fall back to FRONTEND_URL so cookie + credentials work from frontend origin
     origin:
       process.env.CORS_ORIGIN ||
-      (process.env.NODE_ENV === 'production' ? process.env.FRONTEND_URL || 'http://localhost:5173' : true),
+      (process.env.NODE_ENV === 'production' ? process.env.FRONTEND_URL || 'http://localhost:5073' : true),
   },
-  frontendUrl: (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, ''),
+  frontendUrl: (process.env.FRONTEND_URL || 'http://localhost:5073').replace(/\/$/, ''),
   backendUrl: (process.env.BACKEND_URL || 'http://localhost:3001').replace(/\/$/, ''),
   smtp: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',

@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Share2, Download, Maximize2, Flag, CheckCircle, XCircle, AlertTriangle, FileText, Activity } from 'lucide-react';
+import { ArrowLeft, Share2, Download, Maximize2, Flag, CheckCircle, XCircle, AlertTriangle, FileText, Activity, Upload, Cpu, ShieldCheck, Eye, Clock, Zap } from 'lucide-react';
 import { RiskBadge } from '../ui/RiskBadge';
 import { IssueCard } from '../ui/IssueCard';
 import { RecommendationCard } from '../ui/RecommendationCard';
@@ -8,11 +8,12 @@ import { RejectModal } from '../ui/RejectModal';
 import { RequestInfoModal } from '../ui/RequestInfoModal';
 import { SubmitInfoModal } from '../ui/SubmitInfoModal';
 import { useWorkspace } from '../state/workspace';
-import { useMockStore } from '../state/mockStore';
+import { useStore } from '../state/store';
 import { useToast } from '../state/toast';
-import { useMockAuth } from '../state/mockAuth';
+import { useAuth } from '../state/auth';
 import { computeApprovalRequirements } from '../services/approvalRequirements';
 import { format } from 'date-fns';
+import { fetchDocumentFile, getDocumentRisk, getDocumentTimeline, analyzeWhatIf, type TimelineEvent, type WhatIfResponse } from '../api/client';
 
 export default function DocumentDetailPage() {
   const { id } = useParams();
@@ -20,11 +21,115 @@ export default function DocumentDetailPage() {
   const [requestInfoOpen, setRequestInfoOpen] = useState(false);
   const [submitInfoOpen, setSubmitInfoOpen] = useState(false);
   const [, setDecision] = useState<string | null>(null);
-  const [tab, setTab] = useState<'overview' | 'issues' | 'data' | 'activity'>('overview');
+  const [tab, setTab] = useState<'overview' | 'issues' | 'data' | 'timeline' | 'whatif'>('overview');
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const timelineFetched = useRef(false);
+  const [whatIfScenario, setWhatIfScenario] = useState('');
+  const [whatIfAmount, setWhatIfAmount] = useState('');
+  const [whatIfRemoveGst, setWhatIfRemoveGst] = useState(false);
+  const [whatIfResult, setWhatIfResult] = useState<WhatIfResponse | null>(null);
+  const [whatIfLoading, setWhatIfLoading] = useState(false);
   const { activeWorkspace } = useWorkspace();
-  const { documents, users, activity, updateDocument, approveDocument, rejectDocument } = useMockStore();
+  const { documents, users, activity, updateDocument, approveDocument, rejectDocument } = useStore();
   const { push } = useToast();
-  const { user } = useMockAuth();
+  const { user } = useAuth();
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewType, setPreviewType] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const previewObjectUrlRef = useRef<string | null>(null);
+  const fetchedRiskRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!id) return;
+    // If this route points to a document we don't have, don't spam the API.
+    // (This can happen if the user opens a stale link, or documents haven't loaded yet.)
+    const exists = documents.some((d) => d.id === id);
+    if (!exists) return;
+    if (fetchedRiskRef.current.has(id)) return;
+    fetchedRiskRef.current.add(id);
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await getDocumentRisk(id);
+        if (cancelled) return;
+        const patch: Record<string, any> = {};
+        if (Array.isArray(r.riskSignals)) patch.riskSignals = r.riskSignals;
+        if (r.riskResult?.plain_english_explanations?.length) {
+          patch.riskExplanations = r.riskResult.plain_english_explanations;
+        }
+        if (Object.keys(patch).length) updateDocument(id, patch);
+      } catch {
+        // best-effort
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, documents, updateDocument]);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    setPreviewLoading(true);
+    (async () => {
+      try {
+        const { blob, contentType } = await fetchDocumentFile(id);
+        if (cancelled) return;
+        // Revoke previous object URL if any
+        if (previewObjectUrlRef.current) {
+          URL.revokeObjectURL(previewObjectUrlRef.current);
+          previewObjectUrlRef.current = null;
+        }
+        const url = URL.createObjectURL(blob);
+        previewObjectUrlRef.current = url;
+        setPreviewUrl(url);
+        setPreviewType(contentType);
+      } catch {
+        if (!cancelled) {
+          setPreviewUrl(null);
+          setPreviewType(null);
+        }
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+        previewObjectUrlRef.current = null;
+      }
+    };
+  }, [id]);
+
+  const fetchTimeline = useCallback(async () => {
+    if (!id || timelineFetched.current) return;
+    timelineFetched.current = true;
+    setTimelineLoading(true);
+    try {
+      const res = await getDocumentTimeline(id);
+      setTimelineEvents(res.timeline || []);
+    } catch { /* best-effort */ }
+    finally { setTimelineLoading(false); }
+  }, [id]);
+
+  useEffect(() => {
+    if (tab === 'timeline') fetchTimeline();
+  }, [tab, fetchTimeline]);
+
+  const runWhatIf = useCallback(async () => {
+    if (!id || !whatIfScenario.trim()) return;
+    setWhatIfLoading(true);
+    try {
+      let scenario = whatIfScenario;
+      if (whatIfAmount) scenario += ` (amount changed to ₹${whatIfAmount})`;
+      if (whatIfRemoveGst) scenario += ' (GST removed from invoice)';
+      const res = await analyzeWhatIf({ documentId: id, scenario });
+      setWhatIfResult(res);
+    } catch { /* best-effort */ }
+    finally { setWhatIfLoading(false); }
+  }, [id, whatIfScenario, whatIfAmount, whatIfRemoveGst]);
 
   const actorRole = useMemo(() => {
     const email = user?.email?.toLowerCase();
@@ -56,6 +161,13 @@ export default function DocumentDetailPage() {
       .filter((a) => a.docId === doc.id)
       .slice(0, 12);
   }, [activity, activeWorkspace.id, doc.id]);
+
+  const issueItems = useMemo(() => {
+    if (doc.issues.length > 0) return doc.issues;
+    return doc.riskSignals || [];
+  }, [doc.issues, doc.riskSignals]);
+
+  const issueCount = issueItems.length;
 
   const approvalInfo = useMemo(() => {
     const riskLevel = doc.risk_level ?? 'review';
@@ -163,26 +275,26 @@ export default function DocumentDetailPage() {
           </div>
 
           <div className="flex-1 min-h-0 flex flex-col bg-[#1a1a1d] relative overflow-auto">
-            {doc.fileUrl ? (
+            {previewUrl ? (
               <div className="absolute inset-0 flex flex-col">
-                {doc.fileUrl.startsWith('data:application/pdf') ? (
+                {String(previewType || '').includes('pdf') ? (
                   <iframe
-                    src={`${doc.fileUrl}#toolbar=0&navpanes=0&view=FitH`}
+                    src={`${previewUrl}#toolbar=0&navpanes=0&view=FitH`}
                     title={doc.name}
                     className="flex-1 w-full min-h-[500px] border-0"
                     style={{ background: '#1a1a1d' }}
                   />
-                ) : doc.fileUrl.startsWith('data:image/') ? (
+                ) : String(previewType || '').startsWith('image/') ? (
                   <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
                     <img
-                      src={doc.fileUrl}
+                      src={previewUrl}
                       alt={doc.name}
                       className="max-w-full max-h-full object-contain"
                     />
                   </div>
                 ) : (
                   <iframe
-                    src={`${doc.fileUrl}#toolbar=0&navpanes=0&view=FitH`}
+                    src={`${previewUrl}#toolbar=0&navpanes=0&view=FitH`}
                     title={doc.name}
                     className="flex-1 w-full min-h-[500px] border-0"
                     style={{ background: '#1a1a1d' }}
@@ -205,7 +317,7 @@ export default function DocumentDetailPage() {
                     </div>
                     <p className="text-lg font-medium text-white mb-1">Document preview</p>
                     <p className="text-sm text-zinc-400 max-w-md mb-4">
-                      Upload documents with file attachment to view PDF or image preview here.
+                      {previewLoading ? 'Loading preview…' : 'Preview not available for this document.'}
                     </p>
                     <div className="inline-flex flex-wrap gap-3 justify-center text-xs text-zinc-500">
                       <span>Vendor: {doc.vendor}</span>
@@ -254,7 +366,14 @@ export default function DocumentDetailPage() {
               <button
                 className="btn-primary h-12 text-base shadow-lg shadow-indigo-500/20"
                 disabled={!approvalInfo.canApprove}
-                onClick={() => approveDocument(doc.id, user?.email || '')}
+                onClick={async () => {
+                  const res = await approveDocument(doc.id, user?.email || '');
+                  if (!res.ok) {
+                    push({ kind: 'error', title: 'Approve failed', message: res.error || 'Could not approve' });
+                    return;
+                  }
+                  push({ kind: 'success', title: 'Approved', message: doc.name });
+                }}
               >
                 <CheckCircle className="mr-2" size={18} /> Approve
               </button>
@@ -284,20 +403,20 @@ export default function DocumentDetailPage() {
 
           {/* Tabs & Content */}
           <div className="flex-1 card-premium flex flex-col min-h-0 overflow-hidden">
-            <div className="flex items-center border-b border-white/5 bg-white/[0.02]">
-              {['overview', 'issues', 'data', 'activity'].map((t) => (
+            <div className="flex items-center border-b border-white/5 bg-white/[0.02] overflow-x-auto">
+              {['overview', 'issues', 'data', 'timeline', 'whatif'].map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t as any)}
                   className={`
-                        flex-1 py-3 text-xs font-semibold uppercase tracking-wide border-b-2 transition-colors
+                        flex-1 py-3 text-xs font-semibold uppercase tracking-wide border-b-2 transition-colors whitespace-nowrap px-2
                         ${tab === t ? 'border-indigo-500 text-white bg-indigo-500/5' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}
                       `}
                 >
-                  {t}
-                  {t === 'issues' && doc.issues.length > 0 && (
+                  {t === 'whatif' ? 'What If' : t}
+                  {t === 'issues' && issueCount > 0 && (
                     <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-[9px] text-white">
-                      {doc.issues.length}
+                      {issueCount}
                     </span>
                   )}
                 </button>
@@ -315,12 +434,11 @@ export default function DocumentDetailPage() {
                         {doc.riskSignals.map((sig) => (
                           <div
                             key={sig.id}
-                            className={`rounded-lg border p-3 text-sm ${
-                              sig.severity === 'CRITICAL' ? 'border-red-500/20 bg-red-500/5' :
-                              sig.severity === 'HIGH' ? 'border-orange-500/20 bg-orange-500/5' :
-                              sig.severity === 'MEDIUM' ? 'border-amber-500/20 bg-amber-500/5' :
-                              'border-zinc-600/30 bg-zinc-800/30'
-                            }`}
+                            className={`rounded-lg border p-3 text-sm ${sig.severity === 'CRITICAL' ? 'border-red-500/20 bg-red-500/5' :
+                                sig.severity === 'HIGH' ? 'border-orange-500/20 bg-orange-500/5' :
+                                  sig.severity === 'MEDIUM' ? 'border-amber-500/20 bg-amber-500/5' :
+                                    'border-zinc-600/30 bg-zinc-800/30'
+                              }`}
                           >
                             <div className="flex justify-between items-start gap-2 mb-1">
                               <span className="font-semibold text-white">{sig.title}</span>
@@ -330,10 +448,30 @@ export default function DocumentDetailPage() {
                             </div>
                             <p className="text-zinc-400 text-xs leading-relaxed mb-1">{sig.description}</p>
                             <p className="text-zinc-500 text-xs">
-                            {typeof sig.recommendation === 'string' 
-                              ? sig.recommendation 
-                              : sig.recommendation?.reason || 'Review document'}
-                          </p>
+                              {typeof sig.recommendation === 'string'
+                                ? sig.recommendation
+                                : sig.recommendation?.reason || 'Review document'}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Plain English Risk Explanations */}
+                  {doc.riskExplanations && doc.riskExplanations.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wide text-zinc-500 mb-3">What This Means</h4>
+                      <div className="space-y-2">
+                        {doc.riskExplanations.map((explanation, idx) => (
+                          <div
+                            key={idx}
+                            className="flex gap-3 rounded-lg border border-white/10 bg-white/[0.02] p-3"
+                          >
+                            <div className="mt-0.5 shrink-0 w-5 h-5 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 text-xs font-bold">
+                              {idx + 1}
+                            </div>
+                            <p className="text-sm text-zinc-300 leading-relaxed">{explanation}</p>
                           </div>
                         ))}
                       </div>
@@ -417,8 +555,8 @@ export default function DocumentDetailPage() {
 
               {tab === 'issues' && (
                 <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
-                  {doc.issues.length ? doc.issues.map(i => (
-                    <IssueCard key={i.id} issue={i} />
+                  {issueItems.length ? issueItems.map((i: any) => (
+                    <IssueCard key={i.id || `${doc.id}-${i.title || i.explanation || Math.random()}`} issue={i} />
                   )) : (
                     <div className="text-center py-10 text-zinc-500">
                       <CheckCircle className="mx-auto mb-2 opacity-50" />
@@ -449,22 +587,189 @@ export default function DocumentDetailPage() {
                 </div>
               )}
 
-              {tab === 'activity' && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                  {auditEvents.map((ev, i) => (
-                    <div key={i} className="flex gap-3">
-                      <div className="mt-1 relative">
-                        <div className="w-2 h-2 rounded-full bg-zinc-700 ring-4 ring-[#0e0e11]" />
-                        {i !== auditEvents.length - 1 && <div className="absolute top-2 left-1/2 -translate-x-1/2 w-px h-full bg-zinc-800" />}
+              {tab === 'timeline' && (
+                <div className="space-y-1 animate-in fade-in slide-in-from-bottom-2 relative">
+                  {timelineLoading ? (
+                    <div className="flex justify-center py-12">
+                      <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : timelineEvents.length === 0 ? (
+                    <div className="text-center py-12 text-zinc-500">
+                      <Clock className="mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No timeline events yet.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-zinc-800/50 rounded-full" />
+                      {timelineEvents.map((ev, i) => {
+                        const iconMap: Record<string, React.ReactNode> = {
+                          upload: <Upload size={14} />,
+                          extraction: <Cpu size={14} />,
+                          rule_trigger: <AlertTriangle size={14} />,
+                          pattern_detection: <Zap size={14} />,
+                          risk_scored: <ShieldCheck size={14} />,
+                          approval: <CheckCircle size={14} />,
+                          rejection: <XCircle size={14} />,
+                          info_request: <Eye size={14} />,
+                        };
+                        const colorMap: Record<string, string> = {
+                          upload: 'border-indigo-500/30 text-indigo-400',
+                          extraction: 'border-emerald-500/30 text-emerald-400',
+                          rule_trigger: 'border-amber-500/30 text-amber-400',
+                          pattern_detection: 'border-orange-500/30 text-orange-400',
+                          risk_scored: 'border-purple-500/30 text-purple-400',
+                          approval: 'border-emerald-500/30 text-emerald-400',
+                          rejection: 'border-red-500/30 text-red-400',
+                          info_request: 'border-sky-500/30 text-sky-400',
+                        };
+                        return (
+                          <div key={i} className="relative flex gap-3 pl-1 group py-2">
+                            <div className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-[#0e0e11] ring-4 ring-[#0e0e11] group-hover:bg-[#16161a] transition-colors ${colorMap[ev.type] || 'border-zinc-700 text-zinc-400'}`}>
+                              {iconMap[ev.type] || <Activity size={14} />}
+                            </div>
+                            <div className="flex-1 min-w-0 py-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-sm font-medium text-white">{ev.title}</p>
+                                <span className="text-[10px] text-zinc-600 whitespace-nowrap">
+                                  {format(new Date(ev.timestamp), 'PP p')}
+                                </span>
+                              </div>
+                              <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{ev.description}</p>
+                              {ev.severity && (
+                                <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded font-semibold ${ev.severity === 'critical' ? 'bg-red-500/10 text-red-400' :
+                                    ev.severity === 'high' ? 'bg-orange-500/10 text-orange-400' :
+                                      ev.severity === 'medium' ? 'bg-amber-500/10 text-amber-400' :
+                                        'bg-zinc-800 text-zinc-400'
+                                  }`}>
+                                  {ev.severity}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {tab === 'whatif' && (
+                <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-zinc-500 mb-3">Risk Simulation</h4>
+                    <p className="text-xs text-zinc-400 mb-4">Modify parameters and see how risk changes in real-time.</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-zinc-500 mb-1 block">Change Amount (₹)</label>
+                        <input
+                          type="number"
+                          placeholder={String(doc.amount || '')}
+                          value={whatIfAmount}
+                          onChange={e => setWhatIfAmount(e.target.value)}
+                          className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                        />
                       </div>
-                      <div className="pb-4">
-                        <p className="text-sm font-medium text-white">{ev.message}</p>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          {format(new Date(ev.ts), 'PP p')} by {ev.actorEmail?.split('@')[0]}
-                        </p>
+                      <div className="flex items-end">
+                        <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/5 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-all select-none h-[38px]">
+                          <input
+                            type="checkbox"
+                            className="accent-indigo-500 h-4 w-4"
+                            checked={whatIfRemoveGst}
+                            onChange={e => setWhatIfRemoveGst(e.target.checked)}
+                          />
+                          <span className="text-xs">Remove GST</span>
+                        </label>
                       </div>
                     </div>
-                  ))}
+
+                    <div>
+                      <label className="text-xs text-zinc-500 mb-1 block">Scenario Description</label>
+                      <textarea
+                        rows={2}
+                        placeholder="e.g., What if we ignore this notice? What if payment is delayed 90 days?"
+                        value={whatIfScenario}
+                        onChange={e => setWhatIfScenario(e.target.value)}
+                        className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+                      />
+                    </div>
+
+                    <button
+                      onClick={runWhatIf}
+                      disabled={whatIfLoading || !whatIfScenario.trim()}
+                      className="btn-primary w-full h-10 text-sm disabled:opacity-50"
+                    >
+                      {whatIfLoading ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Simulating...
+                        </span>
+                      ) : 'Run Simulation'}
+                    </button>
+                  </div>
+
+                  {whatIfResult && (
+                    <div className="space-y-4 pt-2">
+                      <div className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+                        <div>
+                          <p className="text-xs text-zinc-500">Simulated Risk Score</p>
+                          <p className="text-3xl font-display font-bold text-white">{whatIfResult.analysis.riskScore}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-zinc-500">Overall Severity</p>
+                          <span className={`text-lg font-bold ${whatIfResult.analysis.overallSeverity === 'Critical' ? 'text-red-400' :
+                              whatIfResult.analysis.overallSeverity === 'High' ? 'text-orange-400' :
+                                whatIfResult.analysis.overallSeverity === 'Medium' ? 'text-amber-400' :
+                                  'text-emerald-400'
+                            }`}>
+                            {whatIfResult.analysis.overallSeverity}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h5 className="text-xs font-bold uppercase tracking-wide text-zinc-500">Consequences</h5>
+                        {whatIfResult.analysis.consequences.map((c, i) => (
+                          <div
+                            key={i}
+                            className={`rounded-lg border p-3 ${c.severity === 'Critical' ? 'border-red-500/20 bg-red-500/5' :
+                                c.severity === 'High' ? 'border-orange-500/20 bg-orange-500/5' :
+                                  c.severity === 'Medium' ? 'border-amber-500/20 bg-amber-500/5' :
+                                    'border-white/10 bg-white/[0.02]'
+                              }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-semibold text-white">{c.category}</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${c.severity === 'Critical' ? 'bg-red-500/20 text-red-300' :
+                                    c.severity === 'High' ? 'bg-orange-500/20 text-orange-300' :
+                                      c.severity === 'Medium' ? 'bg-amber-500/20 text-amber-300' :
+                                        'bg-zinc-800 text-zinc-400'
+                                  }`}>{c.severity}</span>
+                                <span className="text-[10px] text-zinc-500">{c.likelihood}</span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-zinc-300 leading-relaxed">{c.description}</p>
+                            <p className="text-[11px] text-zinc-500 mt-1">Impact: {c.impact}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {whatIfResult.analysis.recommendations.length > 0 && (
+                        <div className="space-y-2">
+                          <h5 className="text-xs font-bold uppercase tracking-wide text-zinc-500">Recommendations</h5>
+                          {whatIfResult.analysis.recommendations.map((r, i) => (
+                            <div key={i} className="flex gap-2 items-start p-2 rounded-lg border border-white/5 bg-[#16161a]">
+                              <CheckCircle size={12} className="text-indigo-400 mt-0.5 shrink-0" />
+                              <p className="text-xs text-zinc-300">{r}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -476,13 +781,15 @@ export default function DocumentDetailPage() {
       <RejectModal
         open={rejectOpen}
         onClose={() => setRejectOpen(false)}
-        onConfirm={(notes) => {
-          const res = rejectDocument(doc.id, user?.email || '', notes);
-          if (res.ok) {
-            setDecision('Rejected');
-            setRejectOpen(false);
-            push({ kind: 'error', title: 'Rejected', message: notes });
+        onConfirm={async (notes) => {
+          const res = await rejectDocument(doc.id, user?.email || '', notes);
+          if (!res.ok) {
+            push({ kind: 'error', title: 'Reject failed', message: res.error || 'Could not reject' });
+            return;
           }
+          setDecision('Rejected');
+          setRejectOpen(false);
+          push({ kind: 'error', title: 'Rejected', message: notes });
         }}
       />
 

@@ -58,18 +58,18 @@ export default function WhatIfSimulator({ isOpen, onClose, documentId, documentN
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-content w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#141416] border border-white/10 shadow-2xl overflow-hidden"
+        className="modal-content w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#141416] border border-subtle shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/5 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-subtle backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
               <Sparkles size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">What If Simulator</h2>
-              <p className="text-xs text-zinc-400">Simulate outcomes for <span className="text-zinc-200">{documentName}</span></p>
+              <h2 className="text-lg font-semibold text-main">What If Simulator</h2>
+              <p className="text-xs text-muted">Simulate outcomes for <span className="text-main">{documentName}</span></p>
             </div>
           </div>
           <button className="modal-close" onClick={onClose}>
@@ -82,17 +82,17 @@ export default function WhatIfSimulator({ isOpen, onClose, documentId, documentN
 
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
-              <span className="text-sm text-zinc-400 py-1">Try asking:</span>
+              <span className="text-sm text-muted py-1">Try asking:</span>
               <button
                 type="button"
-                className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1 rounded-full border border-zinc-700 transition"
+                className="text-xs bg-subtle hover:bg-card-hover text-main px-3 py-1 rounded-full border border-subtle transition"
                 onClick={() => setScenario('What happens if I ignore this notice? Show penalty growth and legal risks.')}
               >
                 "Ignore this notice"
               </button>
               <button
                 type="button"
-                className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1 rounded-full border border-zinc-700 transition"
+                className="text-xs bg-subtle hover:bg-card-hover text-main px-3 py-1 rounded-full border border-subtle transition"
                 onClick={() => setScenario('What if I delay payment by 15 days? Show interest calculation.')}
               >
                 "Delay payment 15 days"
@@ -101,7 +101,7 @@ export default function WhatIfSimulator({ isOpen, onClose, documentId, documentN
 
             <div className="relative">
               <textarea
-                className="ds-input w-full min-h-[100px] bg-zinc-900/50 border-zinc-700 focus:border-blue-500 text-base resize-y p-4"
+                className="ds-input w-full min-h-[100px] bg-subtle border-subtle focus:border-blue-500 text-base resize-y p-4"
                 placeholder='Enter your scenario here... e.g., "What if I terminate the contract early?"'
                 value={scenario}
                 onChange={(e) => setScenario(e.target.value)}
@@ -138,12 +138,12 @@ export default function WhatIfSimulator({ isOpen, onClose, documentId, documentN
             <div className="animate-slide-up space-y-6">
 
               {/* Score Card */}
-              <div className="p-5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+              <div className="p-5 rounded-xl bg-subtle border border-subtle flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">Projected Risk Score</h3>
+                  <h3 className="text-sm font-medium text-muted uppercase tracking-wider">Projected Risk Score</h3>
                   <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-3xl font-bold text-white">{result.riskScore}</span>
-                    <span className="text-sm text-zinc-500">/ 100</span>
+                    <span className="text-3xl font-bold text-main">{result.riskScore}</span>
+                    <span className="text-sm text-dim">/ 100</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -158,7 +158,7 @@ export default function WhatIfSimulator({ isOpen, onClose, documentId, documentN
               </div>
 
               {/* Risk Meter */}
-              <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-2 w-full bg-subtle rounded-full overflow-hidden">
                 <div
                   className="h-full transition-all duration-1000 ease-out rounded-full"
                   style={{
@@ -173,26 +173,26 @@ export default function WhatIfSimulator({ isOpen, onClose, documentId, documentN
 
               {/* Consequences Grid */}
               <div>
-                <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <h4 className="text-lg font-semibold text-main mb-4 flex items-center gap-2">
                   <AlertTriangle size={18} className="text-amber-500" />
                   Potential Consequences
                 </h4>
                 <div className="grid gap-4 md:grid-cols-2">
                   {result.consequences.map((consequence, index) => (
-                    <div key={index} className="p-4 rounded-xl bg-zinc-900/50 border border-white/5 hover:border-white/10 transition group">
+                    <div key={index} className="p-4 rounded-xl bg-subtle border border-subtle hover:border-light transition group">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <span className="text-xl">{getCategoryIcon(consequence.category)}</span>
-                          <span className="font-medium text-zinc-300">{consequence.category}</span>
+                          <span className="font-medium text-main">{consequence.category}</span>
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded border ${consequence.severity === 'High' ? 'text-red-400 border-red-900/30' : 'text-zinc-500 border-zinc-800'
+                        <span className={`text-xs px-2 py-0.5 rounded border ${consequence.severity === 'High' ? 'text-red-400 border-red-900/30' : 'text-dim border-zinc-800'
                           }`}>
                           {consequence.likelihood}
                         </span>
                       </div>
-                      <p className="text-sm text-zinc-400 mb-3 leading-relaxed">{consequence.description}</p>
-                      <div className="text-xs p-2 bg-white/5 rounded border border-white/5 text-zinc-300">
-                        <span className="text-zinc-500 font-medium">Impact:</span> {consequence.impact}
+                      <p className="text-sm text-muted mb-3 leading-relaxed">{consequence.description}</p>
+                      <div className="text-xs p-2 bg-subtle rounded border border-subtle text-main">
+                        <span className="text-dim font-medium">Impact:</span> {consequence.impact}
                       </div>
                     </div>
                   ))}
@@ -208,7 +208,7 @@ export default function WhatIfSimulator({ isOpen, onClose, documentId, documentN
                   </h4>
                   <ul className="space-y-2">
                     {result.recommendations.map((rec, index) => (
-                      <li key={index} className="flex items-start gap-3 text-sm text-zinc-300">
+                      <li key={index} className="flex items-start gap-3 text-sm text-main">
                         <CheckCircle size={16} className="text-blue-500 mt-0.5 shrink-0" />
                         <span>{rec}</span>
                       </li>

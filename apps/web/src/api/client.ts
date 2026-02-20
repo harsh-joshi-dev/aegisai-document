@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { RiskSignal } from '../services/risk/types';
 
 // All API calls use relative URLs so they go through the Vite dev proxy (same origin).
 // This ensures session cookies set by the backend are sent with every request.
@@ -7,8 +8,11 @@ export const API_BASE_URL =
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  // Don't set a global Content-Type. Axios will set the correct header per-request:
+  // - JSON: application/json
+  // - FormData: multipart/form-data (with boundary)
   headers: {
-    'Content-Type': 'application/json',
+    Accept: 'application/json',
   },
   withCredentials: true, // Important for session cookies
 });
@@ -17,6 +21,63 @@ export const apiClient = axios.create({
 // If offline, we can enqueue certain JSON requests and retry later.
 // Uploads (multipart) are not queued here.
 import { enqueue } from '../mobile/offlineQueue';
+
+// ============================================================================
+// Auth
+// ============================================================================
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+}
+
+export interface AuthMeResponse {
+  success: boolean;
+  user: AuthUser;
+}
+
+export async function getMe(): Promise<AuthMeResponse> {
+  const response = await apiClient.get<AuthMeResponse>('/api/auth/me');
+  return response.data;
+}
+
+export interface AuthTokenExchangeResponse {
+  success: boolean;
+  token: string;
+  user: AuthUser;
+}
+
+export async function exchangeAuthToken(token: string): Promise<AuthTokenExchangeResponse> {
+  const response = await apiClient.post<AuthTokenExchangeResponse>('/api/auth/token-exchange', { token });
+  return response.data;
+}
+
+export async function logout(): Promise<{ success: boolean; message: string }> {
+  const response = await apiClient.post<{ success: boolean; message: string }>('/api/auth/logout', {});
+  return response.data;
+}
+
+// ============================================================================
+// Workspaces
+// ============================================================================
+
+export interface WorkspaceMembership {
+  tenantId: string;
+  name: string;
+  role: 'owner' | 'admin' | 'reviewer' | 'viewer' | string;
+}
+
+export async function listWorkspaces(): Promise<{ success: boolean; workspaces: WorkspaceMembership[]; count: number }> {
+  const response = await apiClient.get<{ success: boolean; workspaces: WorkspaceMembership[]; count: number }>('/api/workspaces');
+  return response.data;
+}
+
+export async function selectWorkspace(tenantId: string): Promise<{ success: boolean; tenantId: string; role: string }> {
+  const response = await apiClient.post<{ success: boolean; tenantId: string; role: string }>('/api/workspaces/select', { tenantId });
+  return response.data;
+}
 
 // Attach JWT Bearer token from localStorage to every request
 apiClient.interceptors.request.use((config) => {
@@ -121,6 +182,8 @@ export interface Document {
   riskScore?: number | null;
   summary?: string | null;
   extractedData?: Record<string, any> | null;
+  vendorName?: string | null;
+  approvalStatus?: 'pending' | 'approved' | 'rejected' | 'info_requested' | string;
   versionNumber?: number;
   folderId?: string | null;
   metadata?: Record<string, any>;
@@ -701,6 +764,91 @@ export async function renameDocument(documentId: string, filename: string): Prom
   return response.data;
 }
 
+// Approvals
+export async function approveDocument(documentId: string, notes?: string): Promise<any> {
+  const response = await apiClient.post(`/api/documents/${documentId}/approve`, { notes });
+  return response.data;
+}
+
+export async function rejectDocument(documentId: string, notes: string): Promise<any> {
+  const response = await apiClient.post(`/api/documents/${documentId}/reject`, { notes });
+  return response.data;
+}
+
+export async function requestInfo(documentId: string, notes?: string): Promise<any> {
+  const response = await apiClient.post(`/api/documents/${documentId}/request-info`, { notes });
+  return response.data;
+}
+
+export async function getDocumentRisk(documentId: string): Promise<{
+  success: boolean;
+  documentId: string;
+  riskResult: null | {
+    risk_score: number;
+    risk_level: string;
+    summary: string;
+    recommendations: any[];
+    plain_english_explanations?: string[];
+  };
+  riskSignals: RiskSignal[];
+}> {
+  const response = await apiClient.get(`/api/documents/${documentId}/risk`);
+  return response.data;
+}
+
+export async function fetchDocumentFile(documentId: string): Promise<{
+  blob: Blob;
+  contentType: string;
+  filename: string;
+}> {
+  const response = await apiClient.get<Blob>(`/api/documents/${documentId}/file`, {
+    responseType: 'blob',
+  });
+  const contentType =
+    (response.headers as any)?.['content-type'] ||
+    (response.headers as any)?.['Content-Type'] ||
+    'application/octet-stream';
+  const cd = ((response.headers as any)?.['content-disposition'] || '') as string;
+  const filenameMatch = cd.match(/filename="([^"]+)"/i);
+  const filename = filenameMatch?.[1] || 'document';
+  return { blob: response.data as any, contentType: String(contentType), filename };
+}
+
+// Compliance / Audit logs (used for Activity feed)
+export interface AuditLogItem {
+  id: string;
+  userId: string;
+  userEmail?: string | null;
+  userName?: string | null;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  details: Record<string, any>;
+  ipAddress?: string;
+  userAgent?: string;
+  timestamp: string; // ISO string
+  complianceFlags: string[];
+}
+
+export async function getAuditLogs(params?: {
+  resourceType?: string;
+  resourceId?: string;
+  action?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ success: boolean; logs: AuditLogItem[]; total: number; limit: number; offset: number }> {
+  const sp = new URLSearchParams();
+  if (params?.resourceType) sp.set('resourceType', params.resourceType);
+  if (params?.resourceId) sp.set('resourceId', params.resourceId);
+  if (params?.action) sp.set('action', params.action);
+  if (typeof params?.limit === 'number') sp.set('limit', String(params.limit));
+  if (typeof params?.offset === 'number') sp.set('offset', String(params.offset));
+  const response = await apiClient.get<{ success: boolean; logs: AuditLogItem[]; total: number; limit: number; offset: number }>(
+    `/api/compliance/audit-logs?${sp.toString()}`
+  );
+  return response.data;
+}
+
 /** Public shared document (no auth). Used when opening a shared link. */
 export interface SharedDocumentResponse {
   success: boolean;
@@ -1040,6 +1188,459 @@ export async function getScamScore(documentId: string): Promise<{
   summary: string;
 }> {
   const response = await apiClient.post('/api/scam-score', { documentId });
+  return response.data;
+}
+
+// ============================================================================
+// Vendor Links
+// ============================================================================
+
+export interface VendorLink {
+  id: string;
+  tenant_id: string;
+  created_by: string;
+  token: string;
+  vendor_name: string;
+  vendor_email: string | null;
+  vendor_phone: string | null;
+  vendor_pan: string | null;
+  vendor_gstin: string | null;
+  folder_id: string | null;
+  folder_name?: string | null;
+  description: string | null;
+  template: string;
+  required_documents: any[];
+  status: 'active' | 'inactive';
+  folder_status: 'pending' | 'under_review' | 'verified' | 'rejected';
+  max_uploads: number;
+  upload_count: number;
+  expires_at: string | null;
+  last_upload_at: string | null;
+  analysis_data: any;
+  analyzed_at: string | null;
+  is_locked: boolean;
+  locked_at: string | null;
+  reviewed_by: string | null;
+  reviewed_by_name?: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by_name?: string;
+  created_by_email?: string;
+  document_count?: number;
+  latest_upload?: string;
+}
+
+export interface VendorLinkIssue {
+  id: string;
+  category: 'missing' | 'mismatch' | 'format_error' | 'fraud' | 'warning' | 'suggestion';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  affectedDocuments: string[];
+  affectedDocumentNames: string[];
+  recommendation: string;
+  autoDetected: boolean;
+  riskPoints: number;
+}
+
+export interface VendorAnalysis {
+  overallRiskScore: number;
+  overallRiskLevel: 'Safe' | 'Warning' | 'Critical';
+  totalDocuments: number;
+  issuesCount: number;
+  issues: VendorLinkIssue[];
+  missingDocuments: Array<{ type: string; label: string; mandatory: boolean }>;
+  uploadedDocumentTypes: Array<{ type: string; label: string; documentId: string; filename: string }>;
+  progress: { total: number; uploaded: number; mandatory: number; mandatoryUploaded: number; percentage: number; status: string };
+  summary: string;
+  vendorHealthScore: number;
+  categories: Record<string, number>;
+  duplicates: any[];
+  formatErrors: any[];
+  crossDocMismatches: any[];
+}
+
+export interface VendorComment {
+  id: string;
+  vendor_link_id: string;
+  user_id: string;
+  user_name?: string;
+  user_email?: string;
+  document_id: string | null;
+  issue_id: string | null;
+  content: string;
+  comment_type: string;
+  created_at: string;
+}
+
+export interface VendorActivity {
+  id: string;
+  vendor_link_id: string;
+  user_id: string | null;
+  actor_name: string;
+  action: string;
+  details: any;
+  created_at: string;
+}
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  requiredDocuments: Array<{ type: string; label: string; mandatory: boolean; requiresAnalysis?: boolean; description?: string }>;
+}
+
+export interface CreateVendorLinkRequest {
+  vendorName: string;
+  vendorEmail?: string;
+  vendorPhone?: string;
+  vendorPan?: string;
+  vendorGstin?: string;
+  description?: string;
+  maxUploads?: number;
+  expiresInDays?: number;
+  template?: string;
+  customRequiredDocuments?: any[];
+}
+
+// --- Templates ---
+export async function getVendorTemplates(): Promise<{ success: boolean; templates: DocumentTemplate[] }> {
+  const response = await apiClient.get('/api/vendor-links/templates');
+  return response.data;
+}
+
+export async function createVendorTemplate(template: { id: string; name: string; description: string; requiredDocuments: any[] }): Promise<{ success: boolean; template: DocumentTemplate }> {
+  const response = await apiClient.post('/api/vendor-links/templates', template);
+  return response.data;
+}
+
+export async function updateVendorRequiredDocuments(linkId: string, requiredDocuments: any[]): Promise<{ success: boolean; requiredDocuments: any[] }> {
+  const response = await apiClient.patch(`/api/vendor-links/${linkId}/required-documents`, { requiredDocuments });
+  return response.data;
+}
+
+// --- CRUD ---
+export async function getVendorLinks(filters?: {
+  status?: string;
+  folderStatus?: string;
+  search?: string;
+  riskLevel?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  hasMissing?: boolean;
+  minCompletion?: number;
+  maxCompletion?: number;
+}): Promise<{ success: boolean; vendorLinks: VendorLink[]; count: number }> {
+  const params = new URLSearchParams();
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.folderStatus) params.append('folderStatus', filters.folderStatus);
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.riskLevel) params.append('riskLevel', filters.riskLevel);
+  if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
+  if (filters?.dateTo) params.append('dateTo', filters.dateTo);
+  if (filters?.hasMissing) params.append('hasMissing', 'true');
+  if (filters?.minCompletion != null) params.append('minCompletion', String(filters.minCompletion));
+  if (filters?.maxCompletion != null) params.append('maxCompletion', String(filters.maxCompletion));
+  const response = await apiClient.get(`/api/vendor-links?${params.toString()}`);
+  return response.data;
+}
+
+export async function createVendorLink(request: CreateVendorLinkRequest): Promise<{ success: boolean; vendorLink: VendorLink; uploadUrl: string }> {
+  const response = await apiClient.post('/api/vendor-links', request);
+  return response.data;
+}
+
+export async function bulkCreateVendorLinks(vendors: any[], template?: string, expiresInDays?: number): Promise<{ success: boolean; created: any[]; count: number }> {
+  const response = await apiClient.post('/api/vendor-links/bulk', { vendors, template, expiresInDays });
+  return response.data;
+}
+
+export async function getVendorLinkDetail(linkId: string): Promise<{ success: boolean; vendorLink: VendorLink; documents: any[]; comments: VendorComment[]; activity: VendorActivity[] }> {
+  const response = await apiClient.get(`/api/vendor-links/${linkId}`);
+  return response.data;
+}
+
+export async function analyzeVendorLink(linkId: string): Promise<{ success: boolean; analysis: VendorAnalysis }> {
+  const response = await apiClient.post(`/api/vendor-links/${linkId}/analyze`);
+  return response.data;
+}
+
+export async function reprocessVendorDocuments(linkId: string): Promise<{ success: boolean; documentsReprocessed: number }> {
+  const response = await apiClient.post(`/api/vendor-links/${linkId}/reprocess`);
+  return response.data;
+}
+
+export async function deactivateVendorLink(linkId: string): Promise<{ success: boolean }> {
+  const response = await apiClient.post(`/api/vendor-links/${linkId}/deactivate`);
+  return response.data;
+}
+
+export async function activateVendorLink(linkId: string): Promise<{ success: boolean }> {
+  const response = await apiClient.post(`/api/vendor-links/${linkId}/activate`);
+  return response.data;
+}
+
+export async function deleteVendorLink(linkId: string): Promise<{ success: boolean }> {
+  const response = await apiClient.delete(`/api/vendor-links/${linkId}`);
+  return response.data;
+}
+
+// --- Review ---
+export async function reviewVendorLink(linkId: string, folderStatus: string, notes?: string): Promise<{ success: boolean }> {
+  const response = await apiClient.post(`/api/vendor-links/${linkId}/review`, { folderStatus, notes });
+  return response.data;
+}
+
+export async function reviewVendorDocument(linkId: string, documentId: string, status: string, notes?: string): Promise<{ success: boolean }> {
+  const response = await apiClient.post(`/api/vendor-links/${linkId}/documents/${documentId}/review`, { status, notes });
+  return response.data;
+}
+
+// --- Comments ---
+export async function addVendorComment(linkId: string, content: string, opts?: { documentId?: string; issueId?: string; commentType?: string }): Promise<{ success: boolean; comment: VendorComment }> {
+  const response = await apiClient.post(`/api/vendor-links/${linkId}/comments`, { content, ...opts });
+  return response.data;
+}
+
+// --- Lock/Unlock ---
+export async function lockVendorFolder(linkId: string): Promise<{ success: boolean }> {
+  const response = await apiClient.post(`/api/vendor-links/${linkId}/lock`);
+  return response.data;
+}
+
+export async function unlockVendorFolder(linkId: string): Promise<{ success: boolean }> {
+  const response = await apiClient.post(`/api/vendor-links/${linkId}/unlock`);
+  return response.data;
+}
+
+// --- Reminder ---
+export async function sendVendorReminder(linkId: string): Promise<{ success: boolean; emailSent: boolean; missingDocuments: any[] }> {
+  const response = await apiClient.post(`/api/vendor-links/${linkId}/remind`);
+  return response.data;
+}
+
+// --- Audit Report ---
+export async function getVendorAuditReport(linkId: string): Promise<{ success: boolean; report: any }> {
+  const response = await apiClient.get(`/api/vendor-links/${linkId}/report`);
+  return response.data;
+}
+
+// --- Financial Analysis ---
+export async function runVendorFinancialAnalysis(linkId: string): Promise<{ success: boolean; financialAnalysis: any }> {
+  const response = await apiClient.post(`/api/vendor-links/${linkId}/financial-analysis`, {}, { timeout: 120000 });
+  return response.data;
+}
+
+// --- Public Portal ---
+export async function getVendorPortalInfo(token: string): Promise<{
+  success: boolean;
+  portal: {
+    vendorName: string;
+    description: string | null;
+    companyName: string;
+    remainingUploads: number;
+    branding: any;
+    template: string;
+    requiredDocuments: any[];
+    uploadedDocuments: any[];
+  };
+}> {
+  const response = await apiClient.get(`/api/vendor-links/portal/${token}`);
+  return response.data;
+}
+
+export async function uploadToVendorPortal(token: string, file: File): Promise<{ success: boolean; document: { id: string; filename: string; riskLevel: string }; message: string; autoAnalysisTriggered?: boolean }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiClient.post(`/api/vendor-links/portal/${token}/upload`, formData, { timeout: 300000 });
+  return response.data;
+}
+
+// ============================================================================
+// GST Reconciliation & Regulatory Calendar
+// ============================================================================
+
+export interface GstReconciliationMismatch {
+  type: 'missing_in_gstr' | 'missing_in_books' | 'amount_mismatch' | 'gstin_mismatch' | 'date_mismatch' | 'invoice_number_mismatch';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  invoiceDocumentId: string | null;
+  gstrDocumentId: string | null;
+  vendorGstin: string | null;
+  invoiceNumber: string | null;
+  field: string;
+  bookValue: string | number | null;
+  gstrValue: string | number | null;
+  description: string;
+  itcImpact: number | null;
+}
+
+export interface GstReconciliationResult {
+  tenantId: string;
+  period: { from: string; to: string } | null;
+  totalInvoices: number;
+  totalGstrRecords: number;
+  matched: number;
+  mismatched: number;
+  missingInGstr: number;
+  missingInBooks: number;
+  mismatches: GstReconciliationMismatch[];
+  summary: {
+    totalTaxableAmount: number;
+    totalCgst: number;
+    totalSgst: number;
+    totalIgst: number;
+    totalGst: number;
+    itcAtRisk: number;
+    reconciliationScore: number;
+  };
+  recommendations: string[];
+}
+
+export async function runGstReconciliation(params?: { from?: string; to?: string }): Promise<{
+  success: boolean;
+  reconciliation: GstReconciliationResult;
+}> {
+  const response = await apiClient.post('/api/gst/reconcile', params || {});
+  return response.data;
+}
+
+export interface RegulatoryDeadline {
+  id: string;
+  category: 'GST' | 'TDS' | 'Income Tax' | 'ROC' | 'ESI/PF';
+  title: string;
+  description: string;
+  dueDate: string;
+  applicableTo: string;
+  penaltyInfo: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export async function getRegulatoryCalendar(params?: { month?: number; year?: number }): Promise<{
+  success: boolean;
+  year: number;
+  month: number;
+  deadlines: RegulatoryDeadline[];
+  upcoming: RegulatoryDeadline[];
+  overdue: number;
+}> {
+  const q = new URLSearchParams();
+  if (params?.month) q.set('month', String(params.month));
+  if (params?.year) q.set('year', String(params.year));
+  const response = await apiClient.get(`/api/gst/calendar?${q.toString()}`);
+  return response.data;
+}
+
+// --- Vendor Intelligence / 360° ---
+
+export interface VendorPredictions {
+  fraudProbability: number;
+  paymentDefaultRisk: number;
+  escalationRisk: number;
+  overallRiskTrajectory: 'improving' | 'stable' | 'deteriorating';
+  confidence: number;
+  factors: string[];
+}
+
+export interface MonthlyTrendPoint {
+  month: string;
+  docCount: number;
+  totalAmount: number;
+  avgRiskScore: number;
+  highRiskCount: number;
+}
+
+export interface RiskHeatmapPoint {
+  month: string;
+  rule: number;
+  pattern: number;
+  anomaly: number;
+}
+
+export interface VendorIntelligenceResponse {
+  success: boolean;
+  vendor: {
+    key: string;
+    name: string;
+    gstin: string | null;
+    firstTransaction: string | null;
+    lastTransaction: string | null;
+    totalDocuments: number;
+    stats: {
+      count: number;
+      meanAmount: number;
+      variance: number;
+      stdDev: number;
+      lastAmount: number;
+    } | null;
+  };
+  financials: {
+    totalInvoiceValue: number;
+    totalGst: number;
+    invoiceCount: number;
+    avgInvoiceValue: number;
+  };
+  monthlyTrend: MonthlyTrendPoint[];
+  predictions: VendorPredictions;
+  heatmap: RiskHeatmapPoint[];
+  recentDocuments: Array<{
+    id: string;
+    filename: string;
+    uploadedAt: string;
+    riskLevel: string;
+    riskScore: number | null;
+    amount: number | null;
+  }>;
+  patternHistory: Array<{
+    eventType: string;
+    severity: string;
+    title: string;
+    details: any;
+    createdAt: string;
+  }>;
+  riskSignalSummary: {
+    total: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+}
+
+export interface VendorListItem {
+  key: string;
+  name: string;
+  gstin: string | null;
+  documentCount: number;
+  avgAmount: number;
+  lastAmount: number;
+  lastSeen: string | null;
+}
+
+export async function getVendorIntelligence(vendorKey: string): Promise<VendorIntelligenceResponse> {
+  const response = await apiClient.get<VendorIntelligenceResponse>(`/api/vendor-intelligence/${encodeURIComponent(vendorKey)}`);
+  return response.data;
+}
+
+export async function getVendorDirectory(): Promise<{ success: boolean; vendors: VendorListItem[]; count: number }> {
+  const response = await apiClient.get('/api/vendor-intelligence');
+  return response.data;
+}
+
+// --- Document Timeline ---
+
+export interface TimelineEvent {
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  actor?: string;
+  severity?: string;
+}
+
+export async function getDocumentTimeline(documentId: string): Promise<{ success: boolean; documentId: string; timeline: TimelineEvent[] }> {
+  const response = await apiClient.get(`/api/documents/${documentId}/timeline`);
   return response.data;
 }
 

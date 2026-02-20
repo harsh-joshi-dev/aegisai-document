@@ -14,7 +14,9 @@ export type RiskSignalSubtype =
   | 'rapid_transactions'
   | 'required_field_missing'
   | 'consistency_check_failed'
-  | 'time_rule_violation';
+  | 'time_rule_violation'
+  | 'circular_payment'
+  | 'gst_reconciliation_mismatch';
 
 export type Severity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -108,6 +110,7 @@ export interface RiskResult {
   factors: RiskSignal[];
   summary: string;
   recommendations: Recommendation[];
+  plain_english_explanations?: string[];
   created_at: string;
   updated_at: string;
 }

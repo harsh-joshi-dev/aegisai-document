@@ -1,314 +1,627 @@
-import { useState } from 'react';
-import { ArrowRight, FileSearch, ShieldCheck, Sparkles, Workflow, Zap, CheckCircle2, Play, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  ArrowRight, FileSearch, ShieldCheck,
+  BarChart3, Lock, Users,
+  Globe, Cpu, FileText, Shield, ChevronRight, Star, Zap, TrendingUp
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DemoModal } from '../ui/DemoModal';
 
-const features = [
+const featurePillars = [
   {
-    label: 'Risk Detection',
+    title: 'Intelligent Document Processing',
+    desc: 'Extract structured financial data from invoices, GST returns, P&L, contracts, and bank statements automatically.',
+    Icon: FileText,
+    gradient: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.05))',
+    border: 'rgba(59,130,246,0.2)',
+    iconColor: '#60a5fa',
+    iconBg: 'rgba(59,130,246,0.1)',
+    glow: 'rgba(59,130,246,0.2)',
+  },
+  {
+    title: 'Risk Intelligence Engine',
+    desc: 'Unified AI-driven risk scoring with rule-based validation and cross-document anomaly detection.',
     Icon: ShieldCheck,
-    desc: 'Flag mismatches, missing fields, and anomalies instantly.',
-    color: 'text-red-400',
-    bg: 'bg-red-500/10',
-    border: 'border-red-500/20'
+    gradient: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.05))',
+    border: 'rgba(99,102,241,0.2)',
+    iconColor: '#818cf8',
+    iconBg: 'rgba(99,102,241,0.1)',
+    glow: 'rgba(99,102,241,0.2)',
   },
   {
-    label: 'Cross-Match',
-    Icon: Workflow,
-    desc: 'Detect repeated amounts and vendor spikes across docs.',
-    color: 'text-blue-400',
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/20'
+    title: 'Vendor & Approval Workflow',
+    desc: 'Secure vendor portal, review cycles, approval lifecycle, and comprehensive audit trails.',
+    Icon: Users,
+    gradient: 'linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.05))',
+    border: 'rgba(168,85,247,0.2)',
+    iconColor: '#c084fc',
+    iconBg: 'rgba(168,85,247,0.1)',
+    glow: 'rgba(168,85,247,0.2)',
   },
   {
-    label: 'Explainable AI',
-    Icon: Sparkles,
-    desc: 'Understand exactly why a document was flagged.',
-    color: 'text-amber-400',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/20'
+    title: 'Compliance & Governance',
+    desc: 'Built-in GDPR and DPDP compliance, audit logs, data retention policies, and automated enforcement.',
+    Icon: Shield,
+    gradient: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(59,130,246,0.05))',
+    border: 'rgba(16,185,129,0.2)',
+    iconColor: '#34d399',
+    iconBg: 'rgba(16,185,129,0.1)',
+    glow: 'rgba(16,185,129,0.2)',
+  }
+];
+
+const stats = [
+  { value: '99.9%', label: 'Extraction Accuracy', icon: TrendingUp },
+  { value: '10x', label: 'Faster Audit Cycles', icon: Zap },
+  { value: '₹0', label: 'Implementation Cost', icon: Star },
+  { value: '24/7', label: 'Automated Monitoring', icon: ShieldCheck },
+];
+
+const logos = [
+  { name: 'Global Finance', icon: Globe },
+  { name: 'SecureBank', icon: Lock },
+  { name: 'DataCorp', icon: Cpu },
+  { name: 'AuditLogix', icon: BarChart3 },
+  { name: 'TrustShield', icon: ShieldCheck },
+];
+
+const testimonials = [
+  {
+    quote: "CA.Dynamix has transformed how we approach internal audits. We've reduced leakage by 18% in just six months while saving our finance team hundreds of hours in manual review.",
+    name: 'Siddharth Jain',
+    title: 'Managing Partner',
+    company: 'Elite CA Services',
+    initials: 'SJ',
+    color: '#6366f1',
   },
   {
-    label: 'Audit Reports',
-    Icon: FileSearch,
-    desc: 'Generate audit-ready decision summaries in one click.',
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/20'
+    quote: "The AI risk engine catches patterns that our human reviewers would miss. It's like having a senior analyst reviewing every document in real-time.",
+    name: 'Priya Sharma',
+    title: 'Chief Financial Officer',
+    company: 'NextGen Auditx',
+    initials: 'PS',
+    color: '#8b5cf6',
   },
 ];
 
 export default function HomePage() {
   const [demoOpen, setDemoOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [testimonialIdx, setTestimonialIdx] = useState(0);
+  const heroRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 30);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTestimonialIdx(i => (i + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div className="min-h-screen w-full bg-[#030304] text-white font-sans selection:bg-indigo-500/30 overflow-x-hidden">
+    <div style={{ backgroundColor: '#030304', color: '#fff', minHeight: '100vh', overflowX: 'hidden', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
-      {/* Navbar */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#030304]/80 backdrop-blur-md transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 ring-1 ring-white/10">
-              <span className="font-display font-bold text-white text-xl">A</span>
+      <style>{`
+        @keyframes pulse-slow { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
+        @keyframes shimmer-bar { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.3); } 50% { box-shadow: 0 0 40px rgba(99,102,241,0.6); } }
+      `}</style>
+
+      {/* ── Background ── */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        <div style={{ position: 'absolute', top: '-20%', left: '-10%', width: 1200, height: 1200, background: 'radial-gradient(circle, rgba(79,70,229,0.06) 0%, transparent 60%)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: 800, height: 800, background: 'radial-gradient(circle, rgba(124,58,237,0.06) 0%, transparent 60%)', borderRadius: '50%' }} />
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.025 }}>
+          <defs>
+            <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
+              <path d="M 80 0 L 0 0 0 80" fill="none" stroke="rgba(255,255,255,1)" strokeWidth="0.5" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+      </div>
+
+      {/* ── Navbar ── */}
+      <header style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+        height: scrolled ? 68 : 90,
+        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : '1px solid transparent',
+        background: scrolled ? 'rgba(3,3,4,0.88)' : 'transparent',
+        backdropFilter: scrolled ? 'blur(24px)' : 'none',
+        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        display: 'flex', alignItems: 'center',
+      }}>
+        <div style={{ maxWidth: 1280, width: '100%', margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{
+              width: 42, height: 42, borderRadius: 13,
+              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 8px 24px rgba(79,70,229,0.35)',
+              flexShrink: 0, border: '1px solid rgba(255,255,255,0.12)',
+            }}>
+              <span style={{ fontWeight: 900, fontSize: 19, color: '#fff', fontFamily: 'Outfit, sans-serif' }}>C</span>
             </div>
             <div>
-              <p className="font-display font-bold text-lg tracking-tight text-white leading-none">Aegis AI</p>
-              <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium mt-0.5">Decision Intel</p>
+              <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: 17, color: '#fff', letterSpacing: '-0.02em', textTransform: 'uppercase', lineHeight: 1 }}>CA.Dynamix</div>
+              <div style={{ fontSize: 9, color: '#6366f1', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 5 }}>Decision Intelligence</div>
             </div>
           </div>
-          <div className="flex gap-6 items-center">
-            <Link to="/auth" className="hidden md:block text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-              Sign In
+
+          {/* Nav links - hidden on small screens */}
+          <nav className="hidden md:flex" style={{ gap: 36, alignItems: 'center' }}>
+            {[
+              { label: 'Why CA.Dynamix', href: '#features' },
+              { label: 'Features', href: '#features' },
+              { label: 'Security', href: '#security' },
+              { label: 'Enterprise', href: '#enterprise' },
+            ].map(item => (
+              <a key={item.label} href={item.href} style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', transition: 'color 0.2s', letterSpacing: '-0.01em' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}>
+                {item.label}
+              </a>
+            ))}
+          </nav>
+
+          {/* Right CTA */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Link to="/auth" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 22px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none', transition: 'all 0.2s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; }}>
+              Portal Access
             </Link>
-            <Link
-              to="/auth"
-              className="group relative inline-flex h-10 items-center justify-center overflow-hidden rounded-lg bg-indigo-600 px-6 font-medium text-white shadow-lg shadow-indigo-500/20 transition-all hover:bg-indigo-500 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900"
-            >
-              <span className="mr-2">Get Started</span>
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              <div className="absolute inset-0 -z-10 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+            <Link to="/auth" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              height: 40, padding: '0 22px', borderRadius: 10,
+              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', fontWeight: 700, fontSize: 13,
+              textDecoration: 'none', boxShadow: '0 8px 24px rgba(79,70,229,0.35)',
+              transition: 'all 0.2s',
+            }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 32px rgba(79,70,229,0.5)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(79,70,229,0.35)'; }}>
+              Start Free Trial <ArrowRight size={14} />
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="relative pt-32 pb-20 w-full">
-        {/* Abstract Background Elements */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] overflow-hidden pointer-events-none z-0">
-          <div className="absolute top-[-20%] left-[20%] w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px] mix-blend-screen animate-pulse-slow" />
-          <div className="absolute top-[10%] right-[10%] w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[100px] mix-blend-screen" />
-          <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-[#030304] to-transparent" />
-        </div>
+      {/* ── HERO ── */}
+      <section style={{ paddingTop: 160, paddingBottom: 140, position: 'relative', zIndex: 1 }} ref={heroRef}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: 60, alignItems: 'center' }}>
 
-        {/* Hero Section */}
-        <section className="relative z-10 max-w-7xl mx-auto px-6 lg:grid lg:grid-cols-2 lg:gap-16 items-center min-h-[80vh]">
-          <div className="space-y-10 py-10 lg:py-0">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-semibold uppercase tracking-wide backdrop-blur-sm shadow-[0_0_15px_rgba(99,102,241,0.3)] animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <Zap size={14} className="fill-current" />
-              <span>AI Risk Engine v2.0 Live</span>
+          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+
+            {/* Badge */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '8px 18px', borderRadius: 999, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.08)', color: '#818cf8', fontSize: 10, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', alignSelf: 'flex-start' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#818cf8', boxShadow: '0 0 12px #818cf8', flexShrink: 0, animation: 'pulse-slow 2s infinite' }} />
+              Financial Decision OS v4.0
             </div>
 
-            <h1 className="font-display text-5xl sm:text-7xl font-bold tracking-tight text-white leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-              Catch Financial <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 animate-gradient flow-text">Mistakes</span> <br />
-              Before Approval.
+            {/* Headline */}
+            <h1 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: 'clamp(48px, 6vw, 80px)', lineHeight: 1.03, letterSpacing: '-0.04em', margin: 0, color: '#fff' }}>
+              AI Decision<br />
+              <span style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Intelligence</span><br />
+              for Modern CAs
             </h1>
 
-            <p className="text-xl text-zinc-400 max-w-xl leading-relaxed animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
-              Aegis AI proactively reads your financial documents, highlights risks with plain-English explanations, and helps you avoid costly errors.
+            <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.5)', lineHeight: 1.75, maxWidth: 520, margin: 0 }}>
+              CA.Dynamix is a full-stack AI decision intelligence platform built for modern Chartered Accountants and financial teams — transforming document processing, risk analysis, compliance, and vendor management into a unified, automated, and insight-driven workflow.
             </p>
 
-            <div className="flex flex-wrap gap-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
-              <Link
-                to="/auth"
-                className="h-14 px-8 rounded-xl bg-white font-semibold text-lg hover:bg-zinc-200 transition-all transform hover:-translate-y-1 hover:shadow-xl shadow-white/10 flex items-center gap-2"
-                style={{ color: '#000' }}
-              >
-                Start Free Trial
-                <ArrowRight size={20} />
-              </Link>
-              <button
-                className="h-14 px-8 rounded-xl bg-white/5 border border-white/10 text-white font-semibold text-lg hover:bg-white/10 transition-all backdrop-blur-sm flex items-center gap-2"
-                onClick={() => setDemoOpen(true)}
-              >
-                <Play size={20} fill="currentColor" className="opacity-80" />
-                Watch Demo
+            {/* CTAs */}
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+              <button onClick={() => setDemoOpen(true)} style={{
+                height: 54, padding: '0 32px', borderRadius: 14,
+                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                color: '#fff', fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 10,
+                boxShadow: '0 16px 48px rgba(79,70,229,0.45)',
+                transition: 'all 0.25s cubic-bezier(0.16,1,0.3,1)',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 24px 64px rgba(79,70,229,0.55)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 16px 48px rgba(79,70,229,0.45)'; }}>
+                Request Demo <ArrowRight size={18} />
               </button>
+              <Link to="/auth" style={{
+                height: 54, padding: '0 32px', borderRadius: 14,
+                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.04)', color: '#fff', fontWeight: 800, fontSize: 14,
+                textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10,
+                transition: 'all 0.2s',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; }}>
+                Start Free Trial
+              </Link>
             </div>
 
-            <div className="pt-10 border-t border-white/5 grid grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-500">
-              {[
-                ['99.9%', 'Accuracy'],
-                ['10x', 'Faster Audit'],
-                ['$0', 'Setup Cost']
-              ].map(([label, sub]) => (
-                <div key={label}>
-                  <p className="font-display text-3xl font-bold text-white">{label}</p>
-                  <p className="text-sm text-zinc-500 font-medium uppercase tracking-wide mt-1">{sub}</p>
+            {/* Stats */}
+            <div style={{ paddingTop: 32, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 24 }}>
+              {stats.map(stat => (
+                <div key={stat.label}>
+                  <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: 30, color: '#6366f1', lineHeight: 1 }}>{stat.value}</div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 8 }}>{stat.label}</div>
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
-          {/* Hero Visual */}
-          <div className="relative mt-16 lg:mt-0 w-full perspective-1000 animate-in zoom-in-95 duration-1000 delay-300">
-            {/* Glow behind visual */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-indigo-600/10 rounded-full blur-3xl -z-10" />
+          {/* Right — Risk Audit Card */}
+          <motion.div
+            initial={{ opacity: 0, x: 60, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+            style={{ animation: 'float 6s ease-in-out infinite' }}
+          >
+            <div style={{
+              background: 'rgba(12,12,16,0.85)', backdropFilter: 'blur(40px)',
+              border: '1px solid rgba(255,255,255,0.07)', borderRadius: 28, padding: 32,
+              boxShadow: '0 60px 120px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04), 0 0 80px rgba(79,70,229,0.08)',
+              position: 'relative', overflow: 'hidden',
+            }}>
 
-            <div className="relative transform rotate-y-[-5deg] rotate-x-[5deg] hover:rotate-0 transition-transform duration-700 ease-out preserve-3d">
-              <div className="rounded-2xl border border-white/10 bg-[#0e0e11]/90 backdrop-blur-2xl shadow-2xl overflow-hidden ring-1 ring-white/5">
-                {/* Header */}
-                <div className="px-6 py-4 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/50" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20 border border-amber-500/50" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/20 border border-green-500/50" />
+              {/* Top glow */}
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #4f46e5, #7c3aed, #ec4899)' }} />
+              <div style={{ position: 'absolute', top: 3, left: '50%', transform: 'translateX(-50%)', width: '80%', height: 80, background: 'rgba(79,70,229,0.08)', filter: 'blur(24px)', pointerEvents: 'none' }} />
+
+              {/* Fake window controls */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444', opacity: 0.8 }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b', opacity: 0.8 }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981', opacity: 0.8 }} />
+                <div style={{ flex: 1 }} />
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.05em' }}>CA_DYNAMIX-CORE.AI</span>
+              </div>
+
+              {/* Card header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 13, background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8', border: '1px solid rgba(79,70,229,0.2)' }}>
+                    <FileSearch size={22} />
                   </div>
-                  <div className="px-3 py-1 rounded-full bg-white/5 border border-white/5 text-[10px] font-mono text-zinc-400">
-                    analysis_engine.py
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: '#fff' }}>GST Invoice Audit</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: 'JetBrains Mono, monospace', marginTop: 4, letterSpacing: '0.05em' }}>GSTR-2B-COMP-99</div>
                   </div>
                 </div>
+                <span style={{ padding: '5px 12px', borderRadius: 999, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                  Risk Flag Raised
+                </span>
+              </div>
 
-                {/* Content */}
-                <div className="p-8 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs uppercase tracking-wider text-zinc-500 font-bold mb-1">Scanning Document</p>
-                      <h3 className="text-xl font-display font-bold text-white flex items-center gap-2">
-                        <FileSearch size={24} className="text-indigo-400" />
-                        Invoice_Jan_2026.pdf
-                      </h3>
-                    </div>
-                    <span className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold uppercase animate-pulse">
-                      Critical Risk
-                    </span>
+              {/* Alerts */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                <div style={{ padding: '14px 18px', borderRadius: 12, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.14)' }}>
+                  <div style={{ color: '#f87171', fontWeight: 800, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f87171', animation: 'pulse-slow 1.5s infinite' }} />
+                    ITC Mismatch
                   </div>
-
-                  {/* Analysis Block */}
-                  <div className="space-y-3">
-                    <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 transition-colors hover:bg-red-500/10 group cursor-default">
-                      <div className="flex gap-4">
-                        <div className="p-2.5 rounded-lg bg-red-500/10 text-red-400 h-fit group-hover:scale-110 transition-transform">
-                          <ShieldCheck size={20} />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-red-200">Amount Mismatch Detected</p>
-                          <p className="text-sm text-red-200/60 mt-1 leading-relaxed">
-                            Invoice total <span className="text-red-200 font-mono">₹120,000</span> does not match PO #4092 limit of <span className="text-red-200 font-mono">₹100,000</span>.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10 transition-colors hover:bg-indigo-500/10 group cursor-default">
-                      <div className="flex gap-4">
-                        <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-400 h-fit group-hover:scale-110 transition-transform">
-                          <Sparkles size={20} />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-indigo-200">AI Recommendation</p>
-                          <p className="text-sm text-indigo-200/60 mt-1 leading-relaxed">
-                            Flag for manual review. Suggest requesting revised invoice from vendor.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>Input Tax Credit claim for <strong style={{ color: '#fff' }}>Proprietary Assets</strong> exceeds supplier filing by 12%.</div>
+                </div>
+                <div style={{ padding: '14px 18px', borderRadius: 12, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.14)' }}>
+                  <div style={{ color: '#818cf8', fontWeight: 800, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Zap size={11} />
+                    Decision Engine
                   </div>
-
-                  {/* Actions */}
-                  <div className="pt-4 flex gap-4">
-                    <button className="flex-1 py-3.5 rounded-xl bg-white text-black font-semibold text-sm hover:bg-zinc-200 transition-colors shadow-lg shadow-white/5">
-                      Reject Invoice
-                    </button>
-                    <button className="flex-1 py-3.5 rounded-xl bg-white/5 text-white font-semibold text-sm hover:bg-white/10 transition-colors border border-white/10">
-                      View Details
-                    </button>
-                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>Verified against past 24 months of filings. Supplier "Alpha Corp" has a history of delayed GSTR-1 filings.</div>
                 </div>
               </div>
+
+              {/* Metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                {[{ label: 'Severity', value: 'CRITICAL', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' }, { label: 'Extraction', value: '99.8%', color: '#10b981', bg: 'rgba(16,185,129,0.08)' }].map(m => (
+                  <div key={m.label} style={{ padding: '14px 18px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', background: m.bg }}>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>{m.label}</div>
+                    <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: 20, color: m.color }}>{m.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <button style={{ height: 40, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}>
+                  Reject
+                </button>
+                <button style={{ height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 8px 20px rgba(79,70,229,0.3)' }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+                  Audit Context
+                </button>
+              </div>
             </div>
-          </div>
-        </section>
+          </motion.div>
+        </div>
+      </section>
 
-        {/* Features Grid */}
-        <section className="max-w-7xl mx-auto px-6 py-32">
-          <div className="text-center max-w-3xl mx-auto mb-20">
-            <h2 className="font-display text-4xl font-bold text-white mb-6">Built for Decision Quality</h2>
-            <p className="text-lg text-zinc-400">Everything you need to audit, approve, and analyze financial documents with confidence.</p>
+      {/* ── LOGO CLOUD ── */}
+      <section style={{ padding: '48px 0', borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)', position: 'relative', zIndex: 1, overflow: 'hidden' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', fontWeight: 800, letterSpacing: '0.4em', textTransform: 'uppercase' }}>Empowering Modern Financial Excellence</p>
+        </div>
+        {/* Marquee */}
+        <div style={{ display: 'flex', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', gap: 80, animation: 'marquee 20s linear infinite', whiteSpace: 'nowrap' }}>
+            {[...logos, ...logos].map((logo, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'rgba(255,255,255,0.2)', fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em', flexShrink: 0 }}>
+                <logo.icon size={18} style={{ color: 'rgba(99,102,241,0.4)' }} />
+                {logo.name}
+              </div>
+            ))}
           </div>
+        </div>
+      </section>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {features.map(({ label, Icon, desc, color, bg, border }) => (
-              <div
-                key={label}
-                className={`group relative p-8 rounded-3xl border border-white/5 bg-[#0e0e11] hover:bg-[#16161a] transition-all duration-300 hover:-translate-y-2`}
-              >
-                <div className={`absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none border ${border}`} />
-                <div className={`w-14 h-14 rounded-2xl ${bg} ${color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon size={28} />
+      {/* ── WHY CA.DYNAMIX ── */}
+      <section id="features" style={{ padding: '140px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px' }}>
+          <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: 'center', marginBottom: 88 }}>
+            <div style={{ fontSize: 10, color: '#818cf8', fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 20 }}>Value Proposition</div>
+            <h2 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: 'clamp(40px, 5vw, 64px)', letterSpacing: '-0.04em', lineHeight: 1.03, margin: '0 0 20px', color: '#fff' }}>
+              Why CA.Dynamix?
+            </h2>
+            <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.45)', maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>A unified intelligence layer that sits on top of your financial documents and workflows.</p>
+          </motion.div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
+            {featurePillars.map((pillar, idx) => (
+              <motion.div key={pillar.title} initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1, ease: [0.16, 1, 0.3, 1] }}>
+                <div style={{
+                  background: 'rgba(10,10,14,0.6)',
+                  backdropFilter: 'blur(20px)',
+                  border: `1px solid rgba(255,255,255,0.06)`,
+                  borderRadius: 24, padding: '36px 28px', height: '100%',
+                  transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)', cursor: 'default',
+                  position: 'relative', overflow: 'hidden',
+                }}
+                  onMouseEnter={e => {
+                    const el = e.currentTarget;
+                    el.style.border = `1px solid ${pillar.border}`;
+                    el.style.transform = 'translateY(-6px)';
+                    el.style.background = pillar.gradient;
+                    el.style.boxShadow = `0 24px 64px ${pillar.glow}, 0 0 0 1px ${pillar.border}`;
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget;
+                    el.style.border = '1px solid rgba(255,255,255,0.06)';
+                    el.style.transform = 'translateY(0)';
+                    el.style.background = 'rgba(10,10,14,0.6)';
+                    el.style.boxShadow = 'none';
+                  }}>
+                  <div style={{
+                    width: 64, height: 64, borderRadius: 18,
+                    background: pillar.iconBg, border: `1px solid ${pillar.border}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 0 24px',
+                  }}>
+                    <pillar.Icon size={28} style={{ color: pillar.iconColor }} />
+                  </div>
+                  <h3 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 800, fontSize: 17, color: '#fff', marginBottom: 12, lineHeight: 1.3 }}>{pillar.title}</h3>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', lineHeight: 1.65 }}>{pillar.desc}</p>
+                  <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 6, color: pillar.iconColor, fontSize: 12, fontWeight: 700 }}>
+                    Learn more <ChevronRight size={14} />
+                  </div>
                 </div>
-                <h3 className="font-display text-xl font-bold text-white mb-3">{label}</h3>
-                <p className="text-zinc-400 leading-relaxed text-sm">{desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-                <div className="absolute bottom-8 right-8 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-                  <ChevronRight className={`w-5 h-5 ${color}`} />
+      {/* ── SECURITY ── */}
+      <section id="security" style={{ padding: '140px 0', background: 'rgba(255,255,255,0.012)', borderTop: '1px solid rgba(255,255,255,0.04)', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: 60, alignItems: 'center' }}>
+          <motion.div initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ ease: [0.16, 1, 0.3, 1] }}>
+            <div style={{ fontSize: 10, color: '#818cf8', fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 20 }}>Enterprise Security</div>
+            <h2 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: 'clamp(36px, 4vw, 54px)', letterSpacing: '-0.04em', lineHeight: 1.08, marginBottom: 24, color: '#fff' }}>
+              Bank-Grade Security,{' '}
+              <span style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Zero Compromise</span>
+            </h2>
+            <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.45)', lineHeight: 1.75, marginBottom: 44, maxWidth: 480 }}>Every byte of your financial data is protected by military-grade encryption, strict access controls, and regular compliance audits.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {['SOC2 Type II Certified', 'GDPR & DPDP Compliant', 'AES-256 Encryption at Rest', 'Zero-Knowledge Architecture'].map((item, i) => (
+                <motion.div key={item} initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8', flexShrink: 0 }}>
+                    <ShieldCheck size={15} />
+                  </div>
+                  <span style={{ fontSize: 15, color: 'rgba(255,255,255,0.65)', fontWeight: 600 }}>{item}</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, x: 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ ease: [0.16, 1, 0.3, 1] }}>
+            <div style={{ background: 'rgba(12,12,16,0.85)', backdropFilter: 'blur(40px)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 28, padding: 40, boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 80px rgba(79,70,229,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32, paddingBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  <Shield size={24} style={{ color: '#818cf8' }} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 17, color: '#fff' }}>Security Posture</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>Real-time infrastructure monitoring</div>
+                </div>
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 999, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', animation: 'pulse-slow 2s infinite' }} />
+                  <span style={{ fontSize: 10, color: '#34d399', fontWeight: 700, letterSpacing: '0.1em' }}>LIVE</span>
+                </div>
+              </div>
+              {[
+                { label: 'Threat Detection', val: 99, color: '#6366f1' },
+                { label: 'Compliance Score', val: 98, color: '#8b5cf6' },
+                { label: 'Data Integrity', val: 100, color: '#10b981' },
+              ].map(row => (
+                <div key={row.label} style={{ marginBottom: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{row.label}</span>
+                    <span style={{ fontSize: 13, color: row.color, fontWeight: 800, fontFamily: 'Outfit,sans-serif' }}>{row.val}%</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.05)' }}>
+                    <motion.div
+                      initial={{ width: 0 }}
+                      whileInView={{ width: `${row.val}%` }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+                      style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${row.color}, ${row.color}aa)`, boxShadow: `0 0 12px ${row.color}44` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIAL ── */}
+      <section style={{ padding: '120px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 32px', textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: '#818cf8', fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 48 }}>Client Success</div>
+
+          <div style={{ position: 'relative', minHeight: 220 }}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={testimonialIdx}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+              >
+                {/* Stars */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginBottom: 32 }}>
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={18} style={{ color: '#f59e0b', fill: '#f59e0b' }} />
+                  ))}
+                </div>
+                <blockquote style={{ fontFamily: 'Outfit, sans-serif', fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(18px, 2.5vw, 26px)', lineHeight: 1.5, color: 'rgba(255,255,255,0.85)', marginBottom: 40, letterSpacing: '-0.02em' }}>
+                  "{testimonials[testimonialIdx].quote}"
+                </blockquote>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: `linear-gradient(135deg, ${testimonials[testimonialIdx].color}, #a855f7)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Outfit,sans-serif', fontWeight: 900, fontSize: 17, color: '#fff', border: '2px solid rgba(255,255,255,0.1)' }}>
+                    {testimonials[testimonialIdx].initials}
+                  </div>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: '#fff' }}>{testimonials[testimonialIdx].name}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginTop: 4 }}>{testimonials[testimonialIdx].title} · {testimonials[testimonialIdx].company}</div>
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Dots */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 40 }}>
+            {testimonials.map((_, i) => (
+              <button key={i} onClick={() => setTestimonialIdx(i)} style={{ width: i === testimonialIdx ? 24 : 8, height: 8, borderRadius: 999, background: i === testimonialIdx ? '#6366f1' : 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section style={{ padding: '80px 32px 140px', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 32 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)',
+              borderRadius: 32, padding: '88px 72px', textAlign: 'center',
+              position: 'relative', overflow: 'hidden',
+              boxShadow: '0 60px 120px rgba(79,70,229,0.5)',
+            }}>
+            {/* BG decoration */}
+            <div style={{ position: 'absolute', top: -100, right: -100, width: 400, height: 400, background: 'rgba(255,255,255,0.05)', borderRadius: '50%' }} />
+            <div style={{ position: 'absolute', bottom: -80, left: -80, width: 300, height: 300, background: 'rgba(0,0,0,0.1)', borderRadius: '50%' }} />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderRadius: 999, background: 'rgba(255,255,255,0.12)', marginBottom: 28, fontSize: 10, color: '#fff', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                <Zap size={11} />
+                Limited Pilot Spots Available
+              </div>
+              <h2 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: 'clamp(36px, 5vw, 60px)', letterSpacing: '-0.04em', lineHeight: 1.05, marginBottom: 20, color: '#fff' }}>
+                Modernize Your<br />Audit Lifecycle
+              </h2>
+              <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.7)', maxWidth: 480, margin: '0 auto 48px', lineHeight: 1.7 }}>
+                Join hundreds of forward-thinking Chartered Accountants already using CA.Dynamix to build trust and eliminate errors.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <Link to="/auth" style={{ height: 58, padding: '0 40px', borderRadius: 16, background: '#fff', color: '#4f46e5', fontWeight: 800, fontSize: 15, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 16px 40px rgba(0,0,0,0.2)', transition: 'all 0.2s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 24px 48px rgba(0,0,0,0.3)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 16px 40px rgba(0,0,0,0.2)'; }}>
+                  Start Free Trial <ArrowRight size={16} />
+                </Link>
+                <button onClick={() => setDemoOpen(true)} style={{ height: 58, padding: '0 40px', borderRadius: 16, background: 'rgba(0,0,0,0.18)', color: '#fff', fontWeight: 800, fontSize: 15, border: '1px solid rgba(255,255,255,0.25)', cursor: 'pointer', backdropFilter: 'blur(12px)', transition: 'all 0.2s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.28)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.18)')}>
+                  Request Demo
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer style={{ background: '#000', borderTop: '1px solid rgba(255,255,255,0.04)', padding: '80px 32px 40px', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 40, marginBottom: 64 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 17, boxShadow: '0 8px 20px rgba(79,70,229,0.3)' }}>C</div>
+                <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: 17, color: '#fff', textTransform: 'uppercase', letterSpacing: '-0.01em' }}>CA.Dynamix</span>
+              </div>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', lineHeight: 1.75, maxWidth: 280 }}>Artificial Intelligence purpose-built for the rigorous standards of modern Chartered Accountancy firms.</p>
+              <div style={{ display: 'flex', gap: 2, marginTop: 28 }}>
+                {['SOC2', 'GDPR', 'ISO 27001'].map(b => (
+                  <div key={b} style={{ padding: '4px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', fontSize: 9, color: 'rgba(255,255,255,0.25)', fontWeight: 700, letterSpacing: '0.1em', marginRight: 4 }}>{b}</div>
+                ))}
+              </div>
+            </div>
+            {[
+              { title: 'Platform', links: ['Risk Engine', 'Document AI', 'Compliance', 'Integrations'] },
+              { title: 'Legal', links: ['Privacy Policy', 'Terms of Use', 'GDPR', 'DPDP'] },
+              { title: 'Company', links: ['About Us', 'Careers', 'Blog', 'Contact'] },
+            ].map(col => (
+              <div key={col.title}>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 20 }}>{col.title}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {col.links.map(link => (
+                    <a key={link} href="#" style={{ fontSize: 13, color: 'rgba(255,255,255,0.32)', textDecoration: 'none', fontWeight: 600, transition: 'color 0.2s' }}
+                      onMouseEnter={e => (e.currentTarget.style.color = '#818cf8')}
+                      onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.32)')}>
+                      {link}
+                    </a>
+                  ))}
                 </div>
               </div>
             ))}
           </div>
-        </section>
-
-        {/* How It Works */}
-        <section className="max-w-7xl mx-auto px-6 pb-32">
-          <div className="rounded-[40px] p-8 md:p-16 border border-white/5 bg-gradient-to-b from-[#0e0e11] to-black relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-900/20 rounded-full blur-[120px] -z-10" />
-
-            <div className="grid md:grid-cols-2 gap-16 items-center">
-              <div>
-                <h2 className="font-display text-4xl font-bold text-white mb-8">How it Works</h2>
-                <div className="space-y-10">
-                  {['Upload Documents', 'AI Analyzes Risk', 'Review & Approve'].map((step, idx) => (
-                    <div key={step} className="flex gap-6 group">
-                      <div className="relative">
-                        <div className="w-10 h-10 rounded-full border border-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-500 group-hover:border-indigo-500 group-hover:text-indigo-400 transition-all bg-[#030304] z-10 relative">
-                          {idx + 1}
-                        </div>
-                        {idx !== 2 && <div className="absolute top-10 left-1/2 -translate-x-1/2 h-16 w-px bg-zinc-800" />}
-                      </div>
-                      <div>
-                        <h4 className="text-xl font-bold text-zinc-300 group-hover:text-white transition-colors">{step}</h4>
-                        <p className="text-zinc-500 mt-2 text-sm leading-relaxed">
-                          {idx === 0 && "Drag & drop PDF invoices, POs, or receipts. We support bulk uploads."}
-                          {idx === 1 && "Our risk engine scans for 50+ types of anomalies instantly."}
-                          {idx === 2 && "Make a data-backed decision with 1-click audit reports."}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  <Link to="/auth" className="btn-primary inline-flex h-12 px-8 mt-6">
-                    Get Started Now
-                  </Link>
-                </div>
-              </div>
-
-              <div className="relative">
-                <div className="rounded-2xl border border-white/10 bg-black/50 p-6 backdrop-blur-md shadow-2xl">
-                  <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
-                    <span className="text-xs font-mono text-zinc-500">terminal@aegis-ai ~ %</span>
-                    <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-                    </div>
-                  </div>
-                  <div className="space-y-4 font-mono text-sm leading-relaxed">
-                    <div className="flex gap-3 animate-in fade-in slide-in-from-left duration-500 delay-100">
-                      <span className="text-green-500">➜</span>
-                      <span className="text-zinc-300">upload --file invoice_2024.pdf</span>
-                    </div>
-                    <div className="flex gap-3 animate-in fade-in slide-in-from-left duration-500 delay-300">
-                      <span className="text-blue-500">ℹ</span>
-                      <span className="text-zinc-400">Scanning document structure...</span>
-                    </div>
-                    <div className="flex gap-3 animate-in fade-in slide-in-from-left duration-500 delay-500">
-                      <span className="text-blue-500">ℹ</span>
-                      <span className="text-zinc-400">Extracting entities (Vendor, Amount, PO)...</span>
-                    </div>
-                    <div className="flex gap-3 animate-in fade-in slide-in-from-left duration-500 delay-700">
-                      <span className="text-amber-500">⚠</span>
-                      <span className="text-amber-200">Warning: Amount mismatch (PO: 50k, Inv: 55k)</span>
-                    </div>
-                    <div className="flex gap-3 animate-in fade-in slide-in-from-left duration-500 delay-1000 pl-4 border-l-2 border-green-500/30">
-                      <CheckCircle2 size={16} className="text-green-500" />
-                      <span className="text-green-400">Analysis Complete. Risk Score: 78/100</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div style={{ paddingTop: 32, borderTop: '1px solid rgba(255,255,255,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>© 2026 CA.Dynamix. All rights reserved.</p>
+            <div style={{ display: 'flex', gap: 24 }}>
+              {['Terms', 'Privacy', 'Cookies'].map(link => (
+                <a key={link} href="#" style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', transition: 'color 0.2s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#818cf8')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}>
+                  {link}
+                </a>
+              ))}
             </div>
           </div>
-        </section>
-
-      </main>
+        </div>
+      </footer>
 
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </div>

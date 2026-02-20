@@ -151,11 +151,11 @@ router.post('/organize-by-vendor', requireAuth, requireWorkspaceContext, require
 
           // Extract from filename as last resort (e.g., "invoice_acme_corp.pdf" -> "acme_corp")
           if (vendorName === 'Uncategorized') {
-            const nameParts = filename.toLowerCase().split(/[\s_-]+/);
+            const nameParts: string[] = String(filename).toLowerCase().split(/[\s_-]+/);
             if (nameParts.length > 1) {
               // Take the first meaningful part after document type
               const docTypes = ['invoice', 'receipt', 'bill', 'po', 'purchase', 'order', 'statement', 'document', 'pdf', 'doc'];
-              const meaningfulPart = nameParts.find(part => part && !docTypes.includes(part));
+              const meaningfulPart = nameParts.find((part: string) => part && !docTypes.includes(part));
               if (meaningfulPart) {
                 vendorName = meaningfulPart.charAt(0).toUpperCase() + meaningfulPart.slice(1);
               }

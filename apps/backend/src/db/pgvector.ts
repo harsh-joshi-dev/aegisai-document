@@ -720,6 +720,20 @@ export async function initializeDatabase() {
       );
     `);
 
+    // Create tenants table early because many tables reference it via FK.
+    // (Fresh local DB would fail if documents references tenants before it's created.)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tenants (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        domain VARCHAR(255) UNIQUE,
+        branding JSONB DEFAULT '{}'::jsonb,
+        settings JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Add welcome_email_sent column if it doesn't exist (for existing databases)
     try {
       await client.query(`
@@ -975,12 +989,33 @@ export async function initializeDatabase() {
     } catch (e: any) {
       console.log('Note: folders tenant index check:', e.message);
     }
+    // IMPORTANT: ON CONFLICT (tenant_id, name) requires a *non-partial* unique index/constraint.
+    // Older environments may have a partial index here, which Postgres cannot use as an arbiter.
     try {
-      await client.query(
-        `CREATE UNIQUE INDEX IF NOT EXISTS folders_tenant_name_uq
-         ON folders(tenant_id, name)
-         WHERE tenant_id IS NOT NULL AND name IS NOT NULL;`
-      );
+      await client.query(`
+        DELETE FROM folders f
+        USING (
+          SELECT id
+          FROM (
+            SELECT id,
+                   ROW_NUMBER() OVER (PARTITION BY tenant_id, name ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST) AS rn
+            FROM folders
+            WHERE tenant_id IS NOT NULL AND name IS NOT NULL
+          ) x
+          WHERE x.rn > 1
+        ) dup
+        WHERE f.id = dup.id;
+      `);
+    } catch (e: any) {
+      console.log('Note: folders dedupe check:', e.message);
+    }
+    try {
+      await client.query(`DROP INDEX IF EXISTS folders_tenant_name_uq;`);
+    } catch (e: any) {
+      console.log('Note: folders drop old index check:', e.message);
+    }
+    try {
+      await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS folders_tenant_name_uq ON folders(tenant_id, name);`);
     } catch (e: any) {
       console.log('Note: folders unique tenant/name index check:', e.message);
     }
@@ -1008,13 +1043,32 @@ export async function initializeDatabase() {
       console.log('Note: vendor_memory tenant index check:', e.message);
     }
     // Tenant-scoped logical uniqueness for vendor memory.
-    // Required for safe UPSERTs that scope by tenant_id.
+    // IMPORTANT: ON CONFLICT (tenant_id, vendor_key) requires a *non-partial* unique index/constraint.
     try {
-      await client.query(
-        `CREATE UNIQUE INDEX IF NOT EXISTS vendor_memory_tenant_vendor_key_uq
-         ON vendor_memory(tenant_id, vendor_key)
-         WHERE tenant_id IS NOT NULL AND vendor_key IS NOT NULL;`
-      );
+      await client.query(`
+        DELETE FROM vendor_memory vm
+        USING (
+          SELECT id
+          FROM (
+            SELECT id,
+                   ROW_NUMBER() OVER (PARTITION BY tenant_id, vendor_key ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST) AS rn
+            FROM vendor_memory
+            WHERE tenant_id IS NOT NULL AND vendor_key IS NOT NULL
+          ) x
+          WHERE x.rn > 1
+        ) dup
+        WHERE vm.id = dup.id;
+      `);
+    } catch (e: any) {
+      console.log('Note: vendor_memory dedupe check:', e.message);
+    }
+    try {
+      await client.query(`DROP INDEX IF EXISTS vendor_memory_tenant_vendor_key_uq;`);
+    } catch (e: any) {
+      console.log('Note: vendor_memory drop old index check:', e.message);
+    }
+    try {
+      await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS vendor_memory_tenant_vendor_key_uq ON vendor_memory(tenant_id, vendor_key);`);
     } catch (e: any) {
       console.log('Note: vendor_memory unique tenant/vendor_key index check:', e.message);
     }
@@ -1055,13 +1109,32 @@ export async function initializeDatabase() {
       console.log('Note: document_insights tenant_id column check:', e.message);
     }
     // Tenant-scoped logical uniqueness for document insights.
-    // Required for safe UPSERTs that scope by tenant_id.
+    // IMPORTANT: ON CONFLICT (tenant_id, document_id) requires a *non-partial* unique index/constraint.
     try {
-      await client.query(
-        `CREATE UNIQUE INDEX IF NOT EXISTS document_insights_tenant_document_uq
-         ON document_insights(tenant_id, document_id)
-         WHERE tenant_id IS NOT NULL AND document_id IS NOT NULL;`
-      );
+      await client.query(`
+        DELETE FROM document_insights di
+        USING (
+          SELECT id
+          FROM (
+            SELECT id,
+                   ROW_NUMBER() OVER (PARTITION BY tenant_id, document_id ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST) AS rn
+            FROM document_insights
+            WHERE tenant_id IS NOT NULL AND document_id IS NOT NULL
+          ) x
+          WHERE x.rn > 1
+        ) dup
+        WHERE di.id = dup.id;
+      `);
+    } catch (e: any) {
+      console.log('Note: document_insights dedupe check:', e.message);
+    }
+    try {
+      await client.query(`DROP INDEX IF EXISTS document_insights_tenant_document_uq;`);
+    } catch (e: any) {
+      console.log('Note: document_insights drop old index check:', e.message);
+    }
+    try {
+      await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS document_insights_tenant_document_uq ON document_insights(tenant_id, document_id);`);
     } catch (e: any) {
       console.log('Note: document_insights unique tenant/document index check:', e.message);
     }
@@ -1093,12 +1166,31 @@ export async function initializeDatabase() {
     } catch (e: any) {
       console.log('Note: approvals tenant index check:', e.message);
     }
+    // IMPORTANT: ON CONFLICT (tenant_id, document_id) requires a *non-partial* unique index/constraint.
     try {
-      await client.query(
-        `CREATE UNIQUE INDEX IF NOT EXISTS approvals_tenant_document_uq
-         ON approvals(tenant_id, document_id)
-         WHERE tenant_id IS NOT NULL AND document_id IS NOT NULL;`
-      );
+      await client.query(`
+        DELETE FROM approvals a
+        USING (
+          SELECT id
+          FROM (
+            SELECT id,
+                   ROW_NUMBER() OVER (PARTITION BY tenant_id, document_id ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST) AS rn
+            FROM approvals
+          ) x
+          WHERE x.rn > 1
+        ) dup
+        WHERE a.id = dup.id;
+      `);
+    } catch (e: any) {
+      console.log('Note: approvals dedupe check:', e.message);
+    }
+    try {
+      await client.query(`DROP INDEX IF EXISTS approvals_tenant_document_uq;`);
+    } catch (e: any) {
+      console.log('Note: approvals drop old index check:', e.message);
+    }
+    try {
+      await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS approvals_tenant_document_uq ON approvals(tenant_id, document_id);`);
     } catch (e: any) {
       console.log('Note: approvals unique tenant/document index check:', e.message);
     }
@@ -1230,6 +1322,9 @@ export async function initializeDatabase() {
     // Initialize feature tables (deadlines, comments, risk clauses, cases, policies, loan_applications)
     const { initializeFeaturesSchema } = await import('./featuresSchema.js');
     await initializeFeaturesSchema();
+
+    const { initializeVendorLinks } = await import('../api/vendorLinks.js');
+    await initializeVendorLinks();
 
     // ULI consent log + encrypted document cache (India SME Lending)
     const { initializeConsentLog } = await import('../integrations/uli/consentStore.js');
@@ -2136,6 +2231,7 @@ export async function getDocuments(filters?: {
       processing_started_at: hasProcessingStartedAt ? row.processing_started_at : null,
       processing_completed_at: hasProcessingCompletedAt ? row.processing_completed_at : null,
       version_number: hasVersionNumber ? row.version_number : 1,
+      vendor_name: hasVendorName ? (row.vendor_name ?? null) : null,
       folder_id: row.folder_id || null,
       metadata: row.metadata || {},
     }));

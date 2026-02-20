@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import {
   Shield,
   Brain,
@@ -25,17 +25,32 @@ import {
   ChevronDown,
   X,
   User,
+  Lock,
+  Layers,
+  Activity,
+  Search,
+  Check,
+  Building2,
+  FileText,
+  Workflow,
+  ShieldCheck,
+  ChevronRight,
+  Mail,
+  Linkedin,
+  Twitter,
+  Github
 } from 'lucide-react';
 import './LandingPage.css';
 
 // Animated counter component
 function AnimatedCounter({ end, duration = 2, suffix = '' }: { end: number; duration?: number; suffix?: string }) {
   const [count, setCount] = useState(0);
-  
+  const nodeRef = useRef(null);
+
   useEffect(() => {
     let startTime: number;
     let animationFrame: number;
-    
+
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
@@ -44,12 +59,12 @@ function AnimatedCounter({ end, duration = 2, suffix = '' }: { end: number; dura
         animationFrame = requestAnimationFrame(animate);
       }
     };
-    
+
     animationFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrame);
   }, [end, duration]);
-  
-  return <span>{count.toLocaleString()}{suffix}</span>;
+
+  return <span ref={nodeRef}>{count.toLocaleString()}{suffix}</span>;
 }
 
 // Feature Card Component
@@ -75,70 +90,107 @@ function FeatureCard({ icon: Icon, title, description, color, delay }: any) {
 // Risk Signal Demo Component
 function RiskSignalDemo() {
   const [activeSignal, setActiveSignal] = useState(0);
-  
+
   const signals = [
     { type: 'critical', label: 'Amount Mismatch', message: 'Invoice ₹1,00,000 ≠ Bank ₹80,000', icon: AlertTriangle },
     { type: 'high', label: 'Missing GST', message: 'Vendor GSTIN not found in document', icon: Shield },
     { type: 'medium', label: 'Pattern Detected', message: 'Repeated amount across vendors', icon: GitBranch },
     { type: 'low', label: 'Time Check', message: 'Document older than 90 days', icon: Clock },
   ];
-  
+
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveSignal((prev) => (prev + 1) % signals.length);
     }, 3000);
     return () => clearInterval(timer);
   }, []);
-  
+
   return (
     <div className="risk-signal-demo">
+      <div className="risk-glare"></div>
       <div className="risk-signal-header">
         <div className="risk-badge">
-          <Shield size={14} />
-          Risk Intelligence
+          <ShieldCheck size={14} className="text-indigo-400" />
+          <span>Risk Intelligence V2.4</span>
         </div>
-        <div className="risk-score">
-          <span className="score-value">68</span>
-          <span className="score-label">/ 100</span>
+        <div className="risk-status">
+          <div className="status-dot"></div>
+          <span>Live Monitoring</span>
         </div>
       </div>
-      
-      <div className="risk-signals-list">
-        <AnimatePresence mode="wait">
+
+      <div className="risk-analysis-view">
+        <div className="risk-score-circle">
+          <svg viewBox="0 0 36 36" className="circular-chart">
+            <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path className="circle" strokeDasharray="68, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <text x="18" y="20.35" className="percentage">68</text>
+            <text x="18" y="26" className="score-lbl">Risk Score</text>
+          </svg>
+        </div>
+
+        <div className="risk-signals-list">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeSignal}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className={`risk-signal-item ${signals[activeSignal].type}`}
+            >
+              <div className="signal-icon">
+                {(() => {
+                  const IconComponent = signals[activeSignal].icon;
+                  return <IconComponent size={20} />;
+                })()}
+              </div>
+              <div className="signal-content">
+                <div className="signal-label">{signals[activeSignal].label}</div>
+                <div className="signal-message">{signals[activeSignal].message}</div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="risk-mini-stats">
+        <div className="mini-stat">
+          <span className="mini-label">Accuracy</span>
+          <span className="mini-value">99.8%</span>
+        </div>
+        <div className="mini-stat">
+          <span className="mini-label">Scan Speed</span>
+          <span className="mini-value">250ms</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// FAQ Component
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className={`faq-item ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
+      <div className="faq-question">
+        <span>{question}</span>
+        <ChevronDown size={20} className="faq-icon" />
+      </div>
+      <AnimatePresence>
+        {isOpen && (
           <motion.div
-            key={activeSignal}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className={`risk-signal-item ${signals[activeSignal].type}`}
+            className="faq-answer"
           >
-            <div className="signal-icon">
-              {(() => {
-                const IconComponent = signals[activeSignal].icon;
-                return <IconComponent size={20} />;
-              })()}
-            </div>
-            <div className="signal-content">
-              <div className="signal-label">{signals[activeSignal].label}</div>
-              <div className="signal-message">{signals[activeSignal].message}</div>
-            </div>
-            <div className={`signal-severity ${signals[activeSignal].type}`}>
-              {signals[activeSignal].type}
-            </div>
+            <p>{answer}</p>
           </motion.div>
-        </AnimatePresence>
-      </div>
-      
-      <div className="risk-dots">
-        {signals.map((_, idx) => (
-          <button
-            key={idx}
-            className={`risk-dot ${idx === activeSignal ? 'active' : ''}`}
-            onClick={() => setActiveSignal(idx)}
-          />
-        ))}
-      </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -146,7 +198,7 @@ function RiskSignalDemo() {
 // Video Modal Component
 function VideoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   if (!isOpen) return null;
-  
+
   return (
     <AnimatePresence>
       <motion.div
@@ -166,12 +218,34 @@ function VideoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
           <button className="video-modal-close" onClick={onClose}>
             <X size={24} />
           </button>
-          <div className="video-placeholder">
-            <div className="video-placeholder-icon">
-              <Play size={48} />
+          <div className="video-viewport">
+            {/* Using a sophisticated placeholder design for the demo video */}
+            <div className="demo-video-interface">
+              <div className="demo-sidebar">
+                <div className="demo-logo">AA</div>
+                <div className="demo-nav-item active"></div>
+                <div className="demo-nav-item"></div>
+                <div className="demo-nav-item"></div>
+              </div>
+              <div className="demo-main">
+                <div className="demo-header">
+                  <div className="demo-search"></div>
+                  <div className="demo-avatar"></div>
+                </div>
+                <div className="demo-content">
+                  <div className="demo-grid">
+                    <div className="demo-card skeleton-pulse"></div>
+                    <div className="demo-card skeleton-pulse"></div>
+                    <div className="demo-card skeleton-pulse"></div>
+                  </div>
+                  <div className="demo-big-card skeleton-pulse"></div>
+                </div>
+                <div className="demo-floating-action">
+                  <Play size={32} />
+                  <span>Click to Play Demo</span>
+                </div>
+              </div>
             </div>
-            <p>Product Demo Video</p>
-            <p className="video-placeholder-sub">See Risk Intelligence in action</p>
           </div>
         </motion.div>
       </motion.div>
@@ -182,6 +256,14 @@ function VideoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
 export default function LandingPage() {
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const heroRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"]
+  });
+
+  const y = useTransform(scrollYProgress, [0, 1], [0, 200]);
+  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   const handleLogin = useCallback(() => {
     const backendOrigin = import.meta.env.VITE_BACKEND_URL ||
@@ -200,79 +282,81 @@ export default function LandingPage() {
   const features = [
     {
       icon: Brain,
-      title: 'Dynamic Rule Engine V2',
-      description: 'Tenant-scoped rules with threshold, required field, consistency, and time-based validations.',
+      title: 'Neural Rule Engine',
+      description: 'Advanced heuristic analysis combined with machine learning to identify complex document irregularities in milliseconds.',
       color: 'blue',
     },
     {
-      icon: GitBranch,
-      title: 'Pattern Detection V2',
-      description: 'Cross-document intelligence detecting repeated amounts, vendor spikes, round payments, and rapid transactions.',
+      icon: Layers,
+      title: 'Multi-layer Validation',
+      description: 'Cross-reference data against historical records, industry benchmarks, and 3rd party blacklists for 360° protection.',
       color: 'purple',
     },
     {
-      icon: Shield,
-      title: 'Unified Risk Scoring',
-      description: 'Standardized RiskSignals with severity weights, confidence scores, and explainable recommendations.',
+      icon: ShieldCheck,
+      title: 'Bank-Grade Security',
+      description: 'SOC2 Type II compliant infrastructure with end-to-end AES-256 encryption for all processed financial metadata.',
       color: 'green',
     },
     {
-      icon: Eye,
-      title: 'Explainable AI',
-      description: 'Every risk signal includes what triggered it, why it matters, and what action to take next.',
+      icon: Activity,
+      title: 'Real-time Intelligence',
+      description: 'Continuous monitoring of transaction streams with instant alerts for suspicious spikes or pattern deviations.',
       color: 'orange',
     },
     {
-      icon: Database,
-      title: 'Tenant-Scoped Data',
-      description: 'Complete data isolation with multi-tenant architecture and RBAC (owner, admin, reviewer, viewer).',
+      icon: Workflow,
+      title: 'Enterprise Workflows',
+      description: 'Role-based access controls and custom approval chains designed for large-scale financial audit teams.',
       color: 'indigo',
     },
     {
-      icon: Zap,
-      title: 'Async Processing',
-      description: 'High-performance rule execution with stored results. No recomputation on every request.',
+      icon: Database,
+      title: 'Data Sovereignty',
+      description: 'Tenant-isolated databases and multi-cloud deployment options to meet strict regulatory data residency requirements.',
       color: 'yellow',
     },
   ];
 
   const stats = [
-    { value: 99.9, suffix: '%', label: 'Accuracy Rate', icon: TargetIcon },
-    { value: 50, suffix: '+', label: 'Rule Types', icon: CheckCircle },
-    { value: 1000, suffix: '+', label: 'Documents Processed', icon: FileSearch },
-    { value: 10, suffix: 'x', label: 'Faster Review', icon: Zap },
+    { value: 99.9, suffix: '%', label: 'Detection Accuracy', icon: Activity },
+    { value: 120, suffix: 'B+', label: 'Volume Scanned', icon: BarChart3 },
+    { value: 50, suffix: 'ms', label: 'Average Latency', icon: Zap },
+    { value: 500, suffix: '+', label: 'Global Enterprises', icon: Building2 },
   ];
-
-  function TargetIcon(props: any) {
-    return (
-      <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="10" />
-        <circle cx="12" cy="12" r="6" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    );
-  }
 
   return (
     <div className="landing-page-modern">
+      {/* Background Ambience */}
+      <div className="fixed-ambience">
+        <div className="glow-orb orb-1"></div>
+        <div className="glow-orb orb-2"></div>
+      </div>
+
       {/* Navigation */}
       <nav className={`landing-nav-modern ${scrolled ? 'scrolled' : ''}`}>
         <div className="landing-nav-container">
           <Link to="/" className="landing-logo-modern">
             <div className="logo-glow">
-              <Shield size={28} strokeWidth={2} />
+              <Shield size={24} strokeWidth={2} />
             </div>
-            <span className="logo-text">Aegis AI</span>
-            <span className="logo-badge">Risk Intelligence</span>
+            <div className="logo-texts">
+              <span className="logo-text">Aegis AI</span>
+              <span className="logo-tag">Enterprise Risk Intelligence</span>
+            </div>
           </Link>
-          
-          <div className="landing-nav-links">
-            <a href="#features" className="nav-link-modern">Features</a>
-            <a href="#how-it-works" className="nav-link-modern">How it Works</a>
+
+          <div className="landing-nav-links lg:flex hidden">
+            <a href="#solutions" className="nav-link-modern">Solutions</a>
+            <a href="#features" className="nav-link-modern">Platform</a>
+            <a href="#security" className="nav-link-modern">Security</a>
             <a href="#pricing" className="nav-link-modern">Pricing</a>
-            <button onClick={handleLogin} className="nav-link-modern" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Log In</button>
-            <button onClick={handleLogin} className="btn-primary-modern" style={{ border: 'none', cursor: 'pointer' }}>
-              Get Started
+          </div>
+
+          <div className="landing-nav-actions">
+            <button onClick={handleLogin} className="nav-link-modern login-btn">Log In</button>
+            <button onClick={handleLogin} className="btn-primary-modern">
+              <span>Book a Demo</span>
               <ArrowRight size={16} />
             </button>
           </div>
@@ -280,406 +364,413 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="hero-section-modern">
-        <div className="hero-bg-effects">
-          <div className="hero-glow hero-glow-1"></div>
-          <div className="hero-glow hero-glow-2"></div>
-          <div className="hero-grid"></div>
-        </div>
-        
+      <section ref={heroRef} className="hero-section-modern">
+        <div className="hero-grid-overlay"></div>
+
         <div className="hero-container-modern">
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+            style={{ y, opacity }}
             className="hero-content-modern"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
-              className="hero-badge-modern"
+              className="hero-badge-enterprise"
             >
-              <Sparkles size={16} />
-              <span>New: Risk Intelligence System V2</span>
+              <div className="badge-pulse"></div>
+              <span>Trusted by Fortune 500 Risk Teams</span>
             </motion.div>
-            
-            <h1 className="hero-title-modern">
-              Intelligent Risk Detection
-              <br />
-              <span className="gradient-text">for Financial Documents</span>
+
+            <h1 className="hero-title-max">
+              Empowering Integrity in
+              <span className="gradient-text"> Enterprise Finance</span>
             </h1>
-            
-            <p className="hero-description-modern">
-              Aegis AI's unified Risk Intelligence System combines dynamic rule engines
-              with cross-document pattern detection to catch fraud, errors, and compliance
-              issues before they cost you money.
+
+            <p className="hero-description-max">
+              The only AI-driven risk intelligence platform designed specifically for
+              multi-national document auditing, fraud prevention, and real-time compliance.
             </p>
-            
-            <div className="hero-cta-modern">
-              <button onClick={handleLogin} className="btn-primary-large" style={{ border: 'none', cursor: 'pointer' }}>
-                Start Free Trial
+
+            <div className="hero-cta-group">
+              <button onClick={handleLogin} className="btn-primary-xl">
+                Get Started
                 <ArrowRight size={20} />
               </button>
-              <button 
-                className="btn-video"
+              <button
+                className="btn-video-outline"
                 onClick={() => setIsVideoOpen(true)}
               >
-                <div className="btn-video-icon">
-                  <Play size={16} fill="currentColor" />
+                <div className="video-icon">
+                  <Play size={14} fill="currentColor" />
                 </div>
-                Watch Demo
+                See Platform Tour
               </button>
             </div>
-            
-            <div className="hero-trust-modern">
-              <div className="trust-avatars">
-                <div className="trust-avatar avatar-1">
-                  <User size={18} />
-                </div>
-                <div className="trust-avatar avatar-2">
-                  <User size={18} />
-                </div>
-                <div className="trust-avatar avatar-3">
-                  <User size={18} />
-                </div>
-                <div className="trust-avatar avatar-4">
-                  <span>+</span>
-                </div>
-              </div>
-              <div className="trust-rating">
-                <div className="trust-stars">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} size={14} className="trust-star" fill="currentColor" />
-                  ))}
-                </div>
-                <span className="trust-text">Trusted by 500+ audit teams</span>
+
+            <div className="hero-social-proof">
+              <p>INTEGRATES WITH YOUR STACK</p>
+              <div className="integration-logos">
+                <span className="logo-box">SAP</span>
+                <span className="logo-box">Oracle</span>
+                <span className="logo-box">Workday</span>
+                <span className="logo-box">NetSuite</span>
+                <span className="logo-box">Azure</span>
               </div>
             </div>
           </motion.div>
-          
+
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotateY: -15 }}
-            animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-            className="hero-visual-modern"
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 1 }}
+            className="hero-dash-preview"
           >
-            <RiskSignalDemo />
+            <div className="dash-mockup">
+              <RiskSignalDemo />
+              <div className="dash-decor-1"></div>
+              <div className="dash-decor-2"></div>
+            </div>
           </motion.div>
         </div>
-        
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1, duration: 0.5 }}
-          className="hero-scroll-indicator"
-        >
-          <ChevronDown size={24} />
-        </motion.div>
       </section>
 
-      {/* Stats Section */}
-      <section className="stats-section">
-        <div className="stats-container">
-          {stats.map((stat, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.1 }}
-              className="stat-item"
-            >
-              <div className="stat-icon">
-                <stat.icon size={24} />
-              </div>
-              <div className="stat-value">
-                <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-              </div>
-              <div className="stat-label">{stat.label}</div>
-            </motion.div>
+      {/* Trust Ticker */}
+      <div className="trust-ticker-container">
+        <div className="ticker-label">Used by 200+ global brands</div>
+        <div className="ticker-track">
+          {[1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6].map((i, idx) => (
+            <div key={idx} className="ticker-item">
+              <Building2 size={20} />
+              <span>GLOBAL CORPORATE {i}</span>
+            </div>
           ))}
         </div>
-      </section>
+      </div>
 
-      {/* Features Section */}
-      <section id="features" className="features-section-modern">
+      {/* Stats Section */}
+      <section className="stats-modern">
         <div className="section-container">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="section-header"
-          >
-            <div className="section-badge">Features</div>
-            <h2 className="section-title">Everything You Need for<br />Document Risk Intelligence</h2>
-            <p className="section-description">
-              From dynamic rule engines to cross-document pattern detection,
-              Aegis AI provides complete risk visibility.
-            </p>
-          </motion.div>
-          
-          <div className="features-grid-modern">
-            {features.map((feature, idx) => (
-              <FeatureCard key={idx} {...feature} delay={idx * 0.1} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how-it-works" className="how-it-works-section">
-        <div className="section-container">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="section-header"
-          >
-            <div className="section-badge">Process</div>
-            <h2 className="section-title">How Risk Intelligence Works</h2>
-            <p className="section-description">
-              Our unified system processes documents through multiple intelligence layers
-            </p>
-          </motion.div>
-          
-          <div className="process-steps">
-            {[
-              {
-                step: '01',
-                title: 'Document Ingestion',
-                description: 'Upload invoices, bank statements, contracts, and financial documents. Multi-format support with OCR.',
-                icon: FileSearch,
-              },
-              {
-                step: '02',
-                title: 'Dynamic Rule Execution',
-                description: 'Tenant-scoped rules validate thresholds, required fields, consistency checks, and time constraints.',
-                icon: Brain,
-              },
-              {
-                step: '03',
-                title: 'Pattern Detection',
-                description: 'Cross-document analysis detects repeated amounts, vendor frequency spikes, and suspicious patterns.',
-                icon: GitBranch,
-              },
-              {
-                step: '04',
-                title: 'Risk Aggregation',
-                description: 'All signals are aggregated into a unified risk score with severity-weighted calculations.',
-                icon: BarChart3,
-              },
-            ].map((item, idx) => (
+          <div className="stats-grid-modern">
+            {stats.map((stat, idx) => (
               <motion.div
                 key={idx}
-                initial={{ opacity: 0, x: idx % 2 === 0 ? -30 : 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.15 }}
-                className="process-step"
-              >
-                <div className="step-number">{item.step}</div>
-                <div className="step-content">
-                  <div className="step-icon">
-                    <item.icon size={24} />
-                  </div>
-                  <h3 className="step-title">{item.title}</h3>
-                  <p className="step-description">{item.description}</p>
-                </div>
-                {idx < 3 && <div className="step-connector" />}
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Risk Signal Types */}
-      <section className="risk-types-section">
-        <div className="section-container">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="section-header"
-          >
-            <div className="section-badge">Risk Signals</div>
-            <h2 className="section-title">Comprehensive Risk Detection</h2>
-          </motion.div>
-          
-          <div className="risk-types-grid">
-            {[
-              { type: 'Rule Violations', count: '4 Types', desc: 'Threshold, Required, Consistency, Time', color: 'blue', icon: Shield },
-              { type: 'Pattern Detection', count: '4 Patterns', desc: 'Repeated Amounts, Vendor Spike, Round Payments, Rapid TX', color: 'purple', icon: GitBranch },
-              { type: 'Missing Fields', count: 'Custom', desc: 'Configurable required field validation', color: 'orange', icon: FileSearch },
-              { type: 'Mismatches', count: 'Real-time', desc: 'Cross-document amount and data validation', color: 'red', icon: AlertTriangle },
-            ].map((risk, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
-                className={`risk-type-card ${risk.color}`}
+                className="stat-card-enterprise"
               >
-                <div className="risk-type-icon">
-                  <risk.icon size={24} />
+                <div className="stat-icon-box">
+                  <stat.icon size={20} />
                 </div>
-                <div className="risk-type-header">
-                  <span className="risk-type-name">{risk.type}</span>
-                  <span className="risk-type-count">{risk.count}</span>
+                <div className="stat-main">
+                  <div className="stat-v">
+                    <AnimatedCounter end={stat.value} suffix={stat.suffix} />
+                  </div>
+                  <div className="stat-l">{stat.label}</div>
                 </div>
-                <p className="risk-type-desc">{risk.desc}</p>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Solutions / Industry */}
+      <section id="solutions" className="solutions-section">
+        <div className="section-container">
+          <div className="section-header-left">
+            <h2 className="section-title-huge">Enterprise Solutions</h2>
+            <p className="section-subtitle">Tailored intelligence for your industry needs.</p>
+          </div>
+
+          <div className="solutions-grid">
+            <div className="solution-card">
+              <div className="solution-visual finserv"></div>
+              <div className="solution-info">
+                <h3>Financial Services</h3>
+                <p>Automate KYC/AML document verification and transaction auditing at scale.</p>
+                <ul className="solution-list">
+                  <li><Check size={16} /> Credit Risk Assessment</li>
+                  <li><Check size={16} /> Regulatory Reporting (SEC, FINRA)</li>
+                  <li><Check size={16} /> Anti-Money Laundering</li>
+                </ul>
+              </div>
+            </div>
+            <div className="solution-card">
+              <div className="solution-visual healthcare"></div>
+              <div className="solution-info">
+                <h3>Manufacturing & Supply</h3>
+                <p>Monitor vendor spending and invoice patterns across complex supply chains.</p>
+                <ul className="solution-list">
+                  <li><Check size={16} /> Dynamic Vendor Audits</li>
+                  <li><Check size={16} /> Duplicate Payment Prevention</li>
+                  <li><Check size={16} /> Procurement Integrity</li>
+                </ul>
+              </div>
+            </div>
+            <div className="solution-card">
+              <div className="solution-visual retail"></div>
+              <div className="solution-info">
+                <h3>Professional Services</h3>
+                <p>Streamline document review for audit, tax, and advisory engagements.</p>
+                <ul className="solution-list">
+                  <li><Check size={16} /> Workflow Automation</li>
+                  <li><Check size={16} /> Explainable AI Insights</li>
+                  <li><Check size={16} /> Client Data Isolation</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Detail */}
+      <section id="features" className="features-enterprise">
+        <div className="section-container">
+          <div className="features-layout">
+            <div className="features-text">
+              <div className="section-badge-modern">The Platform</div>
+              <h2 className="section-title-xl">Intelligent Infrastructure for Modern Finance</h2>
+              <div className="features-accordion">
+                {features.map((f, i) => (
+                  <motion.div
+                    key={i}
+                    whileHover={{ x: 10 }}
+                    className="feature-row"
+                  >
+                    <div className={`feature-dot ${f.color}`}></div>
+                    <div className="feature-row-content">
+                      <h4>{f.title}</h4>
+                      <p>{f.description}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+            <div className="features-visual">
+              <div className="visual-stack">
+                <div className="v-card v-card-1">
+                  <Activity size={32} className="v-icon" />
+                  <div className="v-graph"></div>
+                </div>
+                <div className="v-card v-card-2">
+                  <ShieldCheck size={32} className="v-icon" />
+                  <div className="v-text-cols">
+                    <div className="v-col"></div>
+                    <div className="v-col"></div>
+                  </div>
+                </div>
+                <div className="v-card v-card-3">
+                  <Database size={32} className="v-icon" />
+                  <div className="v-nodes"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Security Section */}
+      <section id="security" className="security-premium">
+        <div className="security-bg"></div>
+        <div className="section-container">
+          <div className="security-inner">
+            <div className="security-icon-main">
+              <Lock size={48} />
+            </div>
+            <h2 className="security-title">Security is our DNA</h2>
+            <p className="security-text">
+              Aegis AI is built on a Zero-Trust architecture. We prioritize the safety of your
+              financial data with rigorous compliance standards and independent audits.
+            </p>
+            <div className="security-badges">
+              <div className="sec-badge">
+                <Shield size={24} />
+                <span>SOC2 Type II</span>
+              </div>
+              <div className="sec-badge">
+                <Globe size={24} />
+                <span>GDPR Compliant</span>
+              </div>
+              <div className="sec-badge">
+                <FileText size={24} />
+                <span>ISO 27001</span>
+              </div>
+              <div className="sec-badge">
+                <Database size={24} />
+                <span>AES-256 Encrypted</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="testimonials-section">
+      <section className="testimonials-modern">
         <div className="section-container">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="section-header"
-          >
-            <div className="section-badge">Testimonials</div>
-            <h2 className="section-title">Trusted by Audit Professionals</h2>
-          </motion.div>
-          
-          <div className="testimonials-grid">
+          <div className="testimonials-header">
+            <div className="testimonials-label">Global Feedback</div>
+            <h2>What Industry Leaders Say</h2>
+          </div>
+
+          <div className="testimonials-river">
             {[
               {
-                quote: "The Risk Intelligence System caught a ₹50L duplicate payment that our manual review missed. The pattern detection across vendors is game-changing.",
-                author: "Rajesh Kumar",
-                role: "Partner, Big Four Firm",
-                location: "Mumbai",
+                text: "Aegis AI revolutionized our audit process. We've seen a 40% increase in fraud detection accuracy since implementation.",
+                author: "Sarah Jenkins",
+                role: "Director of Audit",
+                company: "Fortis Group"
               },
               {
-                quote: "We reduced our document review time by 80%. The explainable AI feature helps our junior staff understand why something is flagged.",
-                author: "Priya Sharma",
-                role: "CA, Mid-size Practice",
-                location: "Delhi",
+                text: "The explainable AI feature is a game-changer for our compliance team. Every flag is actionable and transparent.",
+                author: "Marcus Chen",
+                role: "VP of Risk",
+                company: "Nexis Financial"
               },
               {
-                quote: "The tenant-scoped rules let us configure different risk profiles for each client. Multi-tenancy with data isolation is exactly what we needed.",
-                author: "Amit Patel",
-                role: "CFO, Manufacturing Co",
-                location: "Ahmedabad",
-              },
-            ].map((testimonial, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.15 }}
-                className="testimonial-card"
-              >
-                <Quote size={32} className="testimonial-quote-icon" />
-                <p className="testimonial-quote">{testimonial.quote}</p>
-                <div className="testimonial-author">
-                  <div className="testimonial-avatar">
-                    {testimonial.author.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div className="testimonial-info">
-                    <div className="testimonial-name">{testimonial.author}</div>
-                    <div className="testimonial-role">{testimonial.role}</div>
-                    <div className="testimonial-location">{testimonial.location}</div>
+                text: "Scaling our document review was a bottleneck until we integrated Aegis. Now we process millions of documents monthly.",
+                author: "Elena Rossi",
+                role: "CFO",
+                company: "Global Logistics"
+              }
+            ].map((t, i) => (
+              <div key={i} className="testimonial-card-premium">
+                <Quote className="quote-icon" />
+                <p>{t.text}</p>
+                <div className="testimonial-footer">
+                  <div className="t-avatar">{t.author[0]}</div>
+                  <div className="t-meta">
+                    <span className="t-name">{t.author}</span>
+                    <span className="t-comp">{t.role}, {t.company}</span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="faq-section-modern">
+        <div className="section-container">
+          <div className="faq-container">
+            <div className="faq-sidebar">
+              <h2>Common Questions</h2>
+              <p>Everything you need to know about Aegis AI for your enterprise.</p>
+              <button className="contact-link">
+                <span>Talk to Sales</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            <div className="faq-list">
+              <FAQItem
+                question="How does Aegis AI handle data privacy?"
+                answer="We use tenant-isolated databases and end-to-end encryption. Your data is never used to train global models without explicit consent, and we support on-premise or private cloud deployments."
+              />
+              <FAQItem
+                question="Can we integrate with legacy ERP systems?"
+                answer="Yes, Aegis AI offers a robust REST API and pre-built connectors for SAP, Oracle, Workday, and Microsoft Dynamics, allowing for seamless data ingestion."
+              />
+              <FAQItem
+                question="What is the average implementation time?"
+                answer="A typical enterprise deployment takes 2-4 weeks, including custom rule configuration, system integration, and team onboarding."
+              />
+              <FAQItem
+                question="How accurate is the risk detection?"
+                answer="Our platform averages 99.9% accuracy on standard document types. Our 'Explainable AI' provides the reasoning behind every flag, allowing humans to verify insights easily."
+              />
+            </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="cta-section-modern">
-        <div className="cta-bg-effects">
-          <div className="cta-glow cta-glow-1"></div>
-          <div className="cta-glow cta-glow-2"></div>
+      <section className="final-cta">
+        <div className="cta-overlay"></div>
+        <div className="section-container">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="cta-content-enterprise"
+          >
+            <h2 className="cta-title-xl">Start Your Financial Compliance Transformation</h2>
+            <p className="cta-subtitle">Join the leading enterprises securing their future with Aegis AI.</p>
+            <div className="cta-actions">
+              <button onClick={handleLogin} className="btn-primary-xxl">Schedule a Personal Demo</button>
+              <button onClick={handleLogin} className="btn-ghost-xxl">View Pricing Plans</button>
+            </div>
+            <div className="cta-trust">
+              <CheckCircle size={14} /> <span>14-Day Free Evaluation</span>
+              <CheckCircle size={14} /> <span>Full Security Assessment</span>
+              <CheckCircle size={14} /> <span>Dedicated Account Manager</span>
+            </div>
+          </motion.div>
         </div>
-        
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="cta-container"
-        >
-          <h2 className="cta-title">Ready to Transform Your<br />Document Risk Management?</h2>
-          <p className="cta-description">
-            Join 500+ audit teams using Aegis AI's Risk Intelligence System
-to catch errors before they become costly mistakes.
-          </p>
-          
-          <div className="cta-buttons">
-            <button onClick={handleLogin} className="btn-primary-large" style={{ border: 'none', cursor: 'pointer' }}>
-              Start Free Trial
-              <ArrowRight size={20} />
-            </button>
-            <button onClick={handleLogin} className="btn-secondary-large" style={{ border: 'none', cursor: 'pointer' }}>
-              Schedule Demo
-            </button>
-          </div>
-          
-          <div className="cta-features">
-            {['No credit card required', '14-day free trial', 'Cancel anytime'].map((feature, idx) => (
-              <div key={idx} className="cta-feature">
-                <CheckCircle size={16} />
-                <span>{feature}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
       </section>
 
       {/* Footer */}
-      <footer className="landing-footer-modern">
-        <div className="footer-container">
-          <div className="footer-brand">
-            <div className="footer-logo">
-              <Shield size={24} />
-              <span>Aegis AI</span>
+      <footer className="footer-enterprise">
+        <div className="section-container">
+          <div className="footer-top">
+            <div className="footer-brand-huge">
+              <div className="footer-logo-main">
+                <Shield size={32} />
+                <span>Aegis AI</span>
+              </div>
+              <p>Securing the world's most sensitive financial workflows with intelligent risk detection.</p>
+              <div className="footer-social-links">
+                <a href="#"><Linkedin size={20} /></a>
+                <a href="#"><Twitter size={20} /></a>
+                <a href="#"><Github size={20} /></a>
+              </div>
             </div>
-            <p className="footer-tagline">
-              Intelligent Risk Detection for Financial Documents
-            </p>
-            <div className="footer-social">
-              {[Globe, Server, Users, Award].map((Icon, idx) => (
-                <a key={idx} href="#" className="social-link">
-                  <Icon size={18} />
-                </a>
-              ))}
+
+            <div className="footer-links-grid">
+              <div className="footer-col">
+                <h4>Platform</h4>
+                <a href="#">Overview</a>
+                <a href="#">Security</a>
+                <a href="#">Integrations</a>
+                <a href="#">Roadmap</a>
+              </div>
+              <div className="footer-col">
+                <h4>Solutions</h4>
+                <a href="#">Financial Services</a>
+                <a href="#">Manufacturing</a>
+                <a href="#">Public Sector</a>
+                <a href="#">Partners</a>
+              </div>
+              <div className="footer-col">
+                <h4>Company</h4>
+                <a href="#">About Us</a>
+                <a href="#">Careers</a>
+                <a href="#">Newsroom</a>
+                <a href="#">Contact</a>
+              </div>
+              <div className="footer-col">
+                <h4>Resources</h4>
+                <a href="#">Documentation</a>
+                <a href="#">API Status</a>
+                <a href="#">Case Studies</a>
+                <a href="#">Blog</a>
+              </div>
             </div>
           </div>
-          
-          <div className="footer-links">
-            <div className="footer-column">
-              <h4>Product</h4>
-              <a href="#features">Features</a>
-              <a href="#pricing">Pricing</a>
-              <button onClick={handleLogin} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, font: 'inherit' }}>Get Started</button>
+
+          <div className="footer-bottom-enterprise">
+            <div className="footer-legal">
+              <span>© 2024 Aegis AI Intelligence Inc.</span>
+              <Link to="/privacy">Privacy Policy</Link>
+              <Link to="/terms">Terms of Service</Link>
+              <a href="#">Cookie Settings</a>
             </div>
-            <div className="footer-column">
-              <h4>Company</h4>
-              <Link to="/contact">Contact</Link>
-              <Link to="/privacy">Privacy</Link>
-              <Link to="/terms">Terms</Link>
-            </div>
-            <div className="footer-column">
-              <h4>Support</h4>
-              <a href="#">Documentation</a>
-              <a href="#">API Reference</a>
-              <a href="#">Status</a>
+            <div className="footer-status">
+              <div className="status-indicator"></div>
+              <span>All Systems Operational</span>
             </div>
           </div>
-        </div>
-        
-        <div className="footer-bottom">
-          <p>© 2024 Aegis AI. All rights reserved.</p>
-          <p className="footer-built">Built for the future of audit intelligence</p>
         </div>
       </footer>
 

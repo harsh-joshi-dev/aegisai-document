@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { DocumentRecord } from '../mock/types';
 import { RiskBadge } from './RiskBadge';
 import { StatusBadge } from './StatusBadge';
-import { Eye, Archive, RotateCcw, Clock, AlertTriangle } from 'lucide-react';
+import { Eye, Archive, RotateCcw, Clock, AlertTriangle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 export function DocumentTable({
@@ -13,6 +13,7 @@ export function DocumentTable({
   isRowSelectable,
   onArchive,
   onRestore,
+  onDelete,
   showWorkflowColumns,
 }: {
   documents: DocumentRecord[];
@@ -22,6 +23,7 @@ export function DocumentTable({
   isRowSelectable?: (doc: DocumentRecord) => boolean;
   onArchive?: (doc: DocumentRecord) => void;
   onRestore?: (doc: DocumentRecord) => void;
+  onDelete?: (doc: DocumentRecord) => void | Promise<void>;
   showWorkflowColumns?: boolean;
 }) {
   const now = Date.now();
@@ -35,11 +37,11 @@ export function DocumentTable({
     selectable && selectableDocs.length > 0 && selectableDocs.every((d) => selectedIds.has(d.id));
 
   return (
-    <div className="rounded-[20px] bg-[#0e0e11] border border-white/5 overflow-hidden shadow-2xl">
+    <div className="rounded-[20px] bg-card border border-subtle overflow-hidden shadow-2xl">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-white/5 bg-white/[0.02]">
+            <tr className="border-b border-subtle bg-subtle">
               {selectable && (
                 <th className="px-6 py-4 w-12">
                   <div className="flex items-center">
@@ -47,7 +49,7 @@ export function DocumentTable({
                       type="checkbox"
                       checked={!!allSelected}
                       onChange={onToggleAll}
-                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-indigo-500 focus:ring-indigo-500/20 focus:ring-offset-0 cursor-pointer transition-colors"
+                      className="h-4 w-4 rounded border-subtle bg-card text-indigo-500 focus:ring-indigo-500/20 focus:ring-offset-0 cursor-pointer transition-colors"
                       aria-label="Select all"
                     />
                   </div>
@@ -71,7 +73,7 @@ export function DocumentTable({
               return (
                 <tr
                   key={doc.id}
-                  className="group hover:bg-white/[0.02] transition-colors duration-200"
+                  className="group hover:bg-card-hover transition-colors duration-200"
                 >
                   {selectable && (
                     <td className="px-6 py-4">
@@ -80,25 +82,25 @@ export function DocumentTable({
                         checked={selectedIds.has(doc.id)}
                         disabled={isRowSelectable ? !isRowSelectable(doc) : false}
                         onChange={() => onToggle(doc.id)}
-                        className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-indigo-500 focus:ring-indigo-500/20 focus:ring-offset-0 cursor-pointer disabled:opacity-50 transition-colors"
+                        className="h-4 w-4 rounded border-subtle bg-card text-indigo-500 focus:ring-indigo-500/20 focus:ring-offset-0 cursor-pointer disabled:opacity-50 transition-colors"
                       />
                     </td>
                   )}
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="font-medium text-white group-hover:text-indigo-300 transition-colors">{doc.name}</span>
-                      <span className="text-xs text-zinc-500 mt-0.5">{format(new Date(doc.date), 'MMM d, yyyy')}</span>
+                      <span className="font-medium text-main group-hover:text-indigo-500 transition-colors">{doc.name}</span>
+                      <span className="text-xs text-muted mt-0.5">{format(new Date(doc.date), 'MMM d, yyyy')}</span>
                     </div>
                   </td>
                   {showWorkflowColumns && (
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-white/5 border border-white/5 text-xs font-medium text-zinc-300">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-subtle border border-subtle text-xs font-medium text-muted">
                         {doc.docType || '—'}
                       </span>
                     </td>
                   )}
-                  <td className="px-6 py-4 text-zinc-300 font-medium">{doc.vendor}</td>
-                  <td className="px-6 py-4 font-mono text-zinc-300">₹{doc.amount.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-muted font-medium">{doc.vendor}</td>
+                  <td className="px-6 py-4 font-mono text-muted">₹{doc.amount.toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4">
                     <RiskBadge level={doc.riskLevel} />
                   </td>
@@ -124,10 +126,10 @@ export function DocumentTable({
                           <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-[10px] font-bold text-indigo-400 ring-1 ring-indigo-500/30">
                             {doc.assignedTo[0].toUpperCase()}
                           </div>
-                          <span className="text-zinc-300">{doc.assignedTo.split('@')[0]}</span>
+                          <span className="text-muted">{doc.assignedTo.split('@')[0]}</span>
                         </div>
                       ) : (
-                        <span className="text-zinc-600 italic">Unassigned</span>
+                        <span className="text-dim italic">Unassigned</span>
                       )}
                     </td>
                   )}
@@ -135,7 +137,7 @@ export function DocumentTable({
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Link
                         to={`/document/${doc.id}`}
-                        className="p-2 rounded-lg text-zinc-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+                        className="p-2 rounded-lg text-muted hover:text-indigo-500 hover:bg-indigo-500/10 transition-colors"
                         title="View Details"
                       >
                         <Eye size={18} />
@@ -144,7 +146,7 @@ export function DocumentTable({
                       {onArchive && (doc.status === 'approved' || doc.status === 'rejected') && (
                         <button
                           onClick={() => onArchive(doc)}
-                          className="p-2 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          className="p-2 rounded-lg text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
                           title="Archive"
                         >
                           <Archive size={18} />
@@ -154,10 +156,20 @@ export function DocumentTable({
                       {onRestore && doc.status === 'archived' && (
                         <button
                           onClick={() => onRestore(doc)}
-                          className="p-2 rounded-lg text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                          className="p-2 rounded-lg text-muted hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
                           title="Restore"
                         >
                           <RotateCcw size={18} />
+                        </button>
+                      )}
+
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(doc)}
+                          className="p-2 rounded-lg text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
                         </button>
                       )}
                     </div>

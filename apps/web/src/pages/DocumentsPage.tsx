@@ -1,32 +1,25 @@
 import { useMemo, useState } from 'react';
 import { DocumentTable } from '../ui/DocumentTable';
-import { UploadModal } from '../ui/UploadModal';
+import { UploadModal, type UploadPayload } from '../ui/UploadModal';
 import { useWorkspace } from '../state/workspace';
-import { useMockStore } from '../state/mockStore';
-import { calculateRisk, riskResultToDocumentFields } from '../services/risk/riskEngine';
+import { useStore } from '../state/store';
 import { useToast } from '../state/toast';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { BulkApproveModal } from '../ui/BulkApproveModal';
 import { BulkRejectModal } from '../ui/BulkRejectModal';
-import { useMockAuth } from '../state/mockAuth';
-import { Archive, Plus, Filter, Search } from 'lucide-react';
-
-type UploadPayload = {
-  name: string;
-  docType: 'Invoice' | 'Bank' | 'GST' | 'Other';
-  vendor?: string;
-  date?: string;
-  fileUrl?: string;
-};
+import { useAuth } from '../state/auth';
+import { Archive, Plus, Filter, Search, ChevronDown, Zap, ShieldCheck, Activity, Layers, ArrowRight } from 'lucide-react';
+import { deleteDocument, uploadFile } from '../api/client';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function DocumentsPage() {
   const { activeWorkspace } = useWorkspace();
-  const { documents, rules, users, addDocument, updateDocument, addActivity, auditLog, bulkApprove, bulkReject } = useMockStore();
+  const { documents, users, updateDocument, removeDocument, addActivity, auditLog, bulkApprove, bulkReject, refreshDocuments } = useStore();
   const { push } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useMockAuth();
+  const { user } = useAuth();
   const [status, setStatus] = useState('all');
   const [risk, setRisk] = useState('all');
   const [vendor, setVendor] = useState('all');
@@ -47,57 +40,28 @@ export default function DocumentsPage() {
     const preset = (location.state as any)?.preset as string | undefined;
     if (!preset) return;
 
-    if (preset === 'pending_review') {
-      setStatus('all');
-      setPendingReviewOnly(true);
-      setHighRiskOnly(false);
-      setOverdueOnly(false);
-      setEscalatedOnly(false);
-    }
+    const resets: Record<string, () => void> = {
+      pending_review: () => { setStatus('all'); setPendingReviewOnly(true); setHighRiskOnly(false); setOverdueOnly(false); setEscalatedOnly(false); },
+      high_risk: () => { setStatus('all'); setPendingReviewOnly(false); setHighRiskOnly(true); setOverdueOnly(false); setEscalatedOnly(false); },
+      overdue: () => { setStatus('all'); setPendingReviewOnly(false); setHighRiskOnly(false); setOverdueOnly(true); setEscalatedOnly(false); },
+      escalated: () => { setStatus('all'); setPendingReviewOnly(false); setHighRiskOnly(false); setEscalatedOnly(true); setOverdueOnly(false); },
+      all: () => { setStatus('all'); setPendingReviewOnly(false); setHighRiskOnly(false); setOverdueOnly(false); setEscalatedOnly(false); },
+    };
 
-    if (preset === 'high_risk') {
-      setStatus('all');
-      setPendingReviewOnly(false);
-      setHighRiskOnly(true);
-      setOverdueOnly(false);
-      setEscalatedOnly(false);
-    }
-
-    if (preset === 'overdue') {
-      setStatus('all');
-      setPendingReviewOnly(false);
-      setHighRiskOnly(false);
-      setOverdueOnly(true);
-      setEscalatedOnly(false);
-    }
-
-    if (preset === 'escalated') {
-      setStatus('all');
-      setPendingReviewOnly(false);
-      setEscalatedOnly(true);
-      setOverdueOnly(false);
-    }
-
-    if (preset === 'all') {
-      setStatus('all');
-      setPendingReviewOnly(false);
-      setHighRiskOnly(false);
-      setOverdueOnly(false);
-      setEscalatedOnly(false);
-    }
-
+    resets[preset]?.();
     navigate(location.pathname, { replace: true, state: null });
   }, [location.pathname, location.state, navigate]);
 
   const workspaceDocs = useMemo(
     () => documents.filter((d) => d.workspaceId === activeWorkspace.id),
-    [activeWorkspace.id]
+    [activeWorkspace.id, documents]
   );
 
   const actionableStatuses = useMemo(
     () => new Set(['pending', 'review_required', 'pending_info', 'under_review', 'needs_info']),
     []
   );
+
   const isActionable = (id: string) => {
     const doc = filtered.find((d) => d.id === id);
     return !!doc && actionableStatuses.has(doc.status);
@@ -206,353 +170,303 @@ export default function DocumentsPage() {
   };
 
   return (
-    <div className="w-full min-h-full space-y-8 animate-in pb-12">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-6">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-white tracking-tight">Documents</h1>
-          <p className="mt-2 text-sm text-zinc-400 max-w-2xl">Manage and audit financial documents across workspaces.</p>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="w-full space-y-12 pb-20"
+    >
+      {/* Background Polish */}
+      <div className="fixed inset-0 z-[-1] pointer-events-none opacity-40">
+        <div className="absolute top-[30%] right-[-5%] w-[35%] h-[35%] bg-indigo-500/5 blur-[120px] rounded-full" />
+        <div className="absolute top-[10%] left-[-5%] w-[30%] h-[30%] bg-purple-500/5 blur-[120px] rounded-full" />
+      </div>
+
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-1.5 w-12 bg-indigo-500 rounded-full" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400">Node Cluster</span>
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-main font-display">
+            Intelligence <span className="text-gradient">Ledger</span>
+          </h1>
+          <p className="text-dim text-lg font-medium max-w-2xl leading-relaxed">
+            Scalable repository for multi-threaded document heuristics and compliance governance.
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {canBulkAct && selectedDocs.length > 0 && (
-            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#0e0e11] px-4 py-2 animate-in slide-in-from-right-4 fade-in">
-              <p className="text-sm font-semibold text-zinc-300">Selected: {selectedDocs.length}</p>
-              <div className="h-4 w-px bg-white/10 mx-2" />
-              <button
-                className="btn-danger h-8 px-3 text-xs"
-                onClick={() => setBulkRejectOpen(true)}
+
+        <div className="flex flex-wrap items-center gap-4">
+          <AnimatePresence>
+            {canBulkAct && selectedDocs.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                className="flex items-center gap-4 glass-card p-2 pr-4 border-indigo-500/20 shadow-glow"
               >
-                Reject
-              </button>
-              <button
-                className="btn-primary h-8 px-3 text-xs"
-                disabled={hasCriticalSelected}
-                onClick={() => setBulkApproveOpen(true)}
-              >
-                Approve {hasCriticalSelected && '(Blocked: Critical Risk)'}
-              </button>
-            </div>
-          )}
+                <div className="px-4 py-2 rounded-xl bg-indigo-500/10 text-[10px] font-black uppercase tracking-widest text-indigo-400">
+                  {selectedDocs.length} Isolated
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    onClick={() => setBulkRejectOpen(true)}
+                  >
+                    Purge Batch
+                  </button>
+                  <button
+                    className="btn-primary h-10 px-6 text-[10px] font-black uppercase tracking-widest disabled:opacity-30"
+                    disabled={hasCriticalSelected}
+                    onClick={() => setBulkApproveOpen(true)}
+                  >
+                    {hasCriticalSelected ? 'Lock Applied' : 'Authorize All'}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <button
             type="button"
             onClick={() => setOpenUpload(true)}
-            className="btn-primary shadow-lg shadow-indigo-500/20"
+            className="btn-primary h-12 px-8 flex items-center gap-3 shadow-glow-primary"
           >
-            <Plus size={18} />
-            Upload Document
+            <Plus size={20} />
+            <span className="text-xs font-bold uppercase tracking-widest">Inject Data</span>
           </button>
         </div>
       </div>
 
-      {/* Archive Suggestions */}
+      {/* Hygiene Insights Row */}
       {archiveCandidatesByDays.some(x => x.count > 0) && (
-        <div className="grid gap-4 md:grid-cols-3">
-          {archiveCandidatesByDays.filter(x => x.count > 0).map((x) => (
-            <div key={x.days} className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 p-4 hover:bg-zinc-900/50 transition-colors group">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-zinc-800 text-zinc-400 group-hover:text-white transition-colors">
-                  <Archive size={16} />
+        <div className="grid gap-6 md:grid-cols-3">
+          {archiveCandidatesByDays.filter(x => x.count > 0).map((x, idx) => (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              key={x.days}
+              className="card-premium p-8 group relative overflow-hidden bg-indigo-500/[0.02] border-indigo-500/10 hover:border-indigo-500/30"
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm">
+                  <Archive size={20} />
                 </div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Suggestion</p>
+                <div className="space-y-0.5">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400/60">Ledger Hygiene</span>
+                  <h3 className="text-lg font-bold text-main">Archive Required</h3>
+                </div>
               </div>
-              <p className="text-sm font-semibold text-white">Archive {x.count} older docs ({x.days}+ days)</p>
-              <div className="mt-3 flex items-center gap-2">
+              <p className="text-sm text-dim font-medium leading-relaxed mb-8">
+                Heuristics detected <span className="text-indigo-400 font-bold">{x.count} legacy nodes</span> inactive for {x.days}+ days. Cleanse to optimize cluster focus.
+              </p>
+              <div className="flex items-center gap-6">
                 <button
-                  className="text-xs font-medium text-indigo-400 hover:text-indigo-300 hover:underline underline-offset-2"
-                  onClick={() => {
-                    setStatus('approved');
-                    setDateFrom('');
-                  }}
+                  className="text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors"
+                  onClick={() => { setStatus('approved'); setDateFrom(''); }}
                 >
-                  View Approved
+                  Verify Data
                 </button>
-                <span className="text-zinc-700">|</span>
                 <button
-                  className="text-xs font-medium text-indigo-400 hover:text-indigo-300 hover:underline underline-offset-2"
-                  onClick={() => {
-                    setStatus('rejected');
-                    setDateFrom('');
-                  }}
+                  className="text-[10px] font-black uppercase tracking-widest text-dim hover:text-main transition-colors flex items-center gap-2"
+                  onClick={() => { setStatus('rejected'); setDateFrom(''); }}
                 >
-                  View Rejected
+                  Reject Logic <ArrowRight size={12} />
                 </button>
               </div>
-            </div>
+              <Zap size={100} className="absolute -bottom-8 -right-8 text-indigo-500 opacity-[0.03] group-hover:scale-125 group-hover:rotate-12 transition-transform duration-1000" />
+            </motion.div>
           ))}
         </div>
       )}
 
-      {/* Filter Bar */}
-      <div className="card-premium p-6 space-y-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter size={16} className="text-zinc-400" />
-          <h3 className="text-sm font-semibold text-white">Search & Filter</h3>
+      {/* Advanced Filter Matrix */}
+      <div className="card-premium p-10 bg-subtle/20 backdrop-blur-md">
+        <div className="flex items-center gap-4 mb-10">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+            <Filter size={18} />
+          </div>
+          <div className="space-y-0.5">
+            <h3 className="text-xl font-bold text-main font-display">Heuristic Filters</h3>
+            <p className="text-[10px] font-black uppercase tracking-widest text-dim">Parameter Matrix Tuner</p>
+          </div>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <div className="sm:col-span-2 lg:col-span-2 relative group">
-            <label className="mb-2 block text-xs font-medium text-zinc-500 uppercase tracking-wide">Search</label>
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="sm:col-span-2 relative group">
+            <label className="mb-3 block text-[10px] font-black text-dim uppercase tracking-widest px-1">Global Neural Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-indigo-400 transition-colors" size={16} />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-dim group-focus-within:text-indigo-500 transition-colors" size={20} />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="input-field pl-10"
-                placeholder="Search by name, vendor, id..."
+                className="w-full bg-card hover:bg-subtle/50 border border-subtle focus:border-indigo-500/50 rounded-2xl pl-14 pr-6 h-14 text-sm text-main placeholder:text-dim/40 focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none font-medium"
+                placeholder="Name, Vendor, or ID..."
               />
             </div>
           </div>
 
-          <div>
-            <label className="mb-2 block text-xs font-medium text-zinc-500 uppercase tracking-wide">Status</label>
-            <div className="relative">
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-field appearance-none cursor-pointer">
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="under_review">Under Review</option>
-                <option value="needs_info">Needs Info</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="archived">Archived</option>
+          <div className="space-y-3">
+            <label className="mb-3 block text-[10px] font-black text-dim uppercase tracking-widest px-1">Ledger State</label>
+            <div className="relative group">
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full bg-card hover:bg-subtle/50 border border-subtle focus:border-indigo-500/50 rounded-2xl px-6 h-14 text-sm text-main appearance-none cursor-pointer outline-none transition-all font-bold"
+              >
+                <option value="all">Spectrum: Full</option>
+                <option value="pending">State: Inbound</option>
+                <option value="under_review">State: Active Review</option>
+                <option value="needs_info">State: Query Open</option>
+                <option value="approved">State: Authorized</option>
+                <option value="rejected">State: Sanctioned</option>
+                <option value="archived">State: Vaulted</option>
               </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
-                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1L5 5L9 1" /></svg>
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-dim group-hover:text-main transition-colors">
+                <ChevronDown size={14} />
               </div>
             </div>
           </div>
 
-          <div>
-            <label className="mb-2 block text-xs font-medium text-zinc-500 uppercase tracking-wide">Risk Level</label>
-            <div className="relative">
-              <select value={risk} onChange={(e) => setRisk(e.target.value)} className="input-field appearance-none cursor-pointer">
-                <option value="all">All Risks</option>
-                <option value="Safe">Safe</option>
-                <option value="Review Required">Review Required</option>
-                <option value="High">High Risk</option>
-                <option value="Critical">Critical</option>
+          <div className="space-y-3">
+            <label className="mb-3 block text-[10px] font-black text-dim uppercase tracking-widest px-1">Risk Heuristics</label>
+            <div className="relative group">
+              <select
+                value={risk}
+                onChange={(e) => setRisk(e.target.value)}
+                className="w-full bg-card hover:bg-subtle/50 border border-subtle focus:border-indigo-500/50 rounded-2xl px-6 h-14 text-sm text-main appearance-none cursor-pointer outline-none transition-all font-bold"
+              >
+                <option value="all">Risk: Any</option>
+                <option value="Safe">Risk: Neutral</option>
+                <option value="Review Required">Risk: Validation</option>
+                <option value="High">Risk: Anomalous</option>
+                <option value="Critical">Risk: Critical</option>
               </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
-                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1L5 5L9 1" /></svg>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-xs font-medium text-zinc-500 uppercase tracking-wide">Vendor</label>
-            <div className="relative">
-              <select value={vendor} onChange={(e) => setVendor(e.target.value)} className="input-field appearance-none cursor-pointer">
-                <option value="all">All Vendors</option>
-                {vendors.map((v) => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
-                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1L5 5L9 1" /></svg>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-xs font-medium text-zinc-500 uppercase tracking-wide">Assignee</label>
-            <div className="relative">
-              <select value={assignedFilter} onChange={(e) => setAssignedFilter(e.target.value)} className="input-field appearance-none cursor-pointer">
-                <option value="all">All Assignees</option>
-                <option value="me">Assigned to Me</option>
-                <option value="unassigned">Unassigned</option>
-                {assignees.map((a) => (
-                  <option key={a.email} value={a.email}>{a.label}</option>
-                ))}
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
-                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1L5 5L9 1" /></svg>
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-dim group-hover:text-main transition-colors">
+                <ChevronDown size={14} />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="pt-4 border-t border-white/5 flex flex-wrap gap-4">
-          {/* Chips */}
-          {[
-            { label: 'My Approvals Only', checked: onlyMyApprovals, set: setOnlyMyApprovals },
-            { label: 'Pending Review', checked: pendingReviewOnly, set: setPendingReviewOnly },
-            { label: 'High Risk', checked: highRiskOnly, set: setHighRiskOnly, color: 'red' },
-            { label: 'Overdue', checked: overdueOnly, set: setOverdueOnly, color: 'amber' },
-            { label: 'Escalated', checked: escalatedOnly, set: setEscalatedOnly, color: 'rose' },
-          ].map((chip) => (
-            <label
-              key={chip.label}
-              className={`
-                 cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all select-none
-                 ${chip.checked
-                  ? `bg-${chip.color || 'indigo'}-500/10 border-${chip.color || 'indigo'}-500/30 text-${chip.color || 'indigo'}-400`
-                  : 'bg-zinc-800/30 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
-                }
-               `}
-            >
-              <input
-                type="checkbox"
-                className="hidden"
-                checked={chip.checked}
-                onChange={(e) => chip.set(e.target.checked)}
-              />
-              {chip.checked && <div className={`w-1.5 h-1.5 rounded-full bg-${chip.color || 'indigo'}-500`} />}
-              {chip.label}
-            </label>
-          ))}
+        <div className="mt-10 pt-10 border-t border-subtle flex flex-col xl:flex-row xl:items-center gap-8">
+          <div className="flex flex-wrap gap-4 flex-1">
+            {[
+              { label: 'Authorized Logs', checked: onlyMyApprovals, set: setOnlyMyApprovals },
+              { label: 'Active Intervention', checked: pendingReviewOnly, set: setPendingReviewOnly },
+              { label: 'Extreme Exposure', checked: highRiskOnly, set: setHighRiskOnly, color: 'var(--danger)' },
+              { label: 'SLA Anomalies', checked: overdueOnly, set: setOverdueOnly, color: 'var(--warning)' },
+              { label: 'Escalation Node', checked: escalatedOnly, set: setEscalatedOnly, color: 'var(--accent)' },
+            ].map((chip) => (
+              <button
+                key={chip.label}
+                onClick={() => chip.set(!chip.checked)}
+                className={`
+                  inline-flex items-center gap-3 px-6 py-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all select-none
+                  ${chip.checked
+                    ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 shadow-glow ring-1 ring-indigo-500/20'
+                    : 'bg-subtle/50 border-subtle text-dim hover:bg-subtle hover:text-main'
+                  }
+                `}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full transition-all ${chip.checked ? 'bg-indigo-500 shadow-[0_0_8px_var(--primary)]' : 'bg-dim/30'}`}
+                  style={chip.checked && chip.color ? { backgroundColor: chip.color, boxShadow: `0 0 10px ${chip.color}` } : {}}
+                />
+                {chip.label}
+              </button>
+            ))}
+          </div>
 
           <button
-            className="text-xs text-zinc-500 hover:text-white transition-colors ml-auto"
+            className="text-[10px] font-black uppercase tracking-[0.2em] text-dim hover:text-indigo-400 transition-all px-6 py-3 rounded-2xl bg-subtle/50 hover:bg-subtle border border-transparent hover:border-indigo-500/20 flex items-center justify-center gap-2"
             onClick={() => {
-              setQuery('');
-              setStatus('all');
-              setRisk('all');
-              setVendor('all');
-              setAssignedFilter('all');
-              setOnlyMyApprovals(false);
-              setHighRiskOnly(false);
-              setPendingReviewOnly(false);
-              setOverdueOnly(false);
-              setEscalatedOnly(false);
-              setDateFrom('');
+              setQuery(''); setStatus('all'); setRisk('all'); setVendor('all'); setAssignedFilter('all');
+              setOnlyMyApprovals(false); setHighRiskOnly(false); setPendingReviewOnly(false); setOverdueOnly(false); setEscalatedOnly(false); setDateFrom('');
             }}
           >
-            Reset Filters
+            Reset Intelligence Grid
           </button>
         </div>
       </div>
 
-      {filtered.length ? (
-        <DocumentTable
-          documents={filtered}
-          selectedIds={canBulkAct ? selected : undefined}
-          onToggle={canBulkAct ? toggle : undefined}
-          onToggleAll={canBulkAct ? toggleAll : undefined}
-          isRowSelectable={(d) => actionableStatuses.has(d.status)}
-          onArchive={(doc) => {
-            // ... (keep existing logic)
-            const actorEmail = user?.email || '';
-            if (!actorEmail) {
-              push({ kind: 'error', title: 'Not signed in', message: 'Please login again.' });
-              return;
-            }
-            const tenant_id = doc.tenant_id || doc.workspaceId;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            updateDocument(doc.id, { status: 'archived', preArchiveStatus: doc.status, ...(actorEmail ? ({ actorEmail } as any) : {}) });
-            addActivity({ id: `act-${Date.now()}`, workspaceId: doc.workspaceId, ts: new Date().toISOString(), actorEmail, docId: doc.id, type: 'note', message: 'Archived manually' });
-            auditLog({ tenant_id, document_id: doc.id, action: 'archived', performed_by: actorEmail, metadata: { previousStatus: doc.status } });
-            push({ kind: 'success', title: 'Archived', message: doc.name });
-          }}
-          onRestore={(doc) => {
-            // ... (keep existing logic)
-            const actorEmail = user?.email || '';
-            if (!actorEmail) {
-              push({ kind: 'error', title: 'Not signed in', message: 'Please login again.' });
-              return;
-            }
-            const tenant_id = doc.tenant_id || doc.workspaceId;
-            const restoreTo = doc.preArchiveStatus && doc.preArchiveStatus !== 'archived' ? doc.preArchiveStatus : 'approved';
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            updateDocument(doc.id, { status: restoreTo, preArchiveStatus: undefined, ...(actorEmail ? ({ actorEmail } as any) : {}) });
-            addActivity({ id: `act-${Date.now()}`, workspaceId: doc.workspaceId, ts: new Date().toISOString(), actorEmail, docId: doc.id, type: 'note', message: `Restored from archive → ${restoreTo}` });
-            auditLog({ tenant_id, document_id: doc.id, action: 'restored', performed_by: actorEmail, metadata: { restoredTo: restoreTo } });
-            push({ kind: 'success', title: 'Restored', message: doc.name });
-          }}
-          showWorkflowColumns
-        />
-      ) : (
-        <div className="card-premium py-20 text-center">
-          <div className="w-20 h-20 rounded-full bg-zinc-800/50 flex items-center justify-center mx-auto mb-6">
-            <Search className="w-10 h-10 text-zinc-600" />
-          </div>
-          <h3 className="text-lg font-semibold text-white">No documents match your filters</h3>
-          <p className="mt-2 text-zinc-400 max-w-sm mx-auto">Try adjusting your search criteria or clear all filters to see all documents.</p>
-          <button
-            className="btn-secondary mt-8"
-            onClick={() => {
-              setQuery('');
-              setStatus('all');
-              setRisk('all');
-              setVendor('all');
-              setAssignedFilter('all');
-              setOnlyMyApprovals(false);
-              setHighRiskOnly(false);
-              setPendingReviewOnly(false);
-              setOverdueOnly(false);
-              setEscalatedOnly(false);
-              setDateFrom('');
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {filtered.length ? (
+          <DocumentTable
+            documents={filtered}
+            selectedIds={canBulkAct ? selected : undefined}
+            onToggle={canBulkAct ? toggle : undefined}
+            onToggleAll={canBulkAct ? toggleAll : undefined}
+            isRowSelectable={(d) => actionableStatuses.has(d.status)}
+            onDelete={async (doc) => {
+              const ok = window.confirm(`Terminate Nexus Link "${doc.name}"? This will purge the intelligence record permanently.`);
+              if (!ok) return;
+              try {
+                removeDocument(doc.id);
+                await deleteDocument(doc.id);
+                await refreshDocuments();
+                push({ kind: 'success', title: 'Isolation Complete', message: doc.name });
+              } catch (e: any) {
+                await refreshDocuments();
+                push({ kind: 'error', title: 'Lock Failed', message: e?.message || 'Permission denied' });
+              }
             }}
+            onArchive={(doc) => {
+              const actorEmail = user?.email || '';
+              if (!actorEmail) { push({ kind: 'error', title: 'Identity Required', message: 'Authenticate to continue.' }); return; }
+              const tenant_id = doc.tenant_id || doc.workspaceId;
+              updateDocument(doc.id, { status: 'archived', preArchiveStatus: doc.status });
+              addActivity({ id: `act-${Date.now()}`, workspaceId: doc.workspaceId, ts: new Date().toISOString(), actorEmail, docId: doc.id, type: 'note', message: 'Nexus link vaulted' });
+              auditLog({ tenant_id, document_id: doc.id, action: 'archived', performed_by: actorEmail, metadata: { prev: doc.status } });
+              push({ kind: 'success', title: 'Vaulted', message: doc.name });
+            }}
+            onRestore={(doc) => {
+              const actorEmail = user?.email || '';
+              if (!actorEmail) { push({ kind: 'error', title: 'Identity Required', message: 'Authenticate to continue.' }); return; }
+              const tenant_id = doc.tenant_id || doc.workspaceId;
+              const restoreTo = doc.preArchiveStatus && doc.preArchiveStatus !== 'archived' ? doc.preArchiveStatus : 'approved';
+              updateDocument(doc.id, { status: restoreTo, preArchiveStatus: undefined });
+              addActivity({ id: `act-${Date.now()}`, workspaceId: doc.workspaceId, ts: new Date().toISOString(), actorEmail, docId: doc.id, type: 'note', message: `Nexus link restored → ${restoreTo}` });
+              auditLog({ tenant_id, document_id: doc.id, action: 'restored', performed_by: actorEmail, metadata: { to: restoreTo } });
+              push({ kind: 'success', title: 'Restored', message: doc.name });
+            }}
+            showWorkflowColumns
+          />
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="card-premium py-32 text-center"
           >
-            Clear all filters
-          </button>
-        </div>
-      )}
+            <div className="w-24 h-24 rounded-[2.5rem] bg-indigo-500/10 flex items-center justify-center mx-auto mb-8 border border-indigo-500/20 shadow-inner">
+              <Layers className="w-10 h-10 text-indigo-400/40" />
+            </div>
+            <h3 className="text-2xl font-bold text-main mb-3">No Neural Matches</h3>
+            <p className="text-dim max-w-sm mx-auto mb-10 font-medium font-sans">Your parameters returned zero active nodes. Adjust simulation matrix to broaden search.</p>
+            <button
+              className="btn-primary-xl h-14 px-10 text-xs font-black uppercase tracking-widest"
+              onClick={() => {
+                setQuery(''); setStatus('all'); setRisk('all'); setVendor('all'); setAssignedFilter('all');
+                setOnlyMyApprovals(false); setHighRiskOnly(false); setPendingReviewOnly(false); setOverdueOnly(false); setEscalatedOnly(false); setDateFrom('');
+              }}
+            >
+              Clear Simulation Parameters
+            </button>
+          </motion.div>
+        )}
+      </div>
 
-      {/* Modals ... (keep existing logic) */}
       <UploadModal
         open={openUpload}
         onClose={() => setOpenUpload(false)}
-        onUpload={(payload) => {
-          const p = typeof payload === 'string' ? ({ name: payload, docType: 'Invoice' } as UploadPayload) : payload;
-          const id = `doc-${Math.random().toString(16).slice(2)}`;
-          const amountByType: Record<string, number> = {
-            Invoice: [8000, 25000, 45000, 85000, 120000, 280000][Math.floor(Math.random() * 6)],
-            Bank: [15000, 55000, 120000, 400000][Math.floor(Math.random() * 4)],
-            GST: [12000, 35000, 90000][Math.floor(Math.random() * 3)],
-            Other: [5000, 30000, 75000][Math.floor(Math.random() * 3)],
-          };
-          const amount = amountByType[p.docType] ?? 25000;
-          const vendor = p.vendor || 'Demo Vendor';
-          const tenantId = activeWorkspace.id;
-
-          const docForRisk = {
-            id,
-            tenantId,
-            workspaceId: tenantId,
-            amount,
-            vendor,
-            gst: 'NA',
-            date: p.date || new Date().toISOString().slice(0, 10),
-            docType: p.docType,
-          };
-
-          const riskResult = calculateRisk({
-            document: docForRisk,
-            rules,
-            allTenantDocs: documents.map((d) => ({
-              id: d.id,
-              tenantId: d.workspaceId || d.tenant_id,
-              amount: d.amount,
-              vendor: d.vendor,
-              gst: d.gst,
-              date: d.date,
-            })),
-            tenantId,
-          });
-
-          const riskFields = riskResultToDocumentFields(riskResult);
-
-          addDocument({
-            id,
-            workspaceId: activeWorkspace.id,
-            name: p.name,
-            docType: p.docType,
-            vendor,
-            amount,
-            riskLevel: riskFields.riskLevel as any,
-            riskScore: riskFields.riskScore,
-            status: 'pending',
-            createdBy: user?.email ?? null,
-            date: p.date || new Date().toISOString().slice(0, 10),
-            gst: 'NA',
-            summary: riskFields.summary,
-            issues: riskFields.issues,
-            recommendations: riskFields.recommendations,
-            mismatches: riskFields.mismatches,
-            patternAlerts: riskFields.patternAlerts,
-            riskSignals: riskFields.riskSignals,
-            fileUrl: p.fileUrl,
-          });
-          push({ kind: 'success', title: 'Processed', message: 'Redirecting...' });
-          navigate(`/document/${id}`);
+        onUpload={async (p: UploadPayload) => {
+          try {
+            const resp = await uploadFile(p.file);
+            await refreshDocuments();
+            push({ kind: 'success', title: 'Injection Successful', message: resp.document.filename });
+            navigate(`/document/${resp.document.id}`);
+          } catch (e: any) {
+            push({ kind: 'error', title: 'Protocol Failure', message: e?.message || 'Data stream corrupted' });
+          }
         }}
       />
 
@@ -560,14 +474,11 @@ export default function DocumentsPage() {
         open={bulkApproveOpen}
         onClose={() => setBulkApproveOpen(false)}
         docs={selectedDocs}
-        onConfirm={() => {
-          const actorEmail = user?.email || '';
-          const res = bulkApprove(selectedDocs.map((d) => d.id), actorEmail);
-          if (!res.ok) {
-            push({ kind: 'error', title: 'Bulk approve blocked', message: res.error });
-            return;
-          }
-          push({ kind: 'success', title: 'Bulk approved', message: `${selectedDocs.length} documents approved.` });
+        onConfirm={async () => {
+          const res = await bulkApprove(selectedDocs.map((d) => d.id), user?.email || '');
+          if (!res.ok) { push({ kind: 'error', title: 'Protocol Rejected', message: res.error }); return; }
+          await refreshDocuments();
+          push({ kind: 'success', title: 'Batch Authorized', message: `${selectedDocs.length} nodes successfully cleared.` });
           setSelected(new Set());
           setBulkApproveOpen(false);
         }}
@@ -577,18 +488,15 @@ export default function DocumentsPage() {
         open={bulkRejectOpen}
         onClose={() => setBulkRejectOpen(false)}
         docs={selectedDocs}
-        onConfirm={(note) => {
-          const actorEmail = user?.email || '';
-          const res = bulkReject(selectedDocs.map((d) => d.id), actorEmail, note);
-          if (!res.ok) {
-            push({ kind: 'error', title: 'Bulk reject blocked', message: res.error });
-            return;
-          }
-          push({ kind: 'success', title: 'Bulk rejected', message: `${selectedDocs.length} documents rejected.` });
+        onConfirm={async (note) => {
+          const res = await bulkReject(selectedDocs.map((d) => d.id), user?.email || '', note);
+          if (!res.ok) { push({ kind: 'error', title: 'Protocol Rejected', message: res.error }); return; }
+          await refreshDocuments();
+          push({ kind: 'success', title: 'Batch Purged', message: `${selectedDocs.length} nodes officially sanctioned.` });
           setSelected(new Set());
           setBulkRejectOpen(false);
         }}
       />
-    </div>
+    </motion.div>
   );
 }

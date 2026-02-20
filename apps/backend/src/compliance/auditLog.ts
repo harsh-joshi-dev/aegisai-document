@@ -7,6 +7,8 @@ import { pool } from '../db/pgvector.js';
 export interface AuditLog {
   id: string;
   userId: string;
+  userEmail?: string | null;
+  userName?: string | null;
   action: string;
   resourceType: string; // 'document', 'user', 'rule', etc.
   resourceId: string;
@@ -115,9 +117,11 @@ export async function logAuditEvent(
  * Get audit logs with filtering
  */
 export async function getAuditLogs(filters: {
+  tenantId?: string;
   userId?: string;
   action?: string;
   resourceType?: string;
+  resourceId?: string;
   startDate?: Date;
   endDate?: Date;
   complianceFlag?: string;
@@ -126,53 +130,67 @@ export async function getAuditLogs(filters: {
 }): Promise<{ logs: AuditLog[]; total: number }> {
   const client = await pool.connect();
   try {
-    let query = 'SELECT * FROM audit_logs WHERE 1=1';
+    const from = `FROM audit_logs a
+                  LEFT JOIN users u ON u.id::text = a.user_id`;
+    let where = 'WHERE 1=1';
     const params: any[] = [];
     let paramIndex = 1;
 
+    if (filters.tenantId) {
+      where += ` AND a.tenant_id = $${paramIndex}`;
+      params.push(filters.tenantId);
+      paramIndex++;
+    }
+
     if (filters.userId) {
-      query += ` AND user_id = $${paramIndex}`;
+      where += ` AND a.user_id = $${paramIndex}`;
       params.push(filters.userId);
       paramIndex++;
     }
 
     if (filters.action) {
-      query += ` AND action = $${paramIndex}`;
+      where += ` AND a.action = $${paramIndex}`;
       params.push(filters.action);
       paramIndex++;
     }
 
     if (filters.resourceType) {
-      query += ` AND resource_type = $${paramIndex}`;
+      where += ` AND a.resource_type = $${paramIndex}`;
       params.push(filters.resourceType);
       paramIndex++;
     }
 
+    if (filters.resourceId) {
+      where += ` AND a.resource_id = $${paramIndex}`;
+      params.push(filters.resourceId);
+      paramIndex++;
+    }
+
     if (filters.startDate) {
-      query += ` AND timestamp >= $${paramIndex}`;
+      where += ` AND a.timestamp >= $${paramIndex}`;
       params.push(filters.startDate);
       paramIndex++;
     }
 
     if (filters.endDate) {
-      query += ` AND timestamp <= $${paramIndex}`;
+      where += ` AND a.timestamp <= $${paramIndex}`;
       params.push(filters.endDate);
       paramIndex++;
     }
 
     if (filters.complianceFlag) {
-      query += ` AND $${paramIndex} = ANY(compliance_flags)`;
+      where += ` AND $${paramIndex} = ANY(a.compliance_flags)`;
       params.push(filters.complianceFlag);
       paramIndex++;
     }
 
     // Get total count
-    const countQuery = query.replace('SELECT *', 'SELECT COUNT(*) as total');
+    const countQuery = `SELECT COUNT(*) as total ${from} ${where}`;
     const countResult = await client.query(countQuery, params);
     const total = parseInt(String((countResult.rows[0] as Record<string, unknown>).total));
 
     // Get paginated results
-    query += ` ORDER BY timestamp DESC`;
+    let query = `SELECT a.*, u.email as user_email, u.name as user_name ${from} ${where} ORDER BY a.timestamp DESC`;
     if (filters.limit) {
       query += ` LIMIT $${paramIndex}`;
       params.push(filters.limit);
@@ -191,6 +209,8 @@ export async function getAuditLogs(filters: {
       return {
       id: r.id as string,
       userId: r.user_id as string,
+      userEmail: (r.user_email as string | null | undefined) ?? null,
+      userName: (r.user_name as string | null | undefined) ?? null,
       action: r.action as string,
       resourceType: r.resource_type as string,
       resourceId: r.resource_id as string,

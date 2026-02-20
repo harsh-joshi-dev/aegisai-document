@@ -39,7 +39,8 @@ export function CreateWorkspaceModal({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0e0e11] p-6 shadow-2xl"
+        className="w-full max-w-md rounded-2xl p-6"
+        style={{ background: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 32px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -47,19 +48,19 @@ export function CreateWorkspaceModal({
             <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
               <Plus size={20} />
             </div>
-            <h2 className="text-lg font-semibold text-white">Create Workspace</h2>
+            <h2 className="text-lg font-semibold text-main">Create Workspace</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5"
+            className="p-2 rounded-lg text-dim hover:text-main hover:bg-subtle"
           >
             <X size={18} />
           </button>
         </div>
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-2">Workspace Name</label>
+            <label className="block text-sm font-medium text-main mb-2">Workspace Name</label>
             <input
               type="text"
               value={name}

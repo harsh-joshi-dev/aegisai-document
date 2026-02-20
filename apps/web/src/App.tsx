@@ -9,19 +9,26 @@ import RulesPage from './pages/RulesPage';
 import UsersPage from './pages/UsersPage';
 import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
+import VendorLinksPage from './pages/VendorLinksPage';
+import VendorLinkDetailPage from './pages/VendorLinkDetailPage';
+import VendorPortalPage from './pages/VendorPortalPage';
+import VendorProfilePage from './pages/VendorProfilePage';
+import GstCompliancePage from './pages/GstCompliancePage';
 import { AppLayout } from './layout/AppLayout';
-import { MockAuthProvider, useMockAuth } from './state/mockAuth';
+import { AuthProvider, useAuth } from './state/auth';
 import { WorkspaceProvider } from './state/workspace';
-import { MockStoreProvider } from './state/mockStore';
+import { StoreProvider } from './state/store';
 import { ToastProvider } from './state/toast';
+import { ThemeProvider } from './state/theme';
 
 function ProtectedAppShell() {
-  const { isAuthenticated } = useMockAuth();
+  const { isAuthenticated, user } = useAuth();
   if (!isAuthenticated) return <Navigate to="/auth" replace />;
 
   const onboarded = (() => {
     try {
-      return localStorage.getItem('aegis_onboarded_v1') === 'true';
+      const key = user?.id ? `aegis_onboarded_v1:${user.id}` : 'aegis_onboarded_v1';
+      return localStorage.getItem(key) === 'true';
     } catch {
       return false;
     }
@@ -39,6 +46,10 @@ function ProtectedAppShell() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/gst-compliance" element={<GstCompliancePage />} />
+        <Route path="/vendor-links" element={<VendorLinksPage />} />
+        <Route path="/vendor-links/:linkId" element={<VendorLinkDetailPage />} />
+        <Route path="/vendor-profile/:vendorKey" element={<VendorProfilePage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </AppLayout>
@@ -46,7 +57,7 @@ function ProtectedAppShell() {
 }
 
 function AppRoutes() {
-  const { isAuthenticated } = useMockAuth();
+  const { isAuthenticated } = useAuth();
 
   return (
     <Routes>
@@ -59,6 +70,7 @@ function AppRoutes() {
         path="/auth"
         element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />}
       />
+      <Route path="/vendor-portal/:token" element={<VendorPortalPage />} />
       <Route path="/*" element={<ProtectedAppShell />} />
     </Routes>
   );
@@ -66,14 +78,16 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <MockAuthProvider>
-      <ToastProvider>
-        <MockStoreProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ToastProvider>
           <WorkspaceProvider>
-            <AppRoutes />
+            <StoreProvider>
+              <AppRoutes />
+            </StoreProvider>
           </WorkspaceProvider>
-        </MockStoreProvider>
-      </ToastProvider>
-    </MockAuthProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

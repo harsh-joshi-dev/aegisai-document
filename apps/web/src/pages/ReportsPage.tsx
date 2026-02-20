@@ -1,6 +1,6 @@
 import { FileBarChart, TrendingUp, AlertCircle, Download, Calendar, BarChart3, PieChart, ArrowUpRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import { useMockStore } from '../state/mockStore';
+import { useStore } from '../state/store';
 import { useWorkspace } from '../state/workspace';
 import { useToast } from '../state/toast';
 import { format } from 'date-fns';
@@ -15,7 +15,7 @@ export default function ReportsPage() {
   const [dateFrom, setDateFrom] = useState(new Date().toISOString().slice(0, 10));
   const [dateTo, setDateTo] = useState(new Date().toISOString().slice(0, 10));
   const [reportHistory, setReportHistory] = useState<{ name: string; date: string; type: string; size: string }[]>([]);
-  const { documents } = useMockStore();
+  const { documents } = useStore();
   const { activeWorkspace } = useWorkspace();
   const { push } = useToast();
 
@@ -74,11 +74,11 @@ th{background:#f5f5f5;font-weight:600}
 <thead><tr><th>Document</th><th>Vendor</th><th>Amount</th><th>Risk</th><th>Status</th><th>Date</th></tr></thead>
 <tbody>
 ${filteredDocs
-  .map(
-    (d) =>
-      `<tr><td>${escapeHtml(d.name)}</td><td>${escapeHtml(d.vendor)}</td><td>₹${d.amount?.toLocaleString('en-IN') ?? '—'}</td><td>${d.riskLevel} (${d.riskScore})</td><td>${d.status}</td><td>${d.date}</td></tr>`
-  )
-  .join('')}
+        .map(
+          (d) =>
+            `<tr><td>${escapeHtml(d.name)}</td><td>${escapeHtml(d.vendor)}</td><td>₹${d.amount?.toLocaleString('en-IN') ?? '—'}</td><td>${d.riskLevel} (${d.riskScore})</td><td>${d.status}</td><td>${d.date}</td></tr>`
+        )
+        .join('')}
 </tbody>
 </table>
 <div class="summary">
@@ -130,10 +130,10 @@ Critical: ${filteredDocs.filter((d) => d.riskLevel === 'Critical').length}
   return (
     <div className="w-full min-h-full space-y-8 animate-in fade-in duration-500 pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-subtle pb-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-white tracking-tight">Reports</h1>
-          <p className="mt-2 text-sm text-zinc-400 max-w-xl">
+          <h1 className="font-display text-3xl font-bold text-main tracking-tight">Reports</h1>
+          <p className="mt-2 text-sm text-muted max-w-xl">
             Audit-ready report snapshots for decision tracking, compliance, and analytics.
           </p>
         </div>
@@ -146,11 +146,11 @@ Critical: ${filteredDocs.filter((d) => d.riskLevel === 'Critical').length}
             <div className={`p-2.5 rounded-xl ${reportCardTemplates[0].bg} ${reportCardTemplates[0].color}`}>
               <FileBarChart size={20} />
             </div>
-            <ArrowUpRight size={16} className="text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ArrowUpRight size={16} className="text-dim opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
-          <p className="text-2xl font-display font-bold text-white mb-1">{reportMetrics.total} docs</p>
-          <p className="text-sm font-medium text-zinc-300 mb-1">Weekly Risk Summary</p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-2xl font-display font-bold text-main mb-1">{reportMetrics.total} docs</p>
+          <p className="text-sm font-medium text-main mb-1">Weekly Risk Summary</p>
+          <p className="text-xs text-dim">
             Safe: {reportMetrics.safe} · Review: {reportMetrics.review} · High/Critical: {reportMetrics.highRisk}
           </p>
         </div>
@@ -159,13 +159,13 @@ Critical: ${filteredDocs.filter((d) => d.riskLevel === 'Critical').length}
             <div className={`p-2.5 rounded-xl ${reportCardTemplates[1].bg} ${reportCardTemplates[1].color}`}>
               <TrendingUp size={20} />
             </div>
-            <ArrowUpRight size={16} className="text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ArrowUpRight size={16} className="text-dim opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
-          <p className="text-2xl font-display font-bold text-white mb-1">
+          <p className="text-2xl font-display font-bold text-main mb-1">
             {reportMetrics.approvalRate != null ? `${reportMetrics.approvalRate}%` : '—'}
           </p>
-          <p className="text-sm font-medium text-zinc-300 mb-1">Approval Quality</p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-sm font-medium text-main mb-1">Approval Quality</p>
+          <p className="text-xs text-dim">
             {reportMetrics.approved} approved, {reportMetrics.rejected} rejected in range
           </p>
         </div>
@@ -174,11 +174,11 @@ Critical: ${filteredDocs.filter((d) => d.riskLevel === 'Critical').length}
             <div className={`p-2.5 rounded-xl ${reportCardTemplates[2].bg} ${reportCardTemplates[2].color}`}>
               <AlertCircle size={20} />
             </div>
-            <ArrowUpRight size={16} className="text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ArrowUpRight size={16} className="text-dim opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
-          <p className="text-2xl font-display font-bold text-white mb-1">{reportMetrics.escalated}</p>
-          <p className="text-sm font-medium text-zinc-300 mb-1">Open Exceptions</p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-2xl font-display font-bold text-main mb-1">{reportMetrics.escalated}</p>
+          <p className="text-sm font-medium text-main mb-1">Open Exceptions</p>
+          <p className="text-xs text-dim">
             Escalated in range · {reportMetrics.escalationRate}% escalation rate
           </p>
         </div>
@@ -191,16 +191,16 @@ Critical: ${filteredDocs.filter((d) => d.riskLevel === 'Critical').length}
             <BarChart3 size={20} />
           </div>
           <div>
-            <h2 className="font-display text-lg font-bold text-white">Generate Custom Report</h2>
-            <p className="text-xs text-zinc-500">Select date range and export format for an audit-ready report</p>
+            <h2 className="font-display text-lg font-bold text-main">Generate Custom Report</h2>
+            <p className="text-xs text-dim">Select date range and export format for an audit-ready report</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <label className="mb-2 block text-xs font-medium text-zinc-500 uppercase tracking-wide">From</label>
+            <label className="mb-2 block text-xs font-medium text-dim uppercase tracking-wide">From</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-dim" size={14} />
               <input
                 type="date"
                 className="input-field pl-9 w-[170px]"
@@ -209,11 +209,11 @@ Critical: ${filteredDocs.filter((d) => d.riskLevel === 'Critical').length}
               />
             </div>
           </div>
-          <div className="pb-[10px] text-zinc-600">→</div>
+          <div className="pb-[10px] text-dim">→</div>
           <div>
-            <label className="mb-2 block text-xs font-medium text-zinc-500 uppercase tracking-wide">To</label>
+            <label className="mb-2 block text-xs font-medium text-dim uppercase tracking-wide">To</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-dim" size={14} />
               <input
                 type="date"
                 className="input-field pl-9 w-[170px]"
@@ -237,39 +237,39 @@ Critical: ${filteredDocs.filter((d) => d.riskLevel === 'Critical').length}
 
       {/* Report History */}
       <div className="card-premium overflow-hidden">
-        <div className="p-6 border-b border-white/5">
-          <h2 className="font-display text-lg font-bold text-white">Report History</h2>
-          <p className="text-xs text-zinc-500 mt-1">Previously generated reports available for download</p>
+        <div className="p-6 border-b border-subtle">
+          <h2 className="font-display text-lg font-bold text-main">Report History</h2>
+          <p className="text-xs text-dim mt-1">Previously generated reports available for download</p>
         </div>
         <div className="divide-y divide-white/5">
           {reportHistory.length === 0 ? (
-            <div className="px-6 py-12 text-center text-zinc-500">
+            <div className="px-6 py-12 text-center text-dim">
               <FileBarChart size={32} className="mx-auto mb-3 opacity-40" />
               <p className="text-sm">No reports generated yet.</p>
               <p className="text-xs mt-1">Use the form above to generate your first report.</p>
             </div>
           ) : reportHistory.map((report, i) => (
-            <div key={i} className="group flex items-center justify-between px-6 py-4 hover:bg-white/[0.02] transition-colors">
+            <div key={i} className="group flex items-center justify-between px-6 py-4 hover:bg-card-hover transition-colors">
               <div className="flex items-center gap-4">
-                <div className="p-2 rounded-lg bg-white/5 text-zinc-400 group-hover:bg-indigo-500/10 group-hover:text-indigo-400 transition-colors">
+                <div className="p-2 rounded-lg bg-subtle text-muted group-hover:bg-indigo-500/10 group-hover:text-indigo-400 transition-colors">
                   <FileBarChart size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white group-hover:text-indigo-300 transition-colors">{report.name}</p>
-                  <p className="text-xs text-zinc-500">{report.date} · {report.size}</p>
+                  <p className="text-sm font-medium text-main group-hover:text-indigo-300 transition-colors">{report.name}</p>
+                  <p className="text-xs text-dim">{report.date} · {report.size}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <span className={`text-xs font-mono px-2 py-0.5 rounded border ${report.type === 'PDF'
-                    ? 'text-red-400 bg-red-500/10 border-red-500/20'
-                    : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                  ? 'text-red-400 bg-red-500/10 border-red-500/20'
+                  : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
                   }`}>
                   {report.type}
                 </span>
                 <button
                   type="button"
                   onClick={() => { if (report.type === 'CSV') exportCSV(); else generatePDF(); }}
-                  className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-all"
+                  className="p-2 rounded-lg text-muted hover:text-main hover:bg-subtle opacity-0 group-hover:opacity-100 transition-all"
                 >
                   <Download size={16} />
                 </button>

@@ -11,6 +11,8 @@ import {
   enforceDataRetention,
 } from '../compliance/auditLog.js';
 import { getComplianceMetrics, getComplianceReport } from '../compliance/dashboard.js';
+import { requireAuth } from '../auth/middleware.js';
+import { requireWorkspaceContext, type WorkspaceRequest } from '../workspace/middleware.js';
 
 const router = Router();
 
@@ -56,12 +58,20 @@ router.get('/report', async (req: Request, res: Response) => {
 /**
  * Get audit logs
  */
-router.get('/audit-logs', async (req: Request, res: Response) => {
+router.get('/audit-logs', requireAuth, requireWorkspaceContext, async (req: Request, res: Response) => {
   try {
+    const authReq = req as WorkspaceRequest;
+    const tenantId = authReq.workspace?.tenantId;
+    if (!tenantId) {
+      return res.status(500).json({ error: 'Workspace context missing' });
+    }
+
     const filters = {
+      tenantId,
       userId: req.query.userId as string | undefined,
       action: req.query.action as string | undefined,
       resourceType: req.query.resourceType as string | undefined,
+      resourceId: req.query.resourceId as string | undefined,
       startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
       endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
       complianceFlag: req.query.complianceFlag as string | undefined,

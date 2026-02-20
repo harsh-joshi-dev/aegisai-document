@@ -307,7 +307,12 @@ export async function upsertRiskResult(params: {
   factors: RiskSignal[];
   summary: string;
   recommendations: any[];
+  plain_english_explanations?: string[];
 }): Promise<RiskResult | null> {
+  const recommendationsPayload = {
+    items: params.recommendations,
+    plain_english_explanations: params.plain_english_explanations || [],
+  };
   const result = await pool.query(
     `INSERT INTO risk_results 
      (tenant_id, document_id, risk_score, risk_level, factors, summary, recommendations)
@@ -328,18 +333,21 @@ export async function upsertRiskResult(params: {
       params.risk_level,
       JSON.stringify(params.factors),
       params.summary,
-      JSON.stringify(params.recommendations),
+      JSON.stringify(recommendationsPayload),
     ]
   );
   if (!result.rows[0]) return null;
+  const row = result.rows[0];
+  const rawRecs = typeof row.recommendations === 'string'
+    ? JSON.parse(row.recommendations)
+    : row.recommendations;
+  const recs = Array.isArray(rawRecs) ? rawRecs : (rawRecs?.items || []);
+  const explanations = Array.isArray(rawRecs) ? [] : (rawRecs?.plain_english_explanations || []);
   return {
-    ...result.rows[0],
-    factors: typeof result.rows[0].factors === 'string' 
-      ? JSON.parse(result.rows[0].factors) 
-      : result.rows[0].factors,
-    recommendations: typeof result.rows[0].recommendations === 'string'
-      ? JSON.parse(result.rows[0].recommendations)
-      : result.rows[0].recommendations,
+    ...row,
+    factors: typeof row.factors === 'string' ? JSON.parse(row.factors) : row.factors,
+    recommendations: recs,
+    plain_english_explanations: explanations,
   } as RiskResult;
 }
 
@@ -352,14 +360,17 @@ export async function getRiskResult(
     [tenantId, documentId]
   );
   if (!result.rows[0]) return null;
+  const row = result.rows[0];
+  const rawRecs = typeof row.recommendations === 'string'
+    ? JSON.parse(row.recommendations)
+    : row.recommendations;
+  const recs = Array.isArray(rawRecs) ? rawRecs : (rawRecs?.items || []);
+  const explanations = Array.isArray(rawRecs) ? [] : (rawRecs?.plain_english_explanations || []);
   return {
-    ...result.rows[0],
-    factors: typeof result.rows[0].factors === 'string' 
-      ? JSON.parse(result.rows[0].factors) 
-      : result.rows[0].factors,
-    recommendations: typeof result.rows[0].recommendations === 'string'
-      ? JSON.parse(result.rows[0].recommendations)
-      : result.rows[0].recommendations,
+    ...row,
+    factors: typeof row.factors === 'string' ? JSON.parse(row.factors) : row.factors,
+    recommendations: recs,
+    plain_english_explanations: explanations,
   } as RiskResult;
 }
 

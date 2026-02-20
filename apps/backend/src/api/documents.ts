@@ -47,6 +47,68 @@ router.get('/:documentId/content', requireAuth, requireWorkspaceContext, async (
   }
 });
 
+/**
+ * Download/view the original uploaded file (PDF/image/etc.).
+ * GET /api/documents/:documentId/file
+ */
+router.get('/:documentId/file', requireAuth, requireWorkspaceContext, async (req: Request, res: Response) => {
+  const authReq = req as WorkspaceRequest;
+  const { documentId } = req.params;
+  if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+  }
+  try {
+    const row = await pool.query(
+      `SELECT filename, file_data, file_type
+       FROM documents
+       WHERE id = $1 AND tenant_id = $2`,
+      [documentId, authReq.workspace.tenantId]
+    );
+    const doc = row.rows[0] as any;
+    if (!doc) {
+      return res.status(404).json({ error: 'Not found', message: 'Document not found or access denied.' });
+    }
+    const data = doc.file_data as Buffer | null | undefined;
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'Not found', message: 'No stored file available for this document.' });
+    }
+
+    const filename = String(doc.filename || 'document');
+    const contentType = String(doc.file_type || 'application/octet-stream');
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${filename.replace(/"/g, '')}"`);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
+
+    const range = req.headers.range;
+    if (range && typeof range === 'string' && range.startsWith('bytes=')) {
+      const [startRaw, endRaw] = range.replace('bytes=', '').split('-');
+      const start = startRaw ? Number(startRaw) : 0;
+      const end = endRaw ? Number(endRaw) : data.length - 1;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start || start >= data.length) {
+        res.status(416).setHeader('Content-Range', `bytes */${data.length}`).end();
+        return;
+      }
+      const chunk = data.subarray(start, Math.min(end + 1, data.length));
+      res.status(206);
+      res.setHeader('Content-Range', `bytes ${start}-${start + chunk.length - 1}/${data.length}`);
+      res.setHeader('Content-Length', String(chunk.length));
+      res.end(chunk);
+      return;
+    }
+
+    res.setHeader('Content-Length', String(data.length));
+    res.end(data);
+  } catch (error) {
+    console.error('Document file error:', error);
+    res.status(500).json({
+      error: 'Failed to get document file',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 const approvalNotesSchema = z
   .object({
     notes: z.string().optional(),
@@ -83,87 +145,95 @@ async function setApprovalStatus(params: {
   requireNotes: boolean;
 }): Promise<void> {
   const { req, res, desiredStatus, requireNotes } = params;
-  const authReq = req as WorkspaceRequest;
-  const { documentId } = req.params;
-  if (!authReq.user?.id || !authReq.workspace?.tenantId) {
-    res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
-    return;
-  }
-  const tenantId = authReq.workspace.tenantId;
-  const reviewerId = authReq.user.id;
+  try {
+    const authReq = req as WorkspaceRequest;
+    const { documentId } = req.params;
+    if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+      res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+      return;
+    }
+    const tenantId = authReq.workspace.tenantId;
+    const reviewerId = authReq.user.id;
 
-  const validated = approvalNotesSchema.parse(req.body ?? {});
-  const notes = typeof validated.notes === 'string' ? validated.notes.trim() : '';
-  if (requireNotes && notes.length === 0) {
-    res.status(400).json({
-      error: 'Invalid request',
-      message: 'Notes are required for rejection',
-    });
-    return;
-  }
+    const validated = approvalNotesSchema.parse(req.body ?? {});
+    const notes = typeof validated.notes === 'string' ? validated.notes.trim() : '';
+    if (requireNotes && notes.length === 0) {
+      res.status(400).json({
+        error: 'Invalid request',
+        message: 'Notes are required for rejection',
+      });
+      return;
+    }
 
-  const docs = await getDocuments({ tenantId, documentIds: [documentId] });
-  if (docs.length === 0) {
-    res.status(404).json({ error: 'Not found', message: 'Document not found or access denied.' });
-    return;
-  }
+    const docs = await getDocuments({ tenantId, documentIds: [documentId] });
+    if (docs.length === 0) {
+      res.status(404).json({ error: 'Not found', message: 'Document not found or access denied.' });
+      return;
+    }
 
-  const previousApproval = await getApprovalForDocument({ tenantId, documentId });
-  const previousStatus = previousApproval?.status ?? 'pending';
-  if (!isAllowedTransition({ previous: previousStatus, next: desiredStatus })) {
-    res.status(409).json({
-      error: 'Invalid transition',
-      message: `Cannot transition approval from ${previousStatus} to ${desiredStatus}`,
-    });
-    return;
-  }
+    const previousApproval = await getApprovalForDocument({ tenantId, documentId });
+    const previousStatus = previousApproval?.status ?? 'pending';
+    if (!isAllowedTransition({ previous: previousStatus, next: desiredStatus })) {
+      res.status(409).json({
+        error: 'Invalid transition',
+        message: `Cannot transition approval from ${previousStatus} to ${desiredStatus}`,
+      });
+      return;
+    }
 
-  const risk = await getDocumentRisk(tenantId, documentId);
-  const riskScore = risk?.risk_score ?? null;
-  const riskLevel = normalizeRiskLevelForResponse(risk?.risk_level);
+    const risk = await getDocumentRisk(tenantId, documentId);
+    const riskScore = risk?.risk_score ?? null;
+    const riskLevel = normalizeRiskLevelForResponse(risk?.risk_level);
 
-  const updated = await upsertApprovalForDocument({
-    tenantId,
-    documentId,
-    status: desiredStatus,
-    reviewerId,
-    notes: notes.length > 0 ? notes : null,
-  });
-
-  const action =
-    desiredStatus === 'approved'
-      ? 'approved'
-      : desiredStatus === 'rejected'
-        ? 'rejected'
-        : 'info_requested';
-
-  await logAuditEvent(
-    reviewerId,
-    `document_${action}`,
-    'document',
-    documentId,
-    {
+    const updated = await upsertApprovalForDocument({
       tenantId,
-      previous_status: previousStatus,
-      new_status: desiredStatus,
+      documentId,
+      status: desiredStatus,
+      reviewerId,
       notes: notes.length > 0 ? notes : null,
+    });
+
+    const action =
+      desiredStatus === 'approved'
+        ? 'approved'
+        : desiredStatus === 'rejected'
+          ? 'rejected'
+          : 'info_requested';
+
+    await logAuditEvent(
+      reviewerId,
+      `document_${action}`,
+      'document',
+      documentId,
+      {
+        tenantId,
+        previous_status: previousStatus,
+        new_status: desiredStatus,
+        notes: notes.length > 0 ? notes : null,
+        risk_score: riskScore,
+        risk_level: riskLevel,
+      },
+      req.ip,
+      req.get('user-agent') || '',
+      ['soc2', 'gdpr']
+    );
+
+    res.json({
+      status: updated.status,
+      document_id: updated.document_id,
+      reviewer_id: updated.reviewer_id,
+      timestamp: updated.updated_at,
+      notes: updated.notes,
       risk_score: riskScore,
       risk_level: riskLevel,
-    },
-    req.ip,
-    req.get('user-agent') || '',
-    ['soc2', 'gdpr']
-  );
-
-  res.json({
-    status: updated.status,
-    document_id: updated.document_id,
-    reviewer_id: updated.reviewer_id,
-    timestamp: updated.updated_at,
-    notes: updated.notes,
-    risk_score: riskScore,
-    risk_level: riskLevel,
-  });
+    });
+  } catch (error) {
+    console.error('Approval status error:', error);
+    res.status(500).json({
+      error: 'Approval failed',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 }
 
 router.post(
@@ -230,6 +300,7 @@ router.get(
               risk_level: riskResult.risk_level,
               summary: riskResult.summary,
               recommendations: riskResult.recommendations,
+              plain_english_explanations: riskResult.plain_english_explanations || [],
             }
           : null,
         riskSignals,
@@ -415,6 +486,7 @@ router.get('/:documentId', requireAuth, requireWorkspaceContext, async (req: Req
       return res.status(404).json({ error: 'Not found', message: 'Document not found or access denied.' });
     }
     const doc = docs[0] as any;
+    const approval = await getApprovalForDocument({ tenantId: authReq.workspace.tenantId, documentId });
     const raw = doc.risk_confidence;
     let pct = raw == null ? null : (typeof raw === 'number' && raw <= 1 ? Math.round(raw * 100) : Math.round(Number(raw)));
     if (pct != null && pct >= 1 && pct <= 20) pct = 99;
@@ -431,6 +503,8 @@ router.get('/:documentId', requireAuth, requireWorkspaceContext, async (req: Req
         riskScore: doc.risk_score ?? null,
         summary: doc.summary ?? null,
         extractedData: doc.extracted_data ?? null,
+        vendorName: doc.vendor_name ?? null,
+        approvalStatus: approval?.status ?? 'pending',
         processingStatus: doc.processing_status ?? 'COMPLETED',
         processingProgress: doc.processing_progress ?? 100,
         processingError: doc.processing_error ?? null,
@@ -523,6 +597,19 @@ router.get('/', requireAuth, requireWorkspaceContext, async (req: Request, res: 
       ...validated,
       tenantId,
     });
+
+    const ids = documents.map((d: any) => String(d.id));
+    const approvalRows = ids.length
+      ? await pool.query(
+          `SELECT document_id, status
+           FROM approvals
+           WHERE tenant_id = $1 AND document_id = ANY($2::uuid[])`,
+          [tenantId, ids]
+        )
+      : { rows: [] as any[] };
+    const approvalByDocId = new Map<string, string>(
+      (approvalRows.rows as any[]).map((r) => [String(r.document_id), String(r.status)])
+    );
     
     res.json({
       success: true,
@@ -541,6 +628,8 @@ router.get('/', requireAuth, requireWorkspaceContext, async (req: Request, res: 
           riskScore: doc.risk_score ?? null,
           summary: doc.summary ?? null,
           extractedData: doc.extracted_data ?? null,
+          vendorName: (doc as any).vendor_name ?? null,
+          approvalStatus: approvalByDocId.get(String(doc.id)) ?? 'pending',
           processingStatus: (doc as any).processing_status ?? 'COMPLETED',
           processingProgress: (doc as any).processing_progress ?? 100,
           processingError: (doc as any).processing_error ?? null,
@@ -665,5 +754,138 @@ router.put('/:documentId/rename', requireAuth, requireWorkspaceContext, requireW
     });
   }
 });
+
+/**
+ * Document risk timeline — aggregates lifecycle events into a structured timeline.
+ */
+router.get(
+  '/:documentId/timeline',
+  requireAuth,
+  requireWorkspaceContext,
+  async (req: Request, res: Response) => {
+    const authReq = req as WorkspaceRequest;
+    const tenantId = authReq.workspace!.tenantId;
+    const { documentId } = req.params;
+
+    try {
+      const docResult = await pool.query(
+        `SELECT id, filename, uploaded_at, risk_level, risk_score, processing_status, created_at
+         FROM documents WHERE id = $1 AND tenant_id = $2`,
+        [documentId, tenantId]
+      );
+      if (docResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+      const doc = docResult.rows[0] as any;
+
+      const events: Array<{
+        type: string;
+        title: string;
+        description: string;
+        timestamp: string;
+        actor?: string;
+        severity?: string;
+      }> = [];
+
+      events.push({
+        type: 'upload',
+        title: 'Document Uploaded',
+        description: `${doc.filename} was uploaded to the workspace`,
+        timestamp: doc.uploaded_at || doc.created_at,
+      });
+
+      const extractionTime = new Date(new Date(doc.uploaded_at || doc.created_at).getTime() + 2000).toISOString();
+      events.push({
+        type: 'extraction',
+        title: 'Data Extracted',
+        description: 'Financial and metadata fields extracted from document',
+        timestamp: extractionTime,
+      });
+
+      // Risk signals as rule trigger events
+      const sigResult = await pool.query(
+        `SELECT type, subtype, severity, explanation, created_at
+         FROM risk_signals WHERE document_id = $1 AND tenant_id = $2
+         ORDER BY created_at ASC`,
+        [documentId, tenantId]
+      );
+      for (const sig of sigResult.rows) {
+        events.push({
+          type: sig.type === 'rule_violation' ? 'rule_trigger' : 'pattern_detection',
+          title: sig.type === 'rule_violation' ? 'Rule Triggered' : 'Pattern Detected',
+          description: (sig as any).explanation || `${(sig as any).subtype} — ${(sig as any).severity} severity`,
+          timestamp: (sig as any).created_at,
+          severity: (sig as any).severity,
+        });
+      }
+
+      // Risk result as scoring event
+      const riskResultRow = await pool.query(
+        `SELECT risk_score, risk_level, created_at FROM risk_results
+         WHERE document_id = $1 AND tenant_id = $2 LIMIT 1`,
+        [documentId, tenantId]
+      );
+      if (riskResultRow.rows.length > 0) {
+        const rr = riskResultRow.rows[0] as any;
+        events.push({
+          type: 'risk_scored',
+          title: 'Risk Score Calculated',
+          description: `Overall risk: ${rr.risk_level} (score: ${rr.risk_score})`,
+          timestamp: rr.created_at,
+          severity: rr.risk_level,
+        });
+      }
+
+      // Pattern events
+      const patternResult = await pool.query(
+        `SELECT event_type, severity, title, details, created_at
+         FROM pattern_events WHERE document_id = $1 AND tenant_id = $2
+         ORDER BY created_at ASC`,
+        [documentId, tenantId]
+      );
+      for (const p of patternResult.rows) {
+        events.push({
+          type: 'pattern_detection',
+          title: (p as any).title,
+          description: typeof (p as any).details === 'object' ? JSON.stringify((p as any).details) : String((p as any).details || ''),
+          timestamp: (p as any).created_at,
+          severity: (p as any).severity,
+        });
+      }
+
+      // Audit logs (approvals, rejections, etc.)
+      const auditResult = await pool.query(
+        `SELECT action, details, timestamp, user_id
+         FROM audit_logs WHERE resource_id = $1 AND tenant_id = $2
+         ORDER BY timestamp ASC`,
+        [documentId, tenantId]
+      );
+      for (const a of auditResult.rows) {
+        const actionMap: Record<string, string> = {
+          document_approved: 'approval',
+          document_rejected: 'rejection',
+          document_request_info: 'info_request',
+          document_uploaded: 'upload',
+          document_renamed: 'update',
+        };
+        if ((a as any).action === 'document_uploaded') continue;
+        events.push({
+          type: actionMap[(a as any).action] || 'action',
+          title: ((a as any).action || '').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          description: typeof (a as any).details === 'object' ? JSON.stringify((a as any).details) : '',
+          timestamp: (a as any).timestamp,
+          actor: (a as any).user_id,
+        });
+      }
+
+      events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+      res.json({ success: true, documentId, timeline: events });
+    } catch (error) {
+      console.error('Timeline error:', error);
+      res.status(500).json({ error: 'Failed to build timeline' });
+    }
+  }
+);
 
 export default router;

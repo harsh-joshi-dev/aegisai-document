@@ -40,6 +40,9 @@ import scamScoreRouter from './api/scamScore.js';
 import draftsRouter from './api/drafts.js';
 import negotiationRouter from './api/negotiation.js';
 import riskAnalyzeRouter from './api/riskAnalyze.js';
+import vendorLinksRouter from './api/vendorLinks.js';
+import gstRouter from './api/gst.js';
+import vendorIntelligenceRouter from './api/vendorIntelligence.js';
 
 const app = express();
 
@@ -64,7 +67,9 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      // Avoid "secure cookie over http" footgun in local dev.
+      // In production behind HTTPS, keep cookies secure.
+      secure: process.env.NODE_ENV === 'production' && config.frontendUrl.startsWith('https://'),
       httpOnly: true,
       sameSite: 'lax' as const,
       maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -119,6 +124,9 @@ app.use('/api/scam-score', scamScoreRouter);
 app.use('/api/drafts', draftsRouter);
 app.use('/api/negotiation', negotiationRouter);
 app.use('/api/risk', riskAnalyzeRouter);
+app.use('/api/vendor-links', vendorLinksRouter);
+app.use('/api/gst', gstRouter);
+app.use('/api/vendor-intelligence', vendorIntelligenceRouter);
 
 console.log('✅ All API routes registered');
 

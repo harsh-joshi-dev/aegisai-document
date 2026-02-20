@@ -6,12 +6,11 @@ export type UploadDocType = 'Invoice' | 'Bank' | 'GST' | 'Other';
 
 export interface UploadPayload {
   name: string;
+  file: File;
   fileName?: string;
   docType: UploadDocType;
   vendor?: string;
   date?: string;
-  /** Base64 data URL for PDF/image preview */
-  fileUrl?: string;
 }
 
 export function UploadModal({
@@ -21,7 +20,7 @@ export function UploadModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onUpload?: (payload: string | UploadPayload) => void;
+  onUpload?: (payload: UploadPayload) => void | Promise<void>;
 }) {
   const [name, setName] = useState('');
   const [vendor, setVendor] = useState('');
@@ -58,18 +57,20 @@ export function UploadModal({
     if (!finalName || !file) return;
 
     setPhase('processing');
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      window.setTimeout(() => {
-        onUpload?.({
-          name: finalName,
-          fileName: file?.name,
-          docType,
-          vendor: vendor.trim() || undefined,
-          date: date || undefined,
-          fileUrl: dataUrl,
-        });
+    Promise.resolve(
+      onUpload?.({
+        name: finalName,
+        file,
+        fileName: file?.name,
+        docType,
+        vendor: vendor.trim() || undefined,
+        date: date || undefined,
+      })
+    )
+      .catch(() => {
+        // keep modal open; parent will typically toast the error
+      })
+      .finally(() => {
         setName('');
         setVendor('');
         setDate('');
@@ -77,14 +78,11 @@ export function UploadModal({
         setFile(null);
         setPhase('form');
         onClose();
-      }, 1200);
-    };
-    reader.readAsDataURL(file);
+      });
   };
 
   const modalMarkup = (
     <div
-      className="modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="upload-modal-title"
@@ -96,14 +94,25 @@ export function UploadModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16,
+        padding: '24px',
         background: 'rgba(0,0,0,0.8)',
-        backdropFilter: 'blur(8px)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
       }}
     >
       <div
-        className="modal-content w-full max-w-lg p-6 bg-[#121214] border border-white/10 rounded-2xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: '520px',
+          padding: '24px',
+          background: '#0f1219',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '20px',
+          boxShadow: '0 32px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
+          maxHeight: '90vh',
+          overflow: 'auto',
+        }}
       >
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
@@ -111,20 +120,32 @@ export function UploadModal({
               <UploadCloud size={20} className="text-indigo-400" />
             </div>
             <div>
-              <h2 id="upload-modal-title" className="text-xl font-semibold text-white tracking-tight">
+              <h2 id="upload-modal-title" className="text-xl font-semibold text-main tracking-tight">
                 Upload Document
               </h2>
-              <p className="mt-0.5 text-sm text-zinc-400">Add a new document for risk analysis</p>
+              <p className="mt-0.5 text-sm text-muted">Add a new document for risk analysis</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={phase === 'processing'}
-            className="modal-close shrink-0"
             aria-label="Close"
+            style={{
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '10px',
+              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(255,255,255,0.04)',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
         {phase === 'processing' ? (
@@ -134,34 +155,34 @@ export function UploadModal({
                 <div className="animate-spin h-5 w-5 border-2 border-indigo-400 border-t-transparent rounded-full" />
                 <p className="text-sm font-semibold text-indigo-300">Processing document…</p>
               </div>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-muted">
                 Extracting data, running rules + patterns, and calculating risk score.
               </p>
-              <div className="mt-4 h-2 w-full rounded-full bg-zinc-800 overflow-hidden">
+              <div className="mt-4 h-2 w-full rounded-full bg-subtle overflow-hidden">
                 <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 animate-pulse" style={{ width: '66%' }} />
               </div>
             </div>
-            <p className="text-xs text-zinc-500">Mock processing (no backend).</p>
+            <p className="text-xs text-dim">Uploading to backend and running analysis…</p>
           </div>
         ) : (
           <form className="space-y-5" onSubmit={onSubmit}>
             <div>
-              <label className="mb-2 block text-sm font-medium text-zinc-300">Upload file</label>
+              <label className="mb-2 block text-sm font-medium text-main">Upload file</label>
               <input
                 type="file"
-                className="input w-full rounded-xl border border-white/10 bg-white/5 py-2.5 px-4 text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-500 file:text-white hover:file:bg-indigo-600 file:cursor-pointer"
+                className="input w-full rounded-xl border border-subtle bg-subtle py-2.5 px-4 text-main file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-500 file:text-main hover:file:bg-indigo-600 file:cursor-pointer"
                 accept="application/pdf,image/*"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 required
               />
-              <p className="mt-2 text-xs text-zinc-500">PDF or image (mock processing).</p>
+              <p className="mt-2 text-xs text-dim">PDF or image.</p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-300">Type</label>
+                <label className="mb-2 block text-sm font-medium text-main">Type</label>
                 <select
-                  className="input w-full rounded-xl border border-white/10 bg-white/5 text-white py-2.5 px-4"
+                  className="input w-full rounded-xl border border-subtle bg-subtle text-main py-2.5 px-4"
                   value={docType}
                   onChange={(e) => setDocType(e.target.value as UploadDocType)}
                 >
@@ -172,9 +193,9 @@ export function UploadModal({
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-300">Document name</label>
+                <label className="mb-2 block text-sm font-medium text-main">Document name</label>
                 <input
-                  className="input w-full rounded-xl border border-white/10 bg-white/5 text-white placeholder-zinc-500 py-2.5 px-4"
+                  className="input w-full rounded-xl border border-subtle bg-subtle text-main placeholder-zinc-500 py-2.5 px-4"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={file?.name || 'Invoice_Jan_2026.pdf'}
@@ -184,18 +205,18 @@ export function UploadModal({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-300">Vendor (optional)</label>
+                <label className="mb-2 block text-sm font-medium text-main">Vendor (optional)</label>
                 <input
-                  className="input w-full rounded-xl border border-white/10 bg-white/5 text-white placeholder-zinc-500 py-2.5 px-4"
+                  className="input w-full rounded-xl border border-subtle bg-subtle text-main placeholder-zinc-500 py-2.5 px-4"
                   value={vendor}
                   onChange={(e) => setVendor(e.target.value)}
                   placeholder="Nova Supplies Pvt Ltd"
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-300">Date (optional)</label>
+                <label className="mb-2 block text-sm font-medium text-main">Date (optional)</label>
                 <input
-                  className="input w-full rounded-xl border border-white/10 bg-white/5 text-white py-2.5 px-4"
+                  className="input w-full rounded-xl border border-subtle bg-subtle text-main py-2.5 px-4"
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
@@ -203,7 +224,7 @@ export function UploadModal({
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+            <div className="flex justify-end gap-3 pt-4 border-t border-subtle">
               <button type="button" onClick={onClose} className="btn-secondary">
                 Cancel
               </button>

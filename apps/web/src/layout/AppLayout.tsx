@@ -1,15 +1,15 @@
 import { ReactNode, useMemo, useState } from 'react';
-import { FileText, Gauge, Settings, ShieldAlert, Users, ClipboardList, Menu, X, ChevronDown, Command, LogOut, Search } from 'lucide-react';
+import { FileText, Gauge, Settings, ShieldAlert, Users, ClipboardList, Menu, X, ChevronDown, Command, LogOut, Search, Link2, IndianRupee } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useMockAuth } from '../state/mockAuth';
+import { useAuth } from '../state/auth';
 import { useWorkspace } from '../state/workspace';
-import { useMockStore } from '../state/mockStore';
 import { NotificationsDropdown } from '../ui/NotificationsDropdown';
-import { CreateWorkspaceModal } from '../ui/CreateWorkspaceModal';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: Gauge },
   { to: '/documents', label: 'Documents', icon: FileText },
+  { to: '/gst-compliance', label: 'GST & Compliance', icon: IndianRupee },
+  { to: '/vendor-links', label: 'Vendor Portal', icon: Link2 },
   { to: '/rules', label: 'Rules', icon: ShieldAlert },
   { to: '/reports', label: 'Reports', icon: ClipboardList },
   { to: '/users', label: 'Users', icon: Users },
@@ -17,19 +17,18 @@ const navItems = [
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { user, logout } = useMockAuth();
-  const { workspaces, activeWorkspace, setActiveWorkspaceId, createWorkspace } = useWorkspace();
-  const { users } = useMockStore();
+  const { user, logout } = useAuth();
+  const { workspaces, activeWorkspace, setActiveWorkspaceId, role } = useWorkspace();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [confirmSwitch, setConfirmSwitch] = useState<{ id: string; name: string } | null>(null);
-  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
   const location = useLocation();
 
   const userRole = useMemo(() => {
-    if (!user?.email) return null;
-    return users.find((u) => u.email.toLowerCase() === user.email?.toLowerCase())?.role ?? null;
-  }, [user?.email, users]);
+    if (!role) return null;
+    const r = String(role);
+    return r.length ? r.charAt(0).toUpperCase() + r.slice(1) : null;
+  }, [role]);
 
   const handleWorkspaceChange = (id: string) => {
     const target = workspaces.find((w) => w.id === id);
@@ -105,11 +104,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   key={w.id}
                   type="button"
                   onClick={() => handleWorkspaceChange(w.id)}
-                  className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-sm transition-colors ${
-                    w.id === activeWorkspace.id
+                  className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-sm transition-colors ${w.id === activeWorkspace.id
                       ? 'bg-indigo-500/10 text-indigo-300'
                       : 'text-zinc-300 hover:bg-white/5 hover:text-white'
-                  }`}
+                    }`}
                 >
                   <span className="truncate">{w.name}</span>
                   {userRole && w.id === activeWorkspace.id && (
@@ -117,14 +115,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   )}
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={() => { setWorkspaceOpen(false); setCreateWorkspaceOpen(true); }}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-zinc-500 hover:bg-white/5 hover:text-indigo-400 border-t border-white/5 transition-colors"
-              >
-                <span className="w-5 h-5 rounded bg-white/5 flex items-center justify-center text-xs font-bold">+</span>
-                Create Workspace
-              </button>
             </div>
           )}
         </div>
@@ -274,17 +264,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </main>
       </div>
-
-      <CreateWorkspaceModal
-        open={createWorkspaceOpen}
-        onClose={() => setCreateWorkspaceOpen(false)}
-        onCreate={(name) => {
-          const ws = createWorkspace(name);
-          setActiveWorkspaceId(ws.id);
-          setCreateWorkspaceOpen(false);
-          window.location.href = '/dashboard';
-        }}
-      />
 
       {/* Workspace switch confirmation */}
       {confirmSwitch && (

@@ -154,6 +154,72 @@ function countBySeverity(signals: RiskSignal[]): Record<Severity, number> {
 }
 
 // ============================================================================
+// Plain English Risk Explanation Generator
+// ============================================================================
+
+const SUBTYPE_EXPLANATIONS: Record<string, (sig: RiskSignal) => string> = {
+  repeated_amount: (sig) => {
+    const amt = sig.metadata?.amount;
+    const vendors = sig.metadata?.vendor_keys?.join(', ') || 'multiple vendors';
+    return `The same amount${amt ? ` (₹${Number(amt).toLocaleString('en-IN')})` : ''} appears across ${vendors}. This could indicate duplicate payments or invoice reuse.`;
+  },
+  vendor_frequency_spike: (sig) => {
+    const vendor = sig.metadata?.vendor_key || 'a vendor';
+    const current = sig.metadata?.current_month_count;
+    const baseline = sig.metadata?.baseline_value || sig.metadata?.previous_month_count;
+    const baselineType = sig.metadata?.baseline_type || 'historical';
+    return `${vendor} submitted ${current} documents this month, which is unusually high compared to the ${baselineType} average of ${baseline}. Worth checking if this reflects genuine business activity.`;
+  },
+  rapid_transactions: (sig) => {
+    const count = sig.metadata?.transaction_count;
+    const vendor = sig.metadata?.vendor_key || 'the same vendor';
+    return `${count} invoices from ${vendor} arrived within just 7 days. Rapid-fire invoicing can be a sign of urgency padding or split-billing.`;
+  },
+  round_number_payment: (sig) => {
+    const amt = sig.metadata?.amount;
+    return `The payment amount ₹${Number(amt).toLocaleString('en-IN')} is a suspiciously round number. Real invoices rarely land on exact multiples — this could indicate manual adjustment.`;
+  },
+  circular_payment: (sig) => {
+    const path = sig.metadata?.cycle_path?.join(' → ') || 'multiple entities';
+    return `A circular payment loop was detected: ${path}. Money appears to flow in a circle between these entities, which is a strong indicator of round-tripping or layered fund movement.`;
+  },
+  threshold_exceeded: (sig) => {
+    return sig.explanation || 'A configured threshold was exceeded for this document.';
+  },
+  gst_missing: () => {
+    return 'This document is missing a GSTIN, which is required for tax compliance in India. Without it, input tax credit cannot be claimed.';
+  },
+  required_field_missing: (sig) => {
+    return `A required field is missing from this document. ${sig.explanation || 'Please ensure all mandatory fields are populated before approval.'}`;
+  },
+  gst_reconciliation_mismatch: (sig) => {
+    return sig.explanation || 'GST amounts on this invoice do not match the expected GSTR-2A/2B records. This discrepancy will block input tax credit claims.';
+  },
+};
+
+export function generatePlainEnglishExplanations(signals: RiskSignal[]): string[] {
+  if (signals.length === 0) return ['No risk signals detected. This document looks clean.'];
+
+  const explanations: string[] = [];
+
+  const sorted = [...signals].sort((a, b) => {
+    const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+    return (order[a.severity] ?? 4) - (order[b.severity] ?? 4);
+  });
+
+  for (const sig of sorted) {
+    const generator = SUBTYPE_EXPLANATIONS[sig.subtype];
+    if (generator) {
+      explanations.push(generator(sig));
+    } else {
+      explanations.push(sig.explanation || `A ${sig.severity}-severity ${sig.type} issue was detected.`);
+    }
+  }
+
+  return explanations;
+}
+
+// ============================================================================
 // Main Aggregation Function
 // ============================================================================
 
@@ -163,6 +229,7 @@ export interface AggregationResult {
   factors: RiskSignal[];
   summary: string;
   recommendations: Recommendation[];
+  plain_english_explanations: string[];
 }
 
 export function aggregateRisk(
@@ -183,6 +250,9 @@ export function aggregateRisk(
   
   // Generate summary
   const summary = generateSummary(risk_score, risk_level, signals);
+
+  // Generate plain English explanations
+  const plain_english_explanations = generatePlainEnglishExplanations(signals);
   
   return {
     risk_score,
@@ -190,6 +260,7 @@ export function aggregateRisk(
     factors: signals,
     summary,
     recommendations,
+    plain_english_explanations,
   };
 }
 

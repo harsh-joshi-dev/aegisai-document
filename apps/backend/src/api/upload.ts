@@ -55,7 +55,7 @@ async function ensureDocumentLimit(userId: string, res: Response) {
   return true;
 }
 
-router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin']), upload.single('file') as unknown as import('express').RequestHandler, async (req: Request, res: Response) => {
+router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['owner', 'admin', 'reviewer']), upload.single('file') as unknown as import('express').RequestHandler, async (req: Request, res: Response) => {
   const authReq = req as WorkspaceRequest;
   
   if (!authReq.user) {
@@ -247,14 +247,17 @@ router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['ow
       const summary = await generateFinancialSummary({ extracted, text: textForAnalysis, filename: req.file.originalname });
       const riskScore = computeRiskScore({ extracted, classification: riskAnalysis });
 
-      extractedDataForResponse = extracted as unknown as Record<string, unknown>;
+      const { encryptPiiInObject } = await import('../services/fieldEncryption.js');
+      const encryptedExtracted = encryptPiiInObject(extracted as Record<string, any>, tenantId);
+
+      extractedDataForResponse = encryptedExtracted as unknown as Record<string, unknown>;
       summaryForResponse = summary;
       riskScoreForResponse = riskScore.score;
 
       await updateDocumentFinancialFieldsByTenant({
         documentId: document.id,
         tenantId,
-        extractedData: extracted as unknown as Record<string, unknown>,
+        extractedData: encryptedExtracted as unknown as Record<string, unknown>,
         riskScore: riskScore.score,
         summary,
       });

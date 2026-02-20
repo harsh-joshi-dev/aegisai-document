@@ -32,11 +32,11 @@ export function RejectModal({
 
   const modal = (
     <div className="modal-overlay" style={{ zIndex: 9999 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content w-full max-w-lg p-6 bg-[#121214] border border-white/10 rounded-2xl shadow-2xl">
+      <div className="modal-content w-full max-w-lg p-6 bg-[#121214] border border-subtle rounded-2xl shadow-2xl">
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-white tracking-tight">Reject Document</h2>
-            <p className="mt-1 text-sm text-zinc-400">Rejection notes are required for audit traceability.</p>
+            <h2 className="text-xl font-semibold text-main tracking-tight">Reject Document</h2>
+            <p className="mt-1 text-sm text-muted">Rejection notes are required for audit traceability.</p>
           </div>
           <button type="button" onClick={onClose} className="modal-close" aria-label="Close">
             <X size={18} />
@@ -44,7 +44,7 @@ export function RejectModal({
         </div>
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div>
-            <label className="mb-2 block text-sm font-medium text-zinc-300">Rejection reason</label>
+            <label className="mb-2 block text-sm font-medium text-main">Rejection reason</label>
             <textarea
               className="ds-input min-h-[120px] resize-y"
               placeholder="Explain why this document is being rejected..."
@@ -53,7 +53,7 @@ export function RejectModal({
               required
             />
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+          <div className="flex justify-end gap-3 pt-4 border-t border-subtle">
             <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
             <button type="submit" className="btn-danger">Confirm Rejection</button>
           </div>

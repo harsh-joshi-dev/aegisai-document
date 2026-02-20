@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { UserRecord } from '../mock/types';
-import { useMockStore } from '../state/mockStore';
+import { useStore } from '../state/store';
 import { useToast } from '../state/toast';
 import { UserPlus, Shield, Eye, Crown, Users } from 'lucide-react';
 
@@ -8,11 +8,11 @@ const roleConfig: Record<string, { icon: typeof Shield; color: string; bg: strin
   Owner: { icon: Crown, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
   Admin: { icon: Shield, color: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20' },
   Reviewer: { icon: Eye, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-  Viewer: { icon: Users, color: 'text-zinc-400', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20' },
+  Viewer: { icon: Users, color: 'text-muted', bg: 'bg-subtle', border: 'border-subtle' },
 };
 
 export default function UsersPage() {
-  const { users, addUser } = useMockStore();
+  const { users, addUser } = useStore();
   const { push } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -30,16 +30,16 @@ export default function UsersPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-subtle pb-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-white tracking-tight">Team</h1>
-          <p className="mt-2 text-sm text-zinc-400 max-w-xl">Manage workspace members, roles, and access permissions.</p>
+          <h1 className="font-display text-3xl font-bold text-main tracking-tight">Team</h1>
+          <p className="mt-2 text-sm text-muted max-w-xl">Manage workspace members, roles, and access permissions.</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0e0e11] border border-white/5 text-sm text-zinc-300">
-            <Users size={16} className="text-zinc-500" />
-            <span className="font-medium">{users.length}</span>
-            <span className="text-zinc-500">members</span>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-subtle text-sm text-muted">
+            <Users size={16} className="text-dim" />
+            <span className="font-bold text-main">{users.length}</span>
+            <span className="text-muted">members</span>
           </div>
         </div>
       </div>
@@ -47,24 +47,24 @@ export default function UsersPage() {
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         {/* Members List */}
         <section className="card-premium overflow-hidden">
-          <div className="p-6 border-b border-white/5">
-            <h2 className="font-display text-lg font-bold text-white">Workspace Members</h2>
-            <p className="text-xs text-zinc-500 mt-1">People with access to this workspace</p>
+          <div className="p-6 border-b border-subtle bg-subtle/50">
+            <h2 className="font-display text-lg font-bold text-main">Workspace Members</h2>
+            <p className="text-xs text-muted mt-1">People with access to this workspace</p>
           </div>
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-subtle">
             {users.map((u) => {
               const rc = roleConfig[u.role] || roleConfig.Viewer;
               const RoleIcon = rc.icon;
               return (
-                <div key={u.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-white/[0.02] transition-colors">
+                <div key={u.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-card-hover transition-colors">
                   {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center text-sm font-bold text-indigo-300 shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-sm font-bold text-indigo-500 dark:text-indigo-400 shrink-0">
                     {u.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate group-hover:text-indigo-300 transition-colors">{u.name}</p>
-                    <p className="text-xs text-zinc-500 truncate">{u.email}</p>
+                    <p className="text-sm font-bold text-main truncate group-hover:text-indigo-500 transition-colors uppercase tracking-tight">{u.name}</p>
+                    <p className="text-xs text-muted truncate">{u.email}</p>
                   </div>
                   {/* Role Badge */}
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${rc.color} ${rc.bg} ${rc.border}`}>
@@ -78,20 +78,20 @@ export default function UsersPage() {
         </section>
 
         {/* Invite Form */}
-        <section className="card-premium h-fit sticky top-24">
-          <div className="p-6 border-b border-white/5 flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
+        <section className="card-premium h-fit xl:sticky xl:top-28">
+          <div className="p-6 border-b border-subtle flex items-center gap-3 bg-indigo-500/[0.02]">
+            <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500">
               <UserPlus size={20} />
             </div>
             <div>
-              <h3 className="font-display text-lg font-bold text-white">Invite Member</h3>
-              <p className="text-xs text-zinc-500">Send an invitation to join this workspace</p>
+              <h3 className="font-display text-lg font-bold text-main">Invite Member</h3>
+              <p className="text-xs text-muted">Send an invitation to join this workspace</p>
             </div>
           </div>
           <div className="p-6">
             <form className="space-y-5" onSubmit={invite}>
               <div>
-                <label className="mb-2 block text-xs font-medium text-zinc-500 uppercase tracking-wide">Full Name</label>
+                <label className="mb-2 block text-xs font-medium text-muted uppercase tracking-wide">Full Name</label>
                 <input
                   className="input-field"
                   placeholder="e.g. Jane Doe"
@@ -101,7 +101,7 @@ export default function UsersPage() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-xs font-medium text-zinc-500 uppercase tracking-wide">Email Address</label>
+                <label className="mb-2 block text-xs font-medium text-muted uppercase tracking-wide">Email Address</label>
                 <input
                   className="input-field"
                   type="email"
@@ -112,7 +112,7 @@ export default function UsersPage() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-xs font-medium text-zinc-500 uppercase tracking-wide">Role</label>
+                <label className="mb-2 block text-xs font-medium text-muted uppercase tracking-wide">Role</label>
                 <div className="relative">
                   <select
                     className="input-field appearance-none cursor-pointer"
@@ -124,7 +124,7 @@ export default function UsersPage() {
                     <option value="Reviewer">Reviewer — Review & approve docs</option>
                     <option value="Viewer">Viewer — Read-only access</option>
                   </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted">
                     <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1L5 5L9 1" /></svg>
                   </div>
                 </div>

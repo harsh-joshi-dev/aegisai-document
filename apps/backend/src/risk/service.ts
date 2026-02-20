@@ -83,6 +83,7 @@ export async function analyzeDocumentRisk(
     factors: storedSignals as RiskSignal[],
     summary: aggregation.summary,
     recommendations: aggregation.recommendations,
+    plain_english_explanations: aggregation.plain_english_explanations,
   });
   
   if (!riskResult) {

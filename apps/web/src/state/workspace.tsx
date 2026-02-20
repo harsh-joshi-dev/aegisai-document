@@ -1,4 +1,6 @@
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { listWorkspaces, selectWorkspace, type WorkspaceMembership } from '../api/client';
+import { useAuth } from './auth';
 
 export type WorkspaceId = string;
 
@@ -7,111 +9,121 @@ export interface Workspace {
   name: string;
 }
 
-const WORKSPACE_NAME_KEY = 'aegis_workspace_name_v1';
-const CUSTOM_WORKSPACES_KEY = 'aegis_custom_workspaces_v1';
+interface WorkspaceContextValue {
+  workspaces: Workspace[];
+  activeWorkspace: Workspace;
+  setActiveWorkspaceId: (id: WorkspaceId) => void;
+  /** Lowercase role from backend membership. */
+  role: WorkspaceMembership['role'] | null;
+}
 
-function getPrimaryWorkspaceName() {
+const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
+
+const ACTIVE_TENANT_KEY = 'aegis_active_tenant_v1';
+
+function readPreferredTenantId(): string | null {
   try {
-    return localStorage.getItem(WORKSPACE_NAME_KEY) || 'Primary Workspace';
+    return localStorage.getItem(ACTIVE_TENANT_KEY);
   } catch {
-    return 'Primary Workspace';
+    return null;
   }
 }
 
-function getCustomWorkspaces(): Workspace[] {
+function writePreferredTenantId(id: string) {
   try {
-    const raw = localStorage.getItem(CUSTOM_WORKSPACES_KEY);
-    return raw ? (JSON.parse(raw) as Workspace[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCustomWorkspaces(ws: Workspace[]) {
-  try {
-    localStorage.setItem(CUSTOM_WORKSPACES_KEY, JSON.stringify(ws));
+    localStorage.setItem(ACTIVE_TENANT_KEY, id);
   } catch {
     // ignore
   }
 }
 
-function getWorkspaces(): Workspace[] {
-  const base: Workspace[] = [
-    { id: 'harsh', name: getPrimaryWorkspaceName() },
-    { id: 'finance', name: 'Finance' },
-    { id: 'audit', name: 'Audit' },
-  ];
-  return [...base, ...getCustomWorkspaces()];
-}
-
-interface WorkspaceContextValue {
-  workspaces: Workspace[];
-  activeWorkspace: Workspace;
-  setActiveWorkspaceId: (id: WorkspaceId) => void;
-  createWorkspace: (name: string) => Workspace;
-}
-
-const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
-
-const STORAGE_KEY = 'aegis_active_workspace';
-
-function readInitialWorkspace(): Workspace {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY) as WorkspaceId | null;
-    const workspaces = getWorkspaces();
-    const found = workspaces.find((w) => w.id === raw);
-    return found ?? workspaces[0];
-  } catch {
-    return { id: 'harsh', name: 'Primary Workspace' };
-  }
-}
-
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const [activeId, setActiveId] = useState<WorkspaceId>(() => readInitialWorkspace().id);
-  const [customList, setCustomList] = useState<Workspace[]>(() => getCustomWorkspaces());
+  const { isAuthenticated } = useAuth();
+  const [memberships, setMemberships] = useState<WorkspaceMembership[]>([]);
+  const [activeId, setActiveId] = useState<WorkspaceId>(() => readPreferredTenantId() ?? '');
+  const [role, setRole] = useState<WorkspaceMembership['role'] | null>(null);
+  const [booted, setBooted] = useState(false);
 
-  const workspaces = useMemo(
-    () => [
-      { id: 'harsh' as const, name: getPrimaryWorkspaceName() },
-      { id: 'finance' as const, name: 'Finance' },
-      { id: 'audit' as const, name: 'Audit' },
-      ...customList,
-    ],
-    [customList]
+  const workspaces = useMemo<Workspace[]>(
+    () => memberships.map((m) => ({ id: m.tenantId, name: m.name })),
+    [memberships]
   );
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, activeId);
-    } catch {
-      // ignore
-    }
+    if (activeId) writePreferredTenantId(activeId);
   }, [activeId]);
 
   const activeWorkspace = useMemo(
-    () => workspaces.find((w) => w.id === activeId) ?? workspaces[0],
+    () => workspaces.find((w) => w.id === activeId) ?? workspaces[0] ?? { id: '', name: 'Workspace' },
     [activeId, workspaces]
   );
 
-  const createWorkspace = (name: string) => {
-    const id = `ws-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-    const ws: Workspace = { id, name: name.trim() || 'New Workspace' };
-    const next = [...customList, ws];
-    setCustomList(next);
-    saveCustomWorkspaces(next);
-    return ws;
-  };
+  const setActiveWorkspaceId = useCallback((id: WorkspaceId) => {
+    setActiveId(id);
+    if (id) writePreferredTenantId(id);
+    // Best-effort: update backend workspace context stored in session.
+    selectWorkspace(id)
+      .then((selected) => setRole((selected.role as any) ?? null))
+      .catch(() => setRole(null));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // Avoid spamming 401s when not logged in
+        if (!isAuthenticated) {
+          if (!cancelled) {
+            setMemberships([]);
+            setActiveId('');
+            setRole(null);
+          }
+          return;
+        }
+
+        const res = await listWorkspaces();
+        const ws = res.workspaces || [];
+        if (cancelled) return;
+        setMemberships(ws);
+
+        const preferred = readPreferredTenantId();
+        const initial = (preferred && ws.some((m) => m.tenantId === preferred)) ? preferred : (ws[0]?.tenantId ?? '');
+        if (initial) {
+          setActiveId(initial);
+          try {
+            const selected = await selectWorkspace(initial);
+            if (!cancelled) setRole((selected.role as any) ?? null);
+          } catch {
+            // If session can't be set, workspace middleware will fall back to default tenant.
+            if (!cancelled) setRole(null);
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setMemberships([]);
+          setActiveId('');
+          setRole(null);
+        }
+      } finally {
+        if (!cancelled) setBooted(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
 
   const value = useMemo(
     () => ({
       workspaces,
       activeWorkspace,
-      setActiveWorkspaceId: setActiveId,
-      createWorkspace,
+      setActiveWorkspaceId,
+      role,
     }),
-    [activeWorkspace, workspaces]
+    [activeWorkspace, workspaces, setActiveWorkspaceId, role]
   );
 
+  if (!booted) return null;
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
 
