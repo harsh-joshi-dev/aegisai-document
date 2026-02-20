@@ -1,7 +1,6 @@
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../state/auth';
 import {
-  Shield,
   ArrowLeft,
   ShieldCheck,
   Lock,
@@ -15,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { Logo } from '../components/ui/Logo';
 
 const TESTIMONIALS = [
   {
@@ -157,19 +157,8 @@ export default function AuthPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          <Link to="/" className="inline-flex items-center gap-3 group">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                boxShadow: '0 8px 24px rgba(99,102,241,0.25)',
-              }}
-            >
-              <Shield size={20} className="text-white" strokeWidth={2.2} />
-            </div>
-            <span className="text-lg font-bold text-white tracking-tight font-display">
-              CA<span className="text-indigo-400">.</span>Dynamix
-            </span>
+          <Link to="/" style={{ textDecoration: 'none' }}>
+            <Logo size="sm" />
           </Link>
         </motion.div>
 
@@ -282,19 +271,8 @@ export default function AuthPage() {
 
         {/* Mobile logo (shown below lg) */}
         <div className="lg:hidden mb-8">
-          <Link to="/" className="inline-flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                boxShadow: '0 8px 24px rgba(99,102,241,0.25)',
-              }}
-            >
-              <Shield size={20} className="text-white" strokeWidth={2.2} />
-            </div>
-            <span className="text-lg font-bold text-white tracking-tight font-display">
-              CA<span className="text-indigo-400">.</span>Dynamix
-            </span>
+          <Link to="/" style={{ textDecoration: 'none' }}>
+            <Logo size="sm" />
           </Link>
         </div>
 

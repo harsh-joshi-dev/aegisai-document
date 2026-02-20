@@ -5,12 +5,12 @@ const sections = [
     {
         icon: Scale,
         title: '1. Acceptance of Terms',
-        content: 'By accessing or using Aegis AI, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the service.',
+        content: 'By accessing or using CA.Dynamix, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the service.',
     },
     {
         icon: FileText,
         title: '2. Description of Service',
-        content: 'Aegis AI provides AI-powered document analysis tools. You understand that the analysis provided is for informational purposes only and does not constitute legal advice.',
+        content: 'CA.Dynamix provides AI-powered document analysis tools. You understand that the analysis provided is for informational purposes only and does not constitute legal advice.',
     },
     {
         icon: UserCheck,
@@ -20,7 +20,7 @@ const sections = [
     {
         icon: Briefcase,
         title: '4. Intellectual Property',
-        content: 'The service and its original content, features, and functionality are owned by Aegis AI and are protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws.',
+        content: 'The service and its original content, features, and functionality are owned by CA.Dynamix and are protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws.',
     },
     {
         icon: Ban,

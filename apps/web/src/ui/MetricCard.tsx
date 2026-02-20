@@ -28,66 +28,57 @@ export function MetricCard({
 
   return (
     <div
-      className="relative rounded-2xl p-6 overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 group"
+      className="relative rounded-2xl p-6 overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-2 group"
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-subtle)',
         boxShadow: 'var(--shadow-card)',
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'var(--border-light)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--border-subtle)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-card)';
-      }}
     >
-      {/* Subtle gradient overlay on hover */}
+      {/* Premium background effects */}
       <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-        style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 100%)' }}
+        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+        style={{
+          background: `radial-gradient(circle at top right, ${c.iconBg}, transparent 70%)`,
+        }}
       />
+      <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-current to-transparent opacity-0 group-hover:opacity-20 transition-opacity duration-500" style={{ color: c.icon }} />
 
-      {/* Top row */}
-      <div className="flex items-center justify-between gap-2 mb-5 relative">
+      <div className="flex items-center justify-between gap-2 mb-6 relative">
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110"
           style={{ background: c.iconBg, border: `1px solid ${c.border}`, color: c.icon }}
         >
-          {icon || <ArrowUpRight size={18} />}
+          {icon || <ArrowUpRight size={20} />}
         </div>
         {trend && (
           <span
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap"
+            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider"
             style={{
-              color: trend.positive ? '#34d399' : '#fb7185',
-              background: trend.positive ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
-              border: `1px solid ${trend.positive ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}`,
+              color: trend.positive ? 'var(--success)' : 'var(--danger)',
+              background: trend.positive ? 'var(--success-dim, rgba(16,185,129,0.1))' : 'var(--danger-dim, rgba(239,68,68,0.1))',
+              border: `1px solid ${trend.positive ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
             }}
           >
-            {trend.positive ? <TrendingUp size={11} className="shrink-0" /> : <TrendingDown size={11} className="shrink-0" />}
+            {trend.positive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
             {trend.value}
           </span>
         )}
       </div>
 
-      {/* Value */}
-      <p className="text-[28px] font-extrabold tracking-tight leading-none font-display text-main relative">
-        {value}
-      </p>
-
-      {/* Title */}
-      <p className="text-sm font-medium text-muted mt-2 relative">
-        {title}
-      </p>
-
-      {/* Description */}
-      {description && (
-        <p className="text-xs text-dim mt-2.5 leading-relaxed relative">
-          {description}
+      <div className="relative">
+        <p className="text-3xl font-extrabold tracking-tight leading-none font-display text-[var(--text-main)]">
+          {value}
         </p>
-      )}
+        <p className="text-xs font-bold text-[var(--text-muted)] mt-2 uppercase tracking-widest opacity-80">
+          {title}
+        </p>
+        {description && (
+          <p className="text-[11px] text-[var(--text-dim)] mt-3 leading-relaxed font-medium">
+            {description}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

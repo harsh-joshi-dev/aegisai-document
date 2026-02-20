@@ -1,5 +1,5 @@
 /**
- * Pattern Detection Engine – Aegis AI Decision Workspace
+ * Pattern Detection Engine – CA.Dynamix Decision Workspace
  * Detects patterns across documents: duplicates, anomalies, suspicious activity.
  */
 

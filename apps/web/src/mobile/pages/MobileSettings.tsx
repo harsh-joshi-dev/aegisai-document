@@ -108,7 +108,7 @@ export default function MobileSettings() {
       <div className="m-card" style={{ marginBottom: 12 }}>
         <div className="m-card-title">Install</div>
         <p className="m-card-description">
-          Add Aegis to your home screen for an app-like experience.
+          Add CADynamix to your home screen for an app-like experience.
         </p>
         <button className="m-btn primary" disabled={!installPromptAvailable} onClick={triggerInstall}>
           {installPromptAvailable ? 'Install app' : 'Install not available'}
@@ -136,8 +136,8 @@ export default function MobileSettings() {
           onClick={async () => {
             try {
               await (navigator as any).share({
-                title: 'Aegis AI',
-                text: 'Open Aegis AI mobile web',
+                title: 'CA.Dynamix',
+                text: 'Open CA.Dynamix mobile web',
                 url: window.location.origin + '/m',
               });
             } catch {
@@ -170,7 +170,7 @@ export default function MobileSettings() {
               const vapidPublicKey = (import.meta as any).env?.VITE_VAPID_PUBLIC_KEY as string | undefined;
               if (!vapidPublicKey) {
                 setSyncMsg('Local notifications enabled (push server key not configured)');
-                new Notification('Aegis AI', { body: 'Notifications are enabled on this device.' });
+                new Notification('CA.Dynamix', { body: 'Notifications are enabled on this device.' });
                 return;
               }
 
@@ -209,7 +209,7 @@ export default function MobileSettings() {
               await navigator.credentials.create({
                 publicKey: {
                   challenge: Uint8Array.from(atob(challenge.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)),
-                  rp: { name: 'Aegis AI' },
+                  rp: { name: 'CA.Dynamix' },
                   user: {
                     id: new Uint8Array([1, 2, 3, 4]),
                     name: 'user',

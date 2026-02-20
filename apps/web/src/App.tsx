@@ -27,7 +27,7 @@ function ProtectedAppShell() {
 
   const onboarded = (() => {
     try {
-      const key = user?.id ? `aegis_onboarded_v1:${user.id}` : 'aegis_onboarded_v1';
+      const key = user?.id ? `ca_dynamix_onboarded_v1:${user.id}` : 'ca_dynamix_onboarded_v1';
       return localStorage.getItem(key) === 'true';
     } catch {
       return false;

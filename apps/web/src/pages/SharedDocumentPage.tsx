@@ -74,7 +74,7 @@ export default function SharedDocumentPage() {
           </div>
           <h1>Cannot open shared document</h1>
           <p>{error || 'Document not found.'}</p>
-          <Link to="/" className="shared-doc-btn">Go to Aegis AI</Link>
+          <Link to="/" className="shared-doc-btn">Go to CA.Dynamix</Link>
         </div>
       </div>
     );
@@ -88,7 +88,7 @@ export default function SharedDocumentPage() {
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <span>Aegis AI</span>
+          <span>CA.Dynamix</span>
         </Link>
         <span className="shared-doc-badge-label">Shared document</span>
       </header>
@@ -153,8 +153,8 @@ export default function SharedDocumentPage() {
         )}
 
         <footer className="shared-doc-footer">
-          <p>Analyzed with <strong>Aegis AI</strong> — Intelligent Document Analysis</p>
-          <Link to="/" className="shared-doc-footer-link">Open in Aegis AI</Link>
+          <p>Analyzed with <strong>CA.Dynamix</strong> — Intelligent Document Analysis</p>
+          <Link to="/" className="shared-doc-footer-link">Open in CA.Dynamix</Link>
         </footer>
       </main>
     </div>

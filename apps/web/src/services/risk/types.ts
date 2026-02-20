@@ -1,5 +1,5 @@
 /**
- * Risk Engine Types – Aegis AI Decision Workspace
+ * Risk Engine Types – CA.Dynamix Decision Workspace
  * Unified risk signal and result models.
  */
 

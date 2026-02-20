@@ -9,13 +9,12 @@ import { useWorkspace } from '../state/workspace';
 import { useStore } from '../state/store';
 import { useToast } from '../state/toast';
 import { useAuth } from '../state/auth';
-import { uploadFile, getRegulatoryCalendar, getVendorDirectory, type RegulatoryDeadline, type VendorListItem } from '../api/client';
+import { uploadFile, getRegulatoryCalendar, getVendorDirectory, type RegulatoryDeadline } from '../api/client';
 
 export default function DecisionDashboardPage() {
   const [openUpload, setOpenUpload] = useState(false);
   const [onlyMyApprovals, setOnlyMyApprovals] = useState(false);
   const [viewMode, setViewMode] = useState<'operational' | 'executive'>('operational');
-  const [topVendors, setTopVendors] = useState<VendorListItem[]>([]);
   const { activeWorkspace } = useWorkspace();
   const { documents, activity, refreshDocuments } = useStore();
   const { push } = useToast();
@@ -123,8 +122,7 @@ export default function DecisionDashboardPage() {
 
   const fetchVendors = useCallback(async () => {
     try {
-      const res = await getVendorDirectory();
-      setTopVendors(res.vendors.slice(0, 8));
+      await getVendorDirectory();
     } catch { /* best-effort */ }
   }, []);
   useEffect(() => { if (viewMode === 'executive') fetchVendors(); }, [viewMode, fetchVendors]);
@@ -189,12 +187,12 @@ export default function DecisionDashboardPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {/* View mode toggle */}
-          <div className="flex rounded-xl border border-white/5 bg-[#0e0e11] p-0.5">
+          <div className="flex rounded-xl border border-white/5 bg-[var(--bg-subtle)] p-0.5 shadow-inner">
             <button
               onClick={() => setViewMode('operational')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === 'operational'
-                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                  : 'text-zinc-500 hover:text-zinc-300'
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewMode === 'operational'
+                ? 'bg-indigo-500/10 text-indigo-400 shadow-sm ring-1 ring-indigo-500/20'
+                : 'text-zinc-500 hover:text-zinc-300'
                 }`}
             >
               <Eye size={12} className="inline mr-1 -mt-0.5" />
@@ -203,8 +201,8 @@ export default function DecisionDashboardPage() {
             <button
               onClick={() => setViewMode('executive')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === 'executive'
-                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                  : 'text-zinc-500 hover:text-zinc-300'
+                ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                : 'text-zinc-500 hover:text-zinc-300'
                 }`}
             >
               <BarChart3 size={12} className="inline mr-1 -mt-0.5" />
@@ -212,7 +210,7 @@ export default function DecisionDashboardPage() {
             </button>
           </div>
           {viewMode === 'operational' && (
-            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/5 bg-[#0e0e11] px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-[#16161a] hover:border-white/10 transition-all select-none">
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/5 bg-[var(--bg-subtle)] px-4 py-2 text-xs font-bold text-zinc-400 hover:bg-[var(--bg-card-hover)] hover:text-zinc-200 hover:border-white/10 transition-all select-none shadow-sm">
               <input
                 type="checkbox"
                 className="accent-indigo-500 h-4 w-4 rounded bg-zinc-800 border-zinc-700 focus:ring-offset-0 focus:ring-0 checked:bg-indigo-500 checked:border-transparent transition-colors cursor-pointer"
@@ -395,7 +393,7 @@ export default function DecisionDashboardPage() {
             <MetricCard
               title="Total Processed"
               value={metrics.total}
-              helper="+12% vs last week"
+              trend={{ value: '12%', positive: true }}
               icon={<Activity size={20} />}
               description="Across all document types"
             />
@@ -520,10 +518,10 @@ export default function DecisionDashboardPage() {
                 {recentActivity.length > 0 ? (
                   // Timeline line
                   <>
-                    <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-zinc-800/50 rounded-full" />
+                    <div className="absolute left-[19px] top-4 bottom-4 w-[1px] bg-[var(--border-subtle)]" />
                     {recentActivity.map((ev) => (
                       <div key={ev.id} className="relative flex gap-4 pl-1 group">
-                        <div className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-800 bg-[#0e0e11] ring-4 ring-[#0e0e11] group-hover:border-indigo-500/30 transition-colors">
+                        <div className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)] ring-4 ring-[var(--bg-card)] group-hover:border-indigo-500/30 transition-all duration-300">
                           <Activity size={14} className="text-zinc-500 group-hover:text-indigo-400 transition-colors" />
                         </div>
                         <div className="flex-1 min-w-0 py-1">
@@ -579,7 +577,7 @@ export default function DecisionDashboardPage() {
                       <Link
                         key={d.id}
                         to={`/document/${d.id}`}
-                        className="group block rounded-xl bg-[#16161a] border border-white/5 p-4 hover:border-indigo-500/30 hover:bg-[#1c1c21] transition-all hover:shadow-lg"
+                        className="group block rounded-xl bg-[var(--bg-subtle)]/50 border border-white/5 p-4 hover:border-indigo-500/30 hover:bg-[var(--bg-card-hover)] transition-all hover:shadow-lg"
                       >
                         <div className="flex justify-between items-start mb-3">
                           <div className="min-w-0 pr-2">
@@ -682,7 +680,7 @@ export default function DecisionDashboardPage() {
                         <Link
                           key={d.id}
                           to="/gst-compliance"
-                          className={`group block rounded-xl border p-3 transition-all hover:border-white/20 ${isUrgent ? 'border-amber-500/20 bg-amber-500/5' : 'border-white/5 bg-[#16161a]'
+                          className={`group block rounded-xl border p-3 transition-all hover:border-white/20 ${isUrgent ? 'border-amber-500/20 bg-amber-500/5' : 'border-white/5 bg-[var(--bg-subtle)]/50'
                             }`}
                         >
                           <div className="flex items-center justify-between mb-1">

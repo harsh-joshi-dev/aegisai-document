@@ -72,7 +72,7 @@ export function DemoModal({ open, onClose }: { open: boolean; onClose: () => voi
         >
           <div>
             <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6366f1', marginBottom: '4px' }}>Watch Demo</p>
-            <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.01em', margin: 0 }}>How Aegis AI drives safer approvals</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.01em', margin: 0 }}>How CA.Dynamix drives safer approvals</h2>
           </div>
           <button
             type="button"

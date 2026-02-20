@@ -9,7 +9,7 @@ import { useEffect } from 'react';
 import { BulkApproveModal } from '../ui/BulkApproveModal';
 import { BulkRejectModal } from '../ui/BulkRejectModal';
 import { useAuth } from '../state/auth';
-import { Archive, Plus, Filter, Search, ChevronDown, Zap, ShieldCheck, Activity, Layers, ArrowRight } from 'lucide-react';
+import { Archive, Plus, Filter, Search, ChevronDown, Zap, Layers, ArrowRight } from 'lucide-react';
 import { deleteDocument, uploadFile } from '../api/client';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -73,15 +73,6 @@ export default function DocumentsPage() {
     const role = users.find((u) => u.email.toLowerCase() === email)?.role;
     return role === 'Owner' || role === 'Admin';
   }, [user?.email, users]);
-
-  const vendors = useMemo(
-    () => Array.from(new Set(workspaceDocs.map((d) => d.vendor))),
-    [workspaceDocs]
-  );
-
-  const assignees = useMemo(() => {
-    return users.map((u) => ({ email: u.email, label: `${u.name} (${u.role})` }));
-  }, [users]);
 
   const archiveCandidatesByDays = useMemo(() => {
     const now = Date.now();
@@ -175,10 +166,8 @@ export default function DocumentsPage() {
       animate={{ opacity: 1, y: 0 }}
       className="w-full space-y-12 pb-20"
     >
-      {/* Background Polish */}
-      <div className="fixed inset-0 z-[-1] pointer-events-none opacity-40">
-        <div className="absolute top-[30%] right-[-5%] w-[35%] h-[35%] bg-indigo-500/5 blur-[120px] rounded-full" />
-        <div className="absolute top-[10%] left-[-5%] w-[30%] h-[30%] bg-purple-500/5 blur-[120px] rounded-full" />
+      <div className="fixed inset-0 z-[-1] pointer-events-none opacity-20">
+        <div className="absolute top-0 right-0 w-full h-[600px] bg-gradient-to-b from-indigo-500/5 to-transparent" />
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10">

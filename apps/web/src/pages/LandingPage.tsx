@@ -40,6 +40,8 @@ import {
   Twitter,
   Github
 } from 'lucide-react';
+import { Logo } from '../components/ui/Logo';
+import { BrandIcon } from '../components/ui/BrandIcon';
 import './LandingPage.css';
 
 // Animated counter component
@@ -110,8 +112,8 @@ function RiskSignalDemo() {
       <div className="risk-glare"></div>
       <div className="risk-signal-header">
         <div className="risk-badge">
-          <ShieldCheck size={14} className="text-indigo-400" />
-          <span>Risk Intelligence V2.4</span>
+          <BrandIcon size={14} className="mr-1" />
+          <span>Risk Intelligence V2.6</span>
         </div>
         <div className="risk-status">
           <div className="status-dot"></div>
@@ -337,13 +339,7 @@ export default function LandingPage() {
       <nav className={`landing-nav-modern ${scrolled ? 'scrolled' : ''}`}>
         <div className="landing-nav-container">
           <Link to="/" className="landing-logo-modern">
-            <div className="logo-glow">
-              <Shield size={24} strokeWidth={2} />
-            </div>
-            <div className="logo-texts">
-              <span className="logo-text">Aegis AI</span>
-              <span className="logo-tag">Enterprise Risk Intelligence</span>
-            </div>
+            <Logo size="sm" />
           </Link>
 
           <div className="landing-nav-links lg:flex hidden">
@@ -555,7 +551,7 @@ export default function LandingPage() {
                   <div className="v-graph"></div>
                 </div>
                 <div className="v-card v-card-2">
-                  <ShieldCheck size={32} className="v-icon" />
+                  <BrandIcon size={32} />
                   <div className="v-text-cols">
                     <div className="v-col"></div>
                     <div className="v-col"></div>
@@ -581,7 +577,7 @@ export default function LandingPage() {
             </div>
             <h2 className="security-title">Security is our DNA</h2>
             <p className="security-text">
-              Aegis AI is built on a Zero-Trust architecture. We prioritize the safety of your
+              CA.Dynamix is built on a Zero-Trust architecture. We prioritize the safety of your
               financial data with rigorous compliance standards and independent audits.
             </p>
             <div className="security-badges">
@@ -617,7 +613,7 @@ export default function LandingPage() {
           <div className="testimonials-river">
             {[
               {
-                text: "Aegis AI revolutionized our audit process. We've seen a 40% increase in fraud detection accuracy since implementation.",
+                text: "CA.Dynamix revolutionized our audit process. We've seen a 40% increase in fraud detection accuracy since implementation.",
                 author: "Sarah Jenkins",
                 role: "Director of Audit",
                 company: "Fortis Group"
@@ -629,7 +625,7 @@ export default function LandingPage() {
                 company: "Nexis Financial"
               },
               {
-                text: "Scaling our document review was a bottleneck until we integrated Aegis. Now we process millions of documents monthly.",
+                text: "Scaling our document review was a bottleneck until we integrated CA.Dynamix. Now we process millions of documents monthly.",
                 author: "Elena Rossi",
                 role: "CFO",
                 company: "Global Logistics"
@@ -657,7 +653,7 @@ export default function LandingPage() {
           <div className="faq-container">
             <div className="faq-sidebar">
               <h2>Common Questions</h2>
-              <p>Everything you need to know about Aegis AI for your enterprise.</p>
+              <p>Everything you need to know about CA.Dynamix for your enterprise.</p>
               <button className="contact-link">
                 <span>Talk to Sales</span>
                 <ChevronRight size={16} />
@@ -665,12 +661,12 @@ export default function LandingPage() {
             </div>
             <div className="faq-list">
               <FAQItem
-                question="How does Aegis AI handle data privacy?"
+                question="How does CA.Dynamix handle data privacy?"
                 answer="We use tenant-isolated databases and end-to-end encryption. Your data is never used to train global models without explicit consent, and we support on-premise or private cloud deployments."
               />
               <FAQItem
                 question="Can we integrate with legacy ERP systems?"
-                answer="Yes, Aegis AI offers a robust REST API and pre-built connectors for SAP, Oracle, Workday, and Microsoft Dynamics, allowing for seamless data ingestion."
+                answer="Yes, CA.Dynamix offers a robust REST API and pre-built connectors for SAP, Oracle, Workday, and Microsoft Dynamics, allowing for seamless data ingestion."
               />
               <FAQItem
                 question="What is the average implementation time?"
@@ -696,7 +692,7 @@ export default function LandingPage() {
             className="cta-content-enterprise"
           >
             <h2 className="cta-title-xl">Start Your Financial Compliance Transformation</h2>
-            <p className="cta-subtitle">Join the leading enterprises securing their future with Aegis AI.</p>
+            <p className="cta-subtitle">Join the leading enterprises securing their future with CA.Dynamix.</p>
             <div className="cta-actions">
               <button onClick={handleLogin} className="btn-primary-xxl">Schedule a Personal Demo</button>
               <button onClick={handleLogin} className="btn-ghost-xxl">View Pricing Plans</button>
@@ -716,8 +712,7 @@ export default function LandingPage() {
           <div className="footer-top">
             <div className="footer-brand-huge">
               <div className="footer-logo-main">
-                <Shield size={32} />
-                <span>Aegis AI</span>
+                <Logo size="md" />
               </div>
               <p>Securing the world's most sensitive financial workflows with intelligent risk detection.</p>
               <div className="footer-social-links">
@@ -761,7 +756,7 @@ export default function LandingPage() {
 
           <div className="footer-bottom-enterprise">
             <div className="footer-legal">
-              <span>© 2024 Aegis AI Intelligence Inc.</span>
+              <span>© 2026 CA.Dynamix Intelligence Inc.</span>
               <Link to="/privacy">Privacy Policy</Link>
               <Link to="/terms">Terms of Service</Link>
               <a href="#">Cookie Settings</a>

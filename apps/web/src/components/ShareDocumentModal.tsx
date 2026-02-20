@@ -14,7 +14,7 @@ export default function ShareDocumentModal({
   isOpen,
   onClose,
   document,
-  companyName = 'Aegis AI',
+  companyName = 'CA.Dynamix',
 }: ShareDocumentModalProps) {
   const [shareUrl, setShareUrl] = useState('');
   const [copied, setCopied] = useState(false);

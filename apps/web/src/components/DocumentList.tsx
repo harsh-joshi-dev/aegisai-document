@@ -1324,7 +1324,7 @@ export default function DocumentList(props: DocumentListProps = {}) {
             setSelectedDocumentForShare(null);
           }}
           document={selectedDocumentForShare}
-          companyName="Aegis AI"
+          companyName="CA.Dynamix"
         />
       )}
 

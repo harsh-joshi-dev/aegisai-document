@@ -1,13 +1,13 @@
 import { ReactNode, useMemo, useState } from 'react';
-import { FileText, Gauge, Settings, ShieldAlert, Users, ClipboardList, Menu, X, ChevronDown, Command, LogOut, Search, Link2, IndianRupee } from 'lucide-react';
+import { Gauge, Settings, ShieldAlert, Users, ClipboardList, Menu, X, ChevronDown, LogOut, Search, Link2, IndianRupee } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../state/auth';
 import { useWorkspace } from '../state/workspace';
 import { NotificationsDropdown } from '../ui/NotificationsDropdown';
+import { Logo } from '../components/ui/Logo';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: Gauge },
-  { to: '/documents', label: 'Documents', icon: FileText },
   { to: '/gst-compliance', label: 'GST & Compliance', icon: IndianRupee },
   { to: '/vendor-links', label: 'Vendor Portal', icon: Link2 },
   { to: '/rules', label: 'Rules', icon: ShieldAlert },
@@ -57,18 +57,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }, [location.pathname]);
 
   const Sidebar = ({ onNavigate }: { onNavigate?: () => void }) => (
-    <div className="h-full w-72 border-r border-white/5 bg-[#0e0e11]/90 backdrop-blur-xl flex flex-col relative z-20 shadow-2xl">
+    <div className="h-full w-72 border-r border-white/5 bg-[var(--bg-sidebar)]/80 backdrop-blur-xl flex flex-col relative z-20 shadow-2xl transition-colors duration-300">
       {/* Sidebar Header */}
-      <div className="px-6 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 ring-1 ring-white/10">
-            <Command size={16} className="text-white" />
-          </div>
-          <div>
-            <h1 className="font-display font-bold text-base text-white tracking-tight leading-none">Aegis AI</h1>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mt-0.5">Enterprise</p>
-          </div>
-        </div>
+      <div className="px-6 py-8 flex items-center justify-between">
+        <Logo size="sm" />
         {onNavigate && (
           <button
             className="rounded-lg p-2 text-zinc-400 hover:text-white hover:bg-white/5 lg:hidden"
@@ -105,8 +97,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   type="button"
                   onClick={() => handleWorkspaceChange(w.id)}
                   className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-sm transition-colors ${w.id === activeWorkspace.id
-                      ? 'bg-indigo-500/10 text-indigo-300'
-                      : 'text-zinc-300 hover:bg-white/5 hover:text-white'
+                    ? 'bg-indigo-500/10 text-indigo-300'
+                    : 'text-zinc-300 hover:bg-white/5 hover:text-white'
                     }`}
                 >
                   <span className="truncate">{w.name}</span>
@@ -191,11 +183,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 
   return (
-    <div className="min-h-screen bg-[#030304] text-white flex overflow-hidden font-sans selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex overflow-hidden font-sans selection:bg-indigo-500/30 transition-colors duration-300">
       {/* Texture Overlay */}
       <div className="fixed inset-0 pointer-events-none z-0 bg-noise opacity-[0.03]" />
 
@@ -219,15 +211,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen relative z-10 transition-all duration-300">
+      <div className="flex-1 flex flex-col min-w-0 h-screen relative z-10 transition-all duration-300">
 
         {/* Top Header (Mobile & Desktop) */}
-        <header className="sticky top-0 z-40 bg-[#030304]/80 backdrop-blur-md border-b border-white/5 h-16 flex items-center justify-between px-4 lg:px-8 shrink-0">
+        <header className="sticky top-0 z-[45] bg-[var(--bg-main)]/80 backdrop-blur-md border-b border-white/5 h-16 flex items-center justify-between px-4 lg:px-8 shrink-0 transition-all duration-300">
           <div className="flex items-center gap-3 lg:hidden">
             <button onClick={() => setMobileOpen(true)} className="p-2 -ml-2 text-zinc-400 hover:text-white transition-colors">
               <Menu size={20} />
             </button>
-            <span className="font-display font-bold text-white tracking-tight">Aegis AI</span>
+            <Logo size="sm" showText={false} />
           </div>
 
           <div className="hidden lg:flex items-center gap-4">
@@ -258,7 +250,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 w-full min-h-0 overflow-y-auto overflow-x-hidden p-4 lg:p-8" key={activeWorkspace.id}>
+        <main className="flex-1 w-full min-h-0 overflow-y-auto overflow-x-hidden p-6 lg:p-10" key={activeWorkspace.id}>
           <div className="max-w-[1600px] mx-auto animate-in fade-in duration-500">
             {children}
           </div>

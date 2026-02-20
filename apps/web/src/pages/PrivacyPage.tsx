@@ -68,7 +68,7 @@ export default function PrivacyPage() {
                 {/* Intro */}
                 <div className="card-premium p-6 mb-8">
                     <p className="text-sm text-zinc-300 leading-relaxed">
-                        At Aegis AI, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our document analysis services.
+                        At CA.Dynamix, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our document analysis services.
                     </p>
                 </div>
 

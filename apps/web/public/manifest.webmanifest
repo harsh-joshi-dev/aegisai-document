@@ -1,12 +1,12 @@
 {
-  "name": "Aegis AI",
-  "short_name": "Aegis",
-  "description": "Document assistant with offline-first mobile web experience.",
-  "start_url": "/m",
+  "name": "CA.Dynamix",
+  "short_name": "CADynamix",
+  "description": "AI-powered financial decision intelligence for Chartered Accountants.",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "background_color": "#020617",
+  "theme_color": "#4f46e5",
   "icons": [
     {
       "src": "/icons/icon-192.svg",
@@ -21,23 +21,28 @@
   ],
   "shortcuts": [
     {
-      "name": "Scan",
-      "short_name": "Scan",
-      "url": "/m/scan",
-      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/icons/icon-192.svg",
+          "sizes": "192x192",
+          "type": "image/svg+xml"
+        }
+      ]
     },
     {
-      "name": "Docs",
+      "name": "Documents",
       "short_name": "Docs",
-      "url": "/m/docs",
-      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
-    },
-    {
-      "name": "Chat",
-      "short_name": "Chat",
-      "url": "/m/chat",
-      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+      "url": "/documents",
+      "icons": [
+        {
+          "src": "/icons/icon-192.svg",
+          "sizes": "192x192",
+          "type": "image/svg+xml"
+        }
+      ]
     }
   ]
 }
-

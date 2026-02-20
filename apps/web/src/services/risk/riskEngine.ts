@@ -1,5 +1,5 @@
 /**
- * Risk Engine – Aegis AI Decision Workspace
+ * Risk Engine – CA.Dynamix Decision Workspace
  * Orchestrates rule engine, pattern engine, and (future) AI engine.
  * Computes unified risk score and level.
  */

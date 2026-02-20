@@ -1,5 +1,5 @@
 /**
- * Risk Engine – Aegis AI Decision Workspace
+ * Risk Engine – CA.Dynamix Decision Workspace
  * Public exports for risk services.
  */
 

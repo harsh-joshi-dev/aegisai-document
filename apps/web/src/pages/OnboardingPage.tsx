@@ -3,11 +3,12 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../state/auth';
 import { useStore } from '../state/store';
 import { useToast } from '../state/toast';
-import { ArrowRight, Building2, Users, ChevronRight, Sparkles, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Building2, Users, ChevronRight, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ONBOARDED_KEY = 'aegis_onboarded_v1';
-const WORKSPACE_NAME_KEY = 'aegis_workspace_name_v1';
+const ONBOARDED_KEY = 'ca_dynamix_onboarded_v1';
+const WORKSPACE_NAME_KEY = 'ca_dynamix_workspace_name_v1';
+import { Logo } from '../components/ui/Logo';
 
 type Step = 'workspace' | 'invite';
 
@@ -88,9 +89,9 @@ export default function OnboardingPage() {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 shadow-lg shadow-indigo-500/20 mb-6"
+            className="flex justify-center mb-10"
           >
-            <ShieldCheck size={32} className="text-white" />
+            <Logo size="lg" showText={false} />
           </motion.div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3 font-display text-white">
             Elevate Your <span className="text-indigo-400">Practice</span>

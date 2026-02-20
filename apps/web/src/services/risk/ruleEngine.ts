@@ -1,5 +1,5 @@
 /**
- * Rule Engine – Aegis AI Decision Workspace
+ * Rule Engine – CA.Dynamix Decision Workspace
  * Evaluates rules against documents and emits RiskSignals.
  */
 

@@ -52,7 +52,7 @@ export default function LoginPage() {
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M9 12l2 2 4-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <h1>Aegis AI</h1>
+              <h1>CA.Dynamix</h1>
             </div>
             <p className="login-subtitle">Financial Document Intelligence</p>
           </div>

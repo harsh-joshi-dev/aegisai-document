@@ -282,7 +282,7 @@ export default function VendorPortalPage() {
         )}
 
         {/* Footer */}
-        <p className="text-center text-xs text-dim mt-12">Secure document upload powered by Aegis AI</p>
+        <p className="text-center text-xs text-dim mt-12">Secure document upload powered by CA.Dynamix</p>
       </div>
     </div>
   );

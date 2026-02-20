@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Link2, Plus, Search, Filter, ExternalLink, Copy, CheckCircle,
+  Link2, Plus, Search, Filter, Copy, CheckCircle,
   AlertTriangle, ShieldAlert, Eye, Trash2, Power, PowerOff,
-  X, Loader2, FileText, Clock, ArrowUpRight, Upload, Users
+  X, Loader2, FileText, Clock, ArrowUpRight, Upload, Users,
+  LinkIcon
 } from 'lucide-react';
+import { MetricCard } from '../ui/MetricCard';
+import { RiskBadge } from '../ui/RiskBadge';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   getVendorLinks, createVendorLink, deleteVendorLink,
   deactivateVendorLink, activateVendorLink, getVendorTemplates,
@@ -18,16 +22,11 @@ function parseAnalysis(data: any): any {
   return parsed && (parsed.overallRiskLevel || parsed.issues) ? parsed : null;
 }
 
-const RISK_COLORS: Record<string, string> = {
-  Safe: 'bg-emerald-500/20 text-emerald-300',
-  Warning: 'bg-amber-500/20 text-amber-300',
-  Critical: 'bg-red-500/20 text-red-300',
-};
 const FOLDER_STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-subtle text-muted',
-  under_review: 'bg-blue-500/20 text-blue-300',
-  verified: 'bg-emerald-500/20 text-emerald-300',
-  rejected: 'bg-red-500/20 text-red-300',
+  pending: 'bg-zinc-800 text-zinc-500',
+  under_review: 'bg-blue-500/10 text-blue-400',
+  verified: 'bg-emerald-500/10 text-emerald-400',
+  rejected: 'bg-rose-500/10 text-rose-400',
 };
 const FOLDER_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending', under_review: 'Under Review', verified: 'Verified', rejected: 'Rejected',
@@ -95,167 +94,248 @@ export default function VendorLinksPage() {
   const hasActiveFilters = statusFilter || folderStatusFilter || riskFilter || searchQuery || hasMissing;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-8 pb-12 animate-in fade-in duration-700">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-6">
         <div>
-          <h1 className="text-2xl font-bold text-main flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-500/20"><Link2 size={20} /></div>
+          <h1 className="font-display text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-600 flex items-center justify-center shadow-2xl shadow-indigo-500/20 ring-1 ring-white/10">
+              <Link2 size={24} className="text-white" />
+            </div>
             Vendor Portal
           </h1>
-          <p className="text-dim mt-1 text-sm">Manage vendor links, track submissions, review documents with AI</p>
+          <p className="mt-2 text-sm text-zinc-400 max-w-2xl">
+            Streamline third-party compliance, track document submissions, and mitigate vendor risks in real-time.
+          </p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowBulk(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-subtle text-sm text-main hover:text-main hover:border-light transition-colors">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowBulk(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/5 bg-[var(--bg-subtle)] text-xs font-bold text-zinc-400 hover:bg-[var(--bg-card-hover)] hover:text-zinc-200 transition-all shadow-sm"
+          >
             <Upload size={14} /> Bulk Import
           </button>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-main font-medium text-sm hover:from-indigo-600 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/20">
-            <Plus size={16} /> Create Link
+          <button
+            onClick={() => setShowCreate(true)}
+            className="btn-primary shadow-lg shadow-indigo-500/20"
+          >
+            <Plus size={18} /> Create Link
           </button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: 'Total Vendors', value: stats.total, icon: Users, color: 'text-indigo-400' },
-          { label: 'Active Links', value: stats.active, icon: Link2, color: 'text-emerald-400' },
-          { label: 'Verified', value: stats.verified, icon: CheckCircle, color: 'text-green-400' },
-          { label: 'Critical Risk', value: stats.critical, icon: ShieldAlert, color: 'text-red-400' },
-        ].map(s => (
-          <div key={s.label} className="rounded-xl border border-subtle bg-card-hover p-4">
-            <div className="flex items-center gap-2 mb-2"><s.icon size={14} className={s.color} /><span className="text-xs text-dim font-medium">{s.label}</span></div>
-            <p className="text-2xl font-bold text-main">{s.value}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard title="Total Vendors" value={stats.total} icon={<Users size={20} />} color="indigo" description="All registered vendors" />
+        <MetricCard title="Active Links" value={stats.active} icon={<LinkIcon size={20} />} color="sky" description="Currently active portals" />
+        <MetricCard title="Verified" value={stats.verified} icon={<CheckCircle size={20} />} color="emerald" description="Passed all document checks" />
+        <MetricCard title="Critical Risk" value={stats.critical} icon={<ShieldAlert size={20} />} color="rose" description="Immediate attention required" />
       </div>
 
       {/* Search + Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim" />
-          <input type="text" placeholder="Search by name, PAN, GST, phone..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-subtle border border-subtle text-sm text-main placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50" />
+      <div className="flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex-1 relative w-full group">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-indigo-400 transition-colors" />
+          <input
+            type="text"
+            placeholder="Search by name, PAN, GST, phone..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-xl bg-[var(--bg-subtle)] border border-white/5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-[var(--bg-card-hover)] transition-all"
+          />
         </div>
-        <button onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${hasActiveFilters ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300' : 'border-subtle bg-subtle text-muted hover:text-main'}`}>
-          <Filter size={14} /> Filters {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-indigo-400" />}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`flex items-center gap-2 px-5 py-3 rounded-xl border text-xs font-bold transition-all ${hasActiveFilters
+            ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-400'
+            : 'border-white/5 bg-[var(--bg-subtle)] text-zinc-400 hover:text-zinc-200 hover:bg-[var(--bg-card-hover)]'
+            }`}
+        >
+          <Filter size={14} />
+          Filters {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]" />}
         </button>
       </div>
 
-      {showFilters && (
-        <div className="rounded-xl border border-subtle bg-card-hover p-4 flex flex-wrap gap-4 items-end animate-in fade-in slide-in-from-top-2 duration-200">
-          <div>
-            <label className="text-xs text-dim font-medium block mb-1.5">Link Status</label>
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 rounded-lg bg-subtle border border-subtle text-sm text-main focus:outline-none appearance-none">
-              <option value="">All</option><option value="active">Active</option><option value="inactive">Inactive</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-dim font-medium block mb-1.5">Folder Status</label>
-            <select value={folderStatusFilter} onChange={e => setFolderStatusFilter(e.target.value)} className="px-3 py-2 rounded-lg bg-subtle border border-subtle text-sm text-main focus:outline-none appearance-none">
-              <option value="">All</option><option value="pending">Pending</option><option value="under_review">Under Review</option><option value="verified">Verified</option><option value="rejected">Rejected</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-dim font-medium block mb-1.5">Risk Level</label>
-            <select value={riskFilter} onChange={e => setRiskFilter(e.target.value)} className="px-3 py-2 rounded-lg bg-subtle border border-subtle text-sm text-main focus:outline-none appearance-none">
-              <option value="">All</option><option value="Safe">Safe</option><option value="Warning">Warning</option><option value="Critical">Critical</option>
-            </select>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-muted cursor-pointer">
-            <input type="checkbox" checked={hasMissing} onChange={e => setHasMissing(e.target.checked)} className="rounded border-light bg-subtle" />
-            Has missing docs
-          </label>
-          {hasActiveFilters && (
-            <button onClick={() => { setStatusFilter(''); setFolderStatusFilter(''); setRiskFilter(''); setSearchQuery(''); setHasMissing(false); }}
-              className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs text-muted hover:text-main hover:bg-subtle"><X size={12} /> Clear</button>
-          )}
-        </div>
-      )}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="rounded-2xl border border-white/5 bg-[var(--bg-card)] p-6 flex flex-wrap gap-6 items-end shadow-xl"
+          >
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Link Status</label>
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="min-w-[140px] px-3 py-2 rounded-lg bg-[var(--bg-subtle)] border border-white/5 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none cursor-pointer">
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Folder Status</label>
+              <select value={folderStatusFilter} onChange={e => setFolderStatusFilter(e.target.value)} className="min-w-[140px] px-3 py-2 rounded-lg bg-[var(--bg-subtle)] border border-white/5 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none cursor-pointer">
+                <option value="">All Folders</option>
+                <option value="pending">Pending</option>
+                <option value="under_review">Under Review</option>
+                <option value="verified">Verified</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Risk Level</label>
+              <select value={riskFilter} onChange={e => setRiskFilter(e.target.value)} className="min-w-[140px] px-3 py-2 rounded-lg bg-[var(--bg-subtle)] border border-white/5 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none cursor-pointer">
+                <option value="">All Risks</option>
+                <option value="Safe">Safe</option>
+                <option value="Warning">Warning</option>
+                <option value="Critical">Critical</option>
+              </select>
+            </div>
+            <label className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[var(--bg-subtle)] border border-white/5 cursor-pointer hover:bg-[var(--bg-card-hover)] transition-colors group">
+              <input type="checkbox" checked={hasMissing} onChange={e => setHasMissing(e.target.checked)} className="rounded border-zinc-700 bg-zinc-800 text-indigo-500 focus:ring-offset-0 focus:ring-1 focus:ring-indigo-500" />
+              <span className="text-xs font-bold text-zinc-400 group-hover:text-zinc-200">Missing docs only</span>
+            </label>
+            {hasActiveFilters && (
+              <button
+                onClick={() => { setStatusFilter(''); setFolderStatusFilter(''); setRiskFilter(''); setSearchQuery(''); setHasMissing(false); }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold text-rose-400 hover:bg-rose-500/10 transition-colors ml-auto"
+              >
+                <X size={14} /> Clear all filters
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* List */}
       {loading ? (
-        <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-indigo-400" size={24} /></div>
+        <div className="flex items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>
       ) : links.length === 0 ? (
-        <div className="text-center py-20 rounded-2xl border border-subtle bg-card">
-          <Link2 size={48} className="text-dim mx-auto mb-4" />
-          <p className="text-lg font-medium text-muted mb-2">{hasActiveFilters ? 'No vendors match filters' : 'No vendor links yet'}</p>
+        <div className="text-center py-24 rounded-3xl border border-dashed border-white/10 bg-[var(--bg-card)]/30 backdrop-blur-sm">
+          <div className="w-20 h-20 rounded-full bg-indigo-500/5 flex items-center justify-center mx-auto mb-6">
+            <Link2 size={40} className="text-zinc-600" />
+          </div>
+          <p className="text-xl font-bold text-white mb-2">{hasActiveFilters ? 'No matches found' : 'No vendor links yet'}</p>
+          <p className="text-sm text-zinc-500 mb-8 max-w-sm mx-auto">Try adjusting your filters or create a new link to start collecting documents.</p>
           {!hasActiveFilters && (
-            <button onClick={() => setShowCreate(true)} className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-500/20 text-indigo-300 font-medium text-sm hover:bg-indigo-500/30">
-              <Plus size={16} /> Create First Vendor Link
+            <button onClick={() => setShowCreate(true)} className="btn-primary">
+              <Plus size={18} /> Create First Vendor Link
             </button>
           )}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {links.map(link => {
             const a = parseAnalysis(link.analysis_data);
             const progress = a?.progress;
             const docCount = link.document_count ?? link.upload_count ?? 0;
 
             return (
-              <div key={link.id} className="group rounded-xl border border-subtle bg-card-hover hover:border-subtle hover:bg-card-hover transition-all">
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-4">
+              <div
+                key={link.id}
+                className="group card-premium hover:shadow-2xl transition-all duration-500"
+              >
+                <div className="p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <h3 className="text-base font-semibold text-main truncate cursor-pointer hover:text-indigo-300 transition-colors" onClick={() => navigate(`/vendor-links/${link.id}`)}>
+                      <div className="flex flex-wrap items-center gap-3 mb-4">
+                        <h3
+                          className="text-lg font-bold text-white truncate cursor-pointer hover:text-indigo-400 transition-colors font-display tracking-tight"
+                          onClick={() => navigate(`/vendor-links/${link.id}`)}
+                        >
                           {link.vendor_name}
                         </h3>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${link.status === 'active' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-subtle text-muted'}`}>{link.status}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${FOLDER_STATUS_COLORS[link.folder_status] || ''}`}>{FOLDER_STATUS_LABELS[link.folder_status] || link.folder_status}</span>
-                        {a?.overallRiskLevel && <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${RISK_COLORS[a.overallRiskLevel] || ''}`}>{a.overallRiskLevel}</span>}
-                        {link.is_locked && <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-subtle text-muted">Locked</span>}
-                        {link.template && link.template !== 'custom' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300">{link.template}</span>}
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-widest ${link.status === 'active'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-zinc-800 text-zinc-500 border border-white/5'
+                            }`}>
+                            {link.status}
+                          </span>
+                          <span className={`text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-widest ${FOLDER_STATUS_COLORS[link.folder_status] || ''} border border-current opacity-80`}>
+                            {FOLDER_STATUS_LABELS[link.folder_status] || link.folder_status}
+                          </span>
+                          {a?.overallRiskLevel && <RiskBadge level={a.overallRiskLevel} />}
+                        </div>
                       </div>
 
                       {/* Progress bar */}
                       {progress && (
-                        <div className="mb-2">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="flex-1 h-1.5 bg-subtle rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full transition-all ${progress.percentage >= 100 ? 'bg-emerald-500' : progress.percentage > 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${progress.percentage}%` }} />
-                            </div>
-                            <span className="text-xs text-muted font-medium shrink-0">{progress.uploaded}/{progress.total}</span>
+                        <div className="mb-5 max-w-md">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Submission Progress</span>
+                            <span className="text-xs font-bold text-indigo-400">{progress.uploaded} / {progress.total} docs</span>
+                          </div>
+                          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden ring-1 ring-white/5">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${progress.percentage}%` }}
+                              className={`h-full rounded-full transition-all ${progress.percentage >= 100
+                                ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                                : progress.percentage > 50
+                                  ? 'bg-indigo-500'
+                                  : 'bg-rose-500'
+                                }`}
+                            />
                           </div>
                         </div>
                       )}
 
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-dim">
-                        <span className="flex items-center gap-1"><FileText size={12} />{docCount} doc{docCount !== 1 ? 's' : ''}</span>
-                        {a?.issuesCount > 0 && <span className="flex items-center gap-1 text-amber-400"><AlertTriangle size={12} />{a.issuesCount} issue{a.issuesCount !== 1 ? 's' : ''}</span>}
-                        {link.vendor_email && <span className="truncate">{link.vendor_email}</span>}
-                        {link.vendor_pan && <span>PAN: {link.vendor_pan}</span>}
-                        {link.vendor_gstin && <span>GST: {link.vendor_gstin}</span>}
-                        <span className="flex items-center gap-1"><Clock size={12} />{new Date(link.created_at).toLocaleDateString()}</span>
+                      <div className="flex flex-wrap items-center gap-6 text-[11px] font-bold text-zinc-500">
+                        <span className="flex items-center gap-2 group-hover:text-zinc-300 transition-colors">
+                          <FileText size={14} className="text-indigo-400/60" />
+                          {docCount} document{docCount !== 1 ? 's' : ''}
+                        </span>
+                        {a?.issuesCount > 0 && (
+                          <span className="flex items-center gap-2 text-rose-400">
+                            <AlertTriangle size={14} className="animate-pulse" />
+                            {a.issuesCount} issue{a.issuesCount !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {link.vendor_email && <span className="truncate flex items-center gap-2"><Clock size={14} className="text-zinc-600" /> {link.vendor_email}</span>}
+                        {link.vendor_pan && <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5">PAN: {link.vendor_pan}</span>}
+                        {link.vendor_gstin && <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5">GST: {link.vendor_gstin}</span>}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => copyLink(link.token, link.id)} className="p-2 rounded-lg text-dim hover:text-main hover:bg-subtle" title="Copy link">
-                        {copiedId === link.id ? <CheckCircle size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                    <div className="flex items-center gap-2 shrink-0 lg:ml-6 group-hover:translate-x-0 lg:translate-x-2 transition-transform duration-500">
+                      <button onClick={() => copyLink(link.token, link.id)} className="p-3 rounded-xl bg-white/5 border border-white/5 text-zinc-400 hover:text-indigo-400 hover:bg-indigo-500/10 hover:border-indigo-500/20 transition-all" title="Copy link">
+                        {copiedId === link.id ? <CheckCircle size={18} className="text-emerald-400" /> : <Copy size={18} />}
                       </button>
-                      <button onClick={() => navigate(`/vendor-links/${link.id}`)} className="p-2 rounded-lg text-dim hover:text-main hover:bg-subtle" title="View"><Eye size={16} /></button>
-                      <button onClick={() => window.open(`/vendor-portal/${link.token}`, '_blank')} className="p-2 rounded-lg text-dim hover:text-main hover:bg-subtle" title="Portal"><ExternalLink size={16} /></button>
-                      <button onClick={() => handleToggle(link.id, link.status)} className="p-2 rounded-lg text-dim hover:text-main hover:bg-subtle" title={link.status === 'active' ? 'Deactivate' : 'Activate'}>
-                        {link.status === 'active' ? <PowerOff size={16} /> : <Power size={16} />}
+                      <button onClick={() => navigate(`/vendor-links/${link.id}`)} className="p-3 rounded-xl bg-white/5 border border-white/5 text-zinc-400 hover:text-white hover:bg-white/10 hover:border-white/10 transition-all" title="View"><Eye size={18} /></button>
+                      <button onClick={() => handleToggle(link.id, link.status)} className="p-3 rounded-xl bg-white/5 border border-white/5 text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/20 transition-all" title={link.status === 'active' ? 'Deactivate' : 'Activate'}>
+                        {link.status === 'active' ? <PowerOff size={18} /> : <Power size={18} />}
                       </button>
-                      <button onClick={() => handleDelete(link.id)} className="p-2 rounded-lg text-dim hover:text-red-400 hover:bg-red-500/10" title="Delete"><Trash2 size={16} /></button>
+                      <button onClick={() => handleDelete(link.id)} className="p-3 rounded-xl bg-white/5 border border-white/5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all" title="Delete"><Trash2 size={18} /></button>
                     </div>
                   </div>
 
                   {a?.issues?.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-subtle">
-                      <div className="flex flex-wrap gap-1.5">
-                        {a.issues.slice(0, 4).map((issue: any, idx: number) => (
-                          <span key={idx} className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${issue.severity === 'critical' ? 'bg-red-500/15 text-red-300' : issue.severity === 'high' ? 'bg-orange-500/15 text-orange-300' : issue.severity === 'medium' ? 'bg-amber-500/15 text-amber-300' : 'bg-zinc-500/15 text-muted'
-                            }`}>
-                            <span className={`w-1 h-1 rounded-full ${issue.severity === 'critical' ? 'bg-red-400' : issue.severity === 'high' ? 'bg-orange-400' : issue.severity === 'medium' ? 'bg-amber-400' : 'bg-zinc-500'}`} />
-                            {issue.title.length > 40 ? issue.title.slice(0, 40) + '...' : issue.title}
-                          </span>
+                    <div className="mt-6 pt-6 border-t border-white/5">
+                      <div className="flex flex-wrap gap-2">
+                        {a.issues.slice(0, 5).map((issue: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider ${issue.severity === 'critical'
+                              ? 'bg-rose-500/5 text-rose-400 border border-rose-500/10'
+                              : issue.severity === 'high'
+                                ? 'bg-orange-500/5 text-orange-400 border border-orange-500/10'
+                                : 'bg-zinc-800 text-zinc-500 border border-white/5'
+                              }`}
+                          >
+                            <span className={`w-1 h-1 rounded-full ${issue.severity === 'critical' ? 'bg-rose-400' : issue.severity === 'high' ? 'bg-orange-400' : 'bg-zinc-500'
+                              }`} />
+                            {issue.title}
+                          </div>
                         ))}
-                        {a.issues.length > 4 && <button onClick={() => navigate(`/vendor-links/${link.id}`)} className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5">+{a.issues.length - 4} more <ArrowUpRight size={8} /></button>}
+                        {a.issues.length > 5 && (
+                          <button
+                            onClick={() => navigate(`/vendor-links/${link.id}`)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/5 text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/10 transition-colors"
+                          >
+                            +{a.issues.length - 5} MORE <ArrowUpRight size={10} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -325,130 +405,156 @@ function CreateModal({ templates, onClose, onCreated }: { templates: DocumentTem
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-subtle bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-main">Create Vendor Upload Link</h3>
-          <button onClick={onClose} className="p-2 rounded-lg text-dim hover:text-main hover:bg-subtle"><X size={18} /></button>
-        </div>
-        <div className="space-y-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[32px] border border-white/5 bg-[var(--bg-modal)] p-8 lg:p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative group">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.02] to-transparent pointer-events-none" />
+
+        <div className="flex items-center justify-between mb-8 relative">
           <div>
-            <label className="text-sm font-medium text-main block mb-1.5">Template *</label>
+            <h3 className="text-2xl font-bold text-white font-display tracking-tight">Create Vendor Portal</h3>
+            <p className="text-xs text-zinc-500 mt-1 font-medium">Issue a secure link for document collection</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl text-zinc-500 hover:text-white hover:bg-white/5 transition-all"><X size={20} /></button>
+        </div>
+
+        <div className="space-y-6 relative">
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Select Template</label>
             <div className="flex flex-wrap gap-2">
               {templatesList.map(t => (
-                <button key={t.id} type="button" onClick={() => selectTemplate(t.id)}
-                  className={`px-3 py-2 rounded-xl border text-sm font-medium transition-all ${form.template === t.id && !isCustom ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300' : 'border-subtle bg-card-hover text-muted hover:border-light'}`}>
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => selectTemplate(t.id)}
+                  className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${form.template === t.id && !isCustom
+                    ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
+                    : 'border-white/5 bg-[var(--bg-subtle)] text-zinc-500 hover:text-zinc-300 hover:border-white/10'
+                    }`}
+                >
                   {t.name}
                 </button>
               ))}
-              <button type="button" onClick={() => selectTemplate('custom')}
-                className={`px-3 py-2 rounded-xl border text-sm font-medium transition-all ${isCustom ? 'border-violet-500/50 bg-violet-500/10 text-violet-300' : 'border-subtle bg-card-hover text-muted hover:border-light'}`}>
+              <button
+                type="button"
+                onClick={() => selectTemplate('custom')}
+                className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${isCustom
+                  ? 'border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-400 shadow-[0_0_15px_rgba(217,70,239,0.1)]'
+                  : 'border-white/5 bg-[var(--bg-subtle)] text-zinc-500 hover:text-zinc-300 hover:border-white/10'
+                  }`}
+              >
                 + Custom
               </button>
             </div>
-            {selectedTemplate && !isCustom && <p className="text-xs text-dim mt-1.5">{selectedTemplate.description}</p>}
-            {isCustom && <p className="text-xs text-violet-400 mt-1.5">Define your own required documents below</p>}
           </div>
-          <div>
-            <label className="text-sm font-medium text-main block mb-1.5">Vendor Name *</label>
-            <input type="text" value={form.vendorName} onChange={e => setForm({ ...form, vendorName: e.target.value })} placeholder="e.g. Acme Corp"
-              className="w-full px-4 py-2.5 rounded-xl bg-subtle border border-subtle text-sm text-main placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-main block mb-1.5">Email</label>
-              <input type="email" value={form.vendorEmail} onChange={e => setForm({ ...form, vendorEmail: e.target.value })} placeholder="vendor@example.com"
-                className="w-full px-4 py-2.5 rounded-xl bg-subtle border border-subtle text-sm text-main placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50" />
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Vendor Name *</label>
+              <input
+                type="text"
+                value={form.vendorName}
+                onChange={e => setForm({ ...form, vendorName: e.target.value })}
+                placeholder="Acme Corporation"
+                className="w-full px-4 py-3 rounded-xl bg-[var(--bg-subtle)] border border-white/5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-[var(--bg-card-hover)] transition-all"
+              />
             </div>
-            <div>
-              <label className="text-sm font-medium text-main block mb-1.5">Phone</label>
-              <input type="text" value={form.vendorPhone} onChange={e => setForm({ ...form, vendorPhone: e.target.value })} placeholder="+91..."
-                className="w-full px-4 py-2.5 rounded-xl bg-subtle border border-subtle text-sm text-main placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-main block mb-1.5">PAN</label>
-              <input type="text" value={form.vendorPan} onChange={e => setForm({ ...form, vendorPan: e.target.value.toUpperCase() })} placeholder="ABCDE1234F" maxLength={10}
-                className="w-full px-4 py-2.5 rounded-xl bg-subtle border border-subtle text-sm text-main placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 uppercase" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-main block mb-1.5">GSTIN</label>
-              <input type="text" value={form.vendorGstin} onChange={e => setForm({ ...form, vendorGstin: e.target.value.toUpperCase() })} placeholder="22AAAAA0000A1Z5" maxLength={15}
-                className="w-full px-4 py-2.5 rounded-xl bg-subtle border border-subtle text-sm text-main placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 uppercase" />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-main block mb-1.5">Description / Instructions</label>
-            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Instructions for the vendor..." rows={2}
-              className="w-full px-4 py-2.5 rounded-xl bg-subtle border border-subtle text-sm text-main placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 resize-none" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-main block mb-1.5">Max Uploads</label>
-              <input type="number" value={form.maxUploads} onChange={e => setForm({ ...form, maxUploads: Number(e.target.value) || 50 })} min={1} max={500}
-                className="w-full px-4 py-2.5 rounded-xl bg-subtle border border-subtle text-sm text-main focus:outline-none focus:ring-1 focus:ring-indigo-500/50" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-main block mb-1.5">Expires In (days)</label>
-              <input type="number" value={form.expiresInDays} onChange={e => setForm({ ...form, expiresInDays: Number(e.target.value) || 30 })} min={1} max={365}
-                className="w-full px-4 py-2.5 rounded-xl bg-subtle border border-subtle text-sm text-main focus:outline-none focus:ring-1 focus:ring-indigo-500/50" />
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Contact Email</label>
+              <input
+                type="email"
+                value={form.vendorEmail}
+                onChange={e => setForm({ ...form, vendorEmail: e.target.value })}
+                placeholder="legal@acme.com"
+                className="w-full px-4 py-3 rounded-xl bg-[var(--bg-subtle)] border border-white/5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-[var(--bg-card-hover)] transition-all"
+              />
             </div>
           </div>
 
-          {/* Required Documents — editable */}
-          <div>
-            <label className="text-xs text-dim font-medium block mb-1.5">
-              Required Documents ({isCustom ? customDocs.length : (selectedTemplate?.requiredDocuments?.length || 0)})
-              {!isCustom && selectedTemplate && <button type="button" onClick={() => { setIsCustom(true); setCustomDocs(selectedTemplate.requiredDocuments.map(d => ({ type: d.type, label: d.label, mandatory: d.mandatory }))); }} className="ml-2 text-indigo-400 hover:text-indigo-300">Edit</button>}
-            </label>
-            {(isCustom || !selectedTemplate) ? (
-              <div className="space-y-2">
-                {customDocs.map((d, i) => (
-                  <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-subtle bg-card-hover">
-                    <span className="text-xs text-main flex-1">{d.label}</span>
-                    <label className="flex items-center gap-1 text-[10px] text-dim cursor-pointer" title="Mandatory upload">
-                      <input type="checkbox" checked={d.mandatory} onChange={e => { const upd = [...customDocs]; upd[i] = { ...upd[i], mandatory: e.target.checked }; setCustomDocs(upd); }} className="rounded border-light bg-subtle" />
-                      Required
-                    </label>
-                    <label className="flex items-center gap-1 text-[10px] text-dim cursor-pointer" title="Run AI analysis on this document">
-                      <input type="checkbox" checked={d.requiresAnalysis !== false} onChange={e => { const upd = [...customDocs]; upd[i] = { ...upd[i], requiresAnalysis: e.target.checked }; setCustomDocs(upd); }} className="rounded border-light bg-subtle" />
-                      <span className="text-indigo-400">AI</span>
-                    </label>
-                    <button type="button" onClick={() => removeDoc(d.type)} className="p-1 rounded text-dim hover:text-red-400"><X size={12} /></button>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">PAN (India)</label>
+              <input
+                type="text"
+                value={form.vendorPan}
+                onChange={e => setForm({ ...form, vendorPan: e.target.value.toUpperCase() })}
+                placeholder="ABCDE1234F"
+                maxLength={10}
+                className="w-full px-4 py-3 rounded-xl bg-[var(--bg-subtle)] border border-white/5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-[var(--bg-card-hover)] transition-all uppercase font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">GSTIN</label>
+              <input
+                type="text"
+                value={form.vendorGstin}
+                onChange={e => setForm({ ...form, vendorGstin: e.target.value.toUpperCase() })}
+                placeholder="22AAAAA0000A1Z5"
+                maxLength={15}
+                className="w-full px-4 py-3 rounded-xl bg-[var(--bg-subtle)] border border-white/5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-[var(--bg-card-hover)] transition-all uppercase font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Required Documents</label>
+            <div className="p-4 rounded-2xl bg-[var(--bg-subtle)] border border-white/5 space-y-4">
+              {(isCustom || !selectedTemplate) ? (
+                <>
+                  <div className="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-2">
+                    {customDocs.map((d, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-white/5 border border-white/5 group/item">
+                        <span className="text-xs font-bold text-zinc-300 flex-1">{d.label}</span>
+                        <div className="flex items-center gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={d.mandatory} onChange={e => { const upd = [...customDocs]; upd[i] = { ...upd[i], mandatory: e.target.checked }; setCustomDocs(upd); }} className="rounded border-zinc-700 bg-zinc-800 text-indigo-500" />
+                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Required</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={d.requiresAnalysis !== false} onChange={e => { const upd = [...customDocs]; upd[i] = { ...upd[i], requiresAnalysis: e.target.checked }; setCustomDocs(upd); }} className="rounded border-zinc-700 bg-zinc-800 text-indigo-500" />
+                            <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest shadow-sm shadow-indigo-500/10">AI</span>
+                          </label>
+                          <button type="button" onClick={() => removeDoc(d.type)} className="p-1 rounded text-zinc-600 hover:text-rose-400 hover:bg-rose-500/10 transition-colors opacity-0 group-hover/item:opacity-100"><X size={14} /></button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                <div className="flex gap-2 items-center">
-                  <input value={newDocLabel} onChange={e => setNewDocLabel(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addDoc())} placeholder="e.g. Bank Statement"
-                    className="flex-1 px-3 py-2 rounded-lg bg-subtle border border-subtle text-xs text-main placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50" />
-                  <label className="flex items-center gap-1 text-[10px] text-dim shrink-0 cursor-pointer">
-                    <input type="checkbox" checked={newDocMandatory} onChange={e => setNewDocMandatory(e.target.checked)} className="rounded border-light bg-subtle" />
-                    Required
-                  </label>
-                  <label className="flex items-center gap-1 text-[10px] text-dim shrink-0 cursor-pointer" title="Run AI analysis">
-                    <input type="checkbox" checked={newDocAI} onChange={e => setNewDocAI(e.target.checked)} className="rounded border-light bg-subtle" />
-                    <span className="text-indigo-400">AI</span>
-                  </label>
-                  <button type="button" onClick={addDoc} disabled={!newDocLabel.trim()} className="px-3 py-2 rounded-lg bg-indigo-500/20 text-indigo-300 text-xs disabled:opacity-30"><Plus size={12} /></button>
+                  <div className="flex gap-2 p-2 rounded-xl bg-black/20 border border-white/5">
+                    <input
+                      value={newDocLabel}
+                      onChange={e => setNewDocLabel(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addDoc())}
+                      placeholder="Add Document Name..."
+                      className="flex-1 bg-transparent px-2 py-1 text-xs text-white focus:outline-none placeholder-zinc-700"
+                    />
+                    <button type="button" onClick={addDoc} disabled={!newDocLabel.trim()} className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 disabled:opacity-30 transition-all"><Plus size={16} /></button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {selectedTemplate.requiredDocuments.map(d => (
+                    <div key={d.type} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/5 border border-indigo-500/10 group">
+                      <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">{d.label} {d.mandatory && '*'}</span>
+                      {d.requiresAnalysis !== false && <span className="w-1 h-1 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]" />}
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => { setIsCustom(true); setCustomDocs(selectedTemplate.requiredDocuments.map(d => ({ type: d.type, label: d.label, mandatory: d.mandatory }))); }} className="text-[10px] font-black text-zinc-500 hover:text-zinc-300 uppercase tracking-widest ml-1 transition-colors">Edit List</button>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {selectedTemplate.requiredDocuments.map(d => (
-                  <span key={d.type} className={`text-[10px] px-2 py-0.5 rounded-full ${d.mandatory ? 'bg-indigo-500/15 text-indigo-300' : 'bg-subtle text-muted'}`}>
-                    {d.label} {d.mandatory && '*'}{d.requiresAnalysis !== false && <span className="text-indigo-400 ml-0.5">AI</span>}
-                  </span>
-                ))}
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {error && <p className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{error}</p>}
+          {error && <motion.p initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/10 rounded-xl px-4 py-3">{error}</motion.p>}
         </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-subtle text-sm font-medium text-muted hover:text-main hover:bg-subtle">Cancel</button>
-          <button onClick={handleCreate} disabled={creating || !form.vendorName?.trim()} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-main font-medium text-sm disabled:opacity-50">
-            {creating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} {creating ? 'Creating...' : 'Create Link'}
+
+        <div className="flex gap-4 mt-10 relative">
+          <button onClick={onClose} className="flex-1 px-6 py-3.5 rounded-2xl border border-white/5 bg-[var(--bg-subtle)] text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-[var(--bg-card-hover)] transition-all">Cancel</button>
+          <button
+            onClick={handleCreate}
+            disabled={creating || !form.vendorName?.trim()}
+            className="flex-1 btn-primary shadow-xl shadow-indigo-500/20 disabled:opacity-50 h-[48px]"
+          >
+            {creating ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+            {creating ? 'CREATING...' : 'CREATE PORTAL'}
           </button>
         </div>
       </div>
@@ -483,32 +589,53 @@ function BulkModal({ templates: _templates, onClose, onDone }: { templates: Docu
     : [{ id: 'vendor', name: 'Vendor' }, { id: 'contractor', name: 'Contractor' }, { id: 'employee', name: 'Employee' }];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-2xl border border-subtle bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-main">Bulk Import Vendors</h3>
-          <button onClick={onClose} className="p-2 rounded-lg text-dim hover:text-main hover:bg-subtle"><X size={18} /></button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="w-full max-w-lg rounded-[32px] border border-white/5 bg-[var(--bg-modal)] p-8 lg:p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative">
+        <div className="flex items-center justify-between mb-8 relative">
+          <div>
+            <h3 className="text-2xl font-bold text-white font-display tracking-tight">Bulk Import</h3>
+            <p className="text-xs text-zinc-500 mt-1 font-medium">Create multiple vendor portals at once</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl text-zinc-500 hover:text-white hover:bg-white/5 transition-all"><X size={20} /></button>
         </div>
+
         {!result ? (
-          <>
-            <p className="text-xs text-dim mb-3">Paste vendor data, one per line. Format: Name, Email, Phone, PAN, GSTIN (comma or tab separated)</p>
-            <select value={template} onChange={e => setTemplate(e.target.value)} className="w-full px-3 py-2 mb-3 rounded-lg bg-subtle border border-subtle text-sm text-main appearance-none">
-              {templateOptions.map(t => <option key={t.id} value={t.id}>{t.name} Template</option>)}
-            </select>
-            <textarea value={text} onChange={e => setText(e.target.value)} rows={8} placeholder="Acme Corp, acme@example.com, +919876543210, ABCDE1234F&#10;Beta Inc, beta@example.com"
-              className="w-full px-4 py-3 rounded-xl bg-subtle border border-subtle text-sm text-main placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 resize-none font-mono" />
-            <div className="flex gap-3 mt-4">
-              <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-subtle text-sm text-muted hover:text-main">Cancel</button>
-              <button onClick={handleBulk} disabled={creating || !text.trim()} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-500 text-main text-sm font-medium disabled:opacity-50">
-                {creating ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} {creating ? 'Creating...' : 'Import'}
+          <div className="space-y-6 relative">
+            <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Standard Format</p>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">Name, Email, Phone, PAN, GSTIN (Comma or Tab separated)</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Apply Template</label>
+              <select value={template} onChange={e => setTemplate(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-[var(--bg-subtle)] border border-white/5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none cursor-pointer">
+                {templateOptions.map(t => <option key={t.id} value={t.id}>{t.name} Template</option>)}
+              </select>
+            </div>
+
+            <textarea
+              value={text}
+              onChange={e => setText(e.target.value)}
+              rows={6}
+              placeholder="Acme Corp, acme@example.com, +919876543210..."
+              className="w-full px-4 py-4 rounded-xl bg-[var(--bg-subtle)] border border-white/5 text-sm text-white placeholder-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none font-mono"
+            />
+
+            <div className="flex gap-4 mt-8">
+              <button onClick={onClose} className="flex-1 px-6 py-3.5 rounded-2xl border border-white/5 bg-[var(--bg-subtle)] text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">Cancel</button>
+              <button onClick={handleBulk} disabled={creating || !text.trim()} className="flex-1 btn-primary shadow-xl shadow-indigo-500/20 disabled:opacity-50">
+                {creating ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />} {creating ? 'IMPORTING...' : 'START IMPORT'}
               </button>
             </div>
-          </>
+          </div>
         ) : (
-          <div className="text-center py-6">
-            <CheckCircle size={36} className="text-emerald-400 mx-auto mb-3" />
-            <p className="text-main font-medium">{result.count} vendor link(s) created</p>
-            <button onClick={onDone} className="mt-4 px-6 py-2 rounded-xl bg-indigo-500 text-main text-sm font-medium">Done</button>
+          <div className="text-center py-10">
+            <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle size={40} className="text-emerald-400" />
+            </div>
+            <p className="text-xl font-bold text-white mb-2">{result.count} Vendor links created</p>
+            <p className="text-sm text-zinc-500 mb-8">Successfully processed your bulk import list.</p>
+            <button onClick={onDone} className="btn-primary w-full max-w-[200px] mx-auto">CONTINUE</button>
           </div>
         )}
       </div>

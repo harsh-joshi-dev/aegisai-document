@@ -56,25 +56,26 @@ export function ModalShell({
         style={{
           width: '100%',
           maxWidth,
-          padding: '24px',
-          background: '#0f1219',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '20px',
-          boxShadow: '0 32px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
+          padding: '32px',
+          background: 'var(--bg-modal)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '24px',
+          boxShadow: 'var(--shadow-xl), 0 0 0 1px var(--border-subtle)',
           maxHeight: '90vh',
           overflow: 'auto',
+          position: 'relative',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '24px' }}>
           <div>
             <h2
               id="modal-title"
-              style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.01em', margin: 0 }}
+              style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.025em', margin: 0 }}
             >
               {title}
             </h2>
             {subtitle && (
-              <p style={{ marginTop: '4px', fontSize: '14px', color: '#94a3b8' }}>{subtitle}</p>
+              <p style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-muted)', fontWeight: 500 }}>{subtitle}</p>
             )}
           </div>
           <button

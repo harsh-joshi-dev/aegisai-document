@@ -1,5 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#2563eb"/>
-  <path d="M256 102 L102 179 L102 307 Q102 410 256 461 Q410 410 410 307 L410 179 Z" fill="none" stroke="white" stroke-width="42" stroke-linejoin="round"/>
-  <path d="M179 256 L205 307 L333 205" fill="none" stroke="white" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect width="512" height="512" fill="#0f0f11"/>
+  <g transform="translate(106, 106) scale(3)">
+     <path
+        d="M50 15L15 85C30 75 70 75 85 85L50 15Z"
+        stroke="white"
+        stroke-width="4"
+        stroke-linejoin="round"
+        fill="none"
+    />
+    <path
+        d="M50 35L30 78C40 73 60 73 70 78L50 35Z"
+        stroke="white"
+        stroke-width="3"
+        stroke-linejoin="round"
+        fill="none"
+    />
+    <path
+        d="M50 55L42 75C45 73 55 73 58 75L50 55Z"
+        stroke="white"
+        stroke-width="2"
+        stroke-linejoin="round"
+        fill="white"
+        fill-opacity="0.2"
+    />
+  </g>
 </svg>

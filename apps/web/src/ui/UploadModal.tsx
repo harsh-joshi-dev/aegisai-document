@@ -104,14 +104,15 @@ export function UploadModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
-          maxWidth: '520px',
-          padding: '24px',
-          background: '#0f1219',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '20px',
-          boxShadow: '0 32px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
+          maxWidth: '560px',
+          padding: '32px',
+          background: 'var(--bg-modal)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '24px',
+          boxShadow: 'var(--shadow-xl), 0 0 0 1px var(--border-subtle)',
           maxHeight: '90vh',
           overflow: 'auto',
+          position: 'relative',
         }}
       >
         <div className="flex items-start justify-between gap-4 mb-6">
@@ -120,10 +121,10 @@ export function UploadModal({
               <UploadCloud size={20} className="text-indigo-400" />
             </div>
             <div>
-              <h2 id="upload-modal-title" className="text-xl font-semibold text-main tracking-tight">
+              <h2 id="upload-modal-title" className="text-2xl font-bold text-main tracking-tight font-display">
                 Upload Document
               </h2>
-              <p className="mt-0.5 text-sm text-muted">Add a new document for risk analysis</p>
+              <p className="mt-1 text-sm text-muted font-medium">Add a new document for risk analysis</p>
             </div>
           </div>
           <button
@@ -137,12 +138,13 @@ export function UploadModal({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: '10px',
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.04)',
-              color: '#94a3b8',
+              borderRadius: '12px',
+              border: '1px solid var(--border-subtle)',
+              background: 'var(--bg-subtle)',
+              color: 'var(--text-muted)',
               cursor: 'pointer',
               flexShrink: 0,
+              transition: 'all 0.2s',
             }}
           >
             <X size={16} />

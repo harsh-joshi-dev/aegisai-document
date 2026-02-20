@@ -1,5 +1,5 @@
 /**
- * Cross-Document Matching Engine – Aegis AI Decision Workspace
+ * Cross-Document Matching Engine – CA.Dynamix Decision Workspace
  * Links and compares documents (Invoice, Bank, GST) to detect mismatches.
  */
 

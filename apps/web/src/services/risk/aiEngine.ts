@@ -1,5 +1,5 @@
 /**
- * AI Analysis Engine – Aegis AI Decision Workspace
+ * AI Analysis Engine – CA.Dynamix Decision Workspace
  * Optional OpenAI-backed analysis. Falls back to no signals when API unavailable.
  */
 
