@@ -261,6 +261,249 @@ export async function sendDocumentUploadEmail(
 }
 
 /**
+ * Send document approval notification email.
+ */
+export async function sendApprovalEmail(
+  userEmail: string,
+  userName: string,
+  documentName: string,
+  documentId: string,
+  approverName: string,
+  notes?: string
+): Promise<void> {
+  if (!isEmailConfigured()) return;
+  try {
+    const transporter = getTransporter();
+    const frontendUrl = config.frontendUrl;
+    const docUrl = `${frontendUrl}/document/${documentId}`;
+    const year = new Date().getFullYear();
+
+    await transporter.sendMail({
+      from: `"Aegis AI" <${config.smtp.fromEmail}>`,
+      to: userEmail,
+      subject: `Document approved: ${documentName}`,
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:linear-gradient(145deg,#0f172a,#1e293b);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 20px;">
+<tr><td style="text-align:center;padding-bottom:24px;"><table align="center" cellpadding="0" cellspacing="0"><tr>
+<td style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);padding:12px 18px;border-radius:12px;">
+<span style="font-size:18px;font-weight:800;color:#fff;">&#x1f6e1;&#xfe0f; Aegis AI</span></td></tr></table></td></tr>
+<tr><td style="background:rgba(30,41,59,0.9);border-radius:20px;padding:36px 32px;border:1px solid rgba(255,255,255,0.08);">
+<div style="background:rgba(16,185,129,0.15);border-left:4px solid #10b981;border-radius:0 14px 14px 0;padding:18px 20px;margin-bottom:24px;">
+<p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#10b981;">&#x2705; Document Approved</p>
+<p style="margin:0;font-size:15px;color:#e2e8f0;font-weight:600;">${(documentName || '').replace(/</g, '&lt;')}</p>
+</div>
+<p style="margin:0 0 16px;font-size:14px;color:#94a3b8;">Approved by <strong style="color:#e2e8f0;">${(approverName || 'Reviewer').replace(/</g, '&lt;')}</strong></p>
+${notes ? `<p style="margin:0 0 16px;font-size:14px;color:#94a3b8;background:rgba(255,255,255,0.05);padding:12px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);">"${notes.replace(/</g, '&lt;')}"</p>` : ''}
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+<tr><td align="center"><a href="${docUrl}" style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;padding:14px 28px;text-decoration:none;font-weight:700;font-size:14px;border-radius:12px;">View Document</a></td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:20px 0;text-align:center;color:#64748b;font-size:12px;">&copy; ${year} Aegis AI</td></tr>
+</table></body></html>`,
+      text: `Document Approved: ${documentName}\nApproved by: ${approverName}\n${notes ? `Notes: ${notes}\n` : ''}View: ${docUrl}`,
+    });
+    console.log(`✅ Approval email sent to ${userEmail}`);
+  } catch (error) {
+    logEmailError('approval email', error);
+  }
+}
+
+/**
+ * Send document rejection notification email.
+ */
+export async function sendRejectionEmail(
+  userEmail: string,
+  userName: string,
+  documentName: string,
+  documentId: string,
+  rejectorName: string,
+  reason: string
+): Promise<void> {
+  if (!isEmailConfigured()) return;
+  try {
+    const transporter = getTransporter();
+    const frontendUrl = config.frontendUrl;
+    const docUrl = `${frontendUrl}/document/${documentId}`;
+    const year = new Date().getFullYear();
+
+    await transporter.sendMail({
+      from: `"Aegis AI" <${config.smtp.fromEmail}>`,
+      to: userEmail,
+      subject: `Document rejected: ${documentName}`,
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:linear-gradient(145deg,#0f172a,#1e293b);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 20px;">
+<tr><td style="text-align:center;padding-bottom:24px;"><table align="center" cellpadding="0" cellspacing="0"><tr>
+<td style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);padding:12px 18px;border-radius:12px;">
+<span style="font-size:18px;font-weight:800;color:#fff;">&#x1f6e1;&#xfe0f; Aegis AI</span></td></tr></table></td></tr>
+<tr><td style="background:rgba(30,41,59,0.9);border-radius:20px;padding:36px 32px;border:1px solid rgba(255,255,255,0.08);">
+<div style="background:rgba(239,68,68,0.15);border-left:4px solid #ef4444;border-radius:0 14px 14px 0;padding:18px 20px;margin-bottom:24px;">
+<p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#ef4444;">&#x274c; Document Rejected</p>
+<p style="margin:0;font-size:15px;color:#e2e8f0;font-weight:600;">${(documentName || '').replace(/</g, '&lt;')}</p>
+</div>
+<p style="margin:0 0 16px;font-size:14px;color:#94a3b8;">Rejected by <strong style="color:#e2e8f0;">${(rejectorName || 'Reviewer').replace(/</g, '&lt;')}</strong></p>
+<div style="margin:0 0 16px;font-size:14px;color:#fca5a5;background:rgba(239,68,68,0.1);padding:14px 16px;border-radius:10px;border:1px solid rgba(239,68,68,0.2);">
+<p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;">Reason</p>
+<p style="margin:0;color:#fca5a5;">${(reason || 'No reason provided').replace(/</g, '&lt;')}</p>
+</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+<tr><td align="center"><a href="${docUrl}" style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;padding:14px 28px;text-decoration:none;font-weight:700;font-size:14px;border-radius:12px;">Review Document</a></td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:20px 0;text-align:center;color:#64748b;font-size:12px;">&copy; ${year} Aegis AI</td></tr>
+</table></body></html>`,
+      text: `Document Rejected: ${documentName}\nRejected by: ${rejectorName}\nReason: ${reason}\nView: ${docUrl}`,
+    });
+    console.log(`✅ Rejection email sent to ${userEmail}`);
+  } catch (error) {
+    logEmailError('rejection email', error);
+  }
+}
+
+/**
+ * Send info request notification email.
+ */
+export async function sendInfoRequestEmail(
+  userEmail: string,
+  userName: string,
+  documentName: string,
+  documentId: string,
+  requesterName: string,
+  message: string
+): Promise<void> {
+  if (!isEmailConfigured()) return;
+  try {
+    const transporter = getTransporter();
+    const frontendUrl = config.frontendUrl;
+    const docUrl = `${frontendUrl}/document/${documentId}`;
+    const year = new Date().getFullYear();
+
+    await transporter.sendMail({
+      from: `"Aegis AI" <${config.smtp.fromEmail}>`,
+      to: userEmail,
+      subject: `Info requested: ${documentName}`,
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:linear-gradient(145deg,#0f172a,#1e293b);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 20px;">
+<tr><td style="text-align:center;padding-bottom:24px;"><table align="center" cellpadding="0" cellspacing="0"><tr>
+<td style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);padding:12px 18px;border-radius:12px;">
+<span style="font-size:18px;font-weight:800;color:#fff;">&#x1f6e1;&#xfe0f; Aegis AI</span></td></tr></table></td></tr>
+<tr><td style="background:rgba(30,41,59,0.9);border-radius:20px;padding:36px 32px;border:1px solid rgba(255,255,255,0.08);">
+<div style="background:rgba(59,130,246,0.15);border-left:4px solid #3b82f6;border-radius:0 14px 14px 0;padding:18px 20px;margin-bottom:24px;">
+<p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#3b82f6;">&#x2139;&#xfe0f; Additional Info Requested</p>
+<p style="margin:0;font-size:15px;color:#e2e8f0;font-weight:600;">${(documentName || '').replace(/</g, '&lt;')}</p>
+</div>
+<p style="margin:0 0 16px;font-size:14px;color:#94a3b8;">Requested by <strong style="color:#e2e8f0;">${(requesterName || 'Reviewer').replace(/</g, '&lt;')}</strong></p>
+<div style="margin:0 0 16px;font-size:14px;color:#93c5fd;background:rgba(59,130,246,0.1);padding:14px 16px;border-radius:10px;border:1px solid rgba(59,130,246,0.2);">
+<p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;">Message</p>
+<p style="margin:0;color:#93c5fd;">${(message || 'Please provide additional details.').replace(/</g, '&lt;')}</p>
+</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+<tr><td align="center"><a href="${docUrl}" style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;padding:14px 28px;text-decoration:none;font-weight:700;font-size:14px;border-radius:12px;">Respond Now</a></td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:20px 0;text-align:center;color:#64748b;font-size:12px;">&copy; ${year} Aegis AI</td></tr>
+</table></body></html>`,
+      text: `Info Requested: ${documentName}\nRequested by: ${requesterName}\nMessage: ${message}\nRespond: ${docUrl}`,
+    });
+    console.log(`✅ Info request email sent to ${userEmail}`);
+  } catch (error) {
+    logEmailError('info request email', error);
+  }
+}
+
+/**
+ * Send vendor reminder email.
+ */
+export async function sendVendorReminderEmail(
+  vendorEmail: string,
+  vendorName: string,
+  companyName: string,
+  portalUrl: string,
+  missingDocuments: Array<{ type: string; label: string }>
+): Promise<void> {
+  if (!isEmailConfigured()) return;
+  try {
+    const transporter = getTransporter();
+    const year = new Date().getFullYear();
+    const docList = missingDocuments.map(d => `<li style="margin-bottom:6px;color:#94a3b8;">${(d.label || d.type).replace(/</g, '&lt;')}</li>`).join('');
+
+    await transporter.sendMail({
+      from: `"Aegis AI" <${config.smtp.fromEmail}>`,
+      to: vendorEmail,
+      subject: `Reminder: Documents pending from ${companyName}`,
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:linear-gradient(145deg,#0f172a,#1e293b);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 20px;">
+<tr><td style="text-align:center;padding-bottom:24px;"><table align="center" cellpadding="0" cellspacing="0"><tr>
+<td style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);padding:12px 18px;border-radius:12px;">
+<span style="font-size:18px;font-weight:800;color:#fff;">&#x1f6e1;&#xfe0f; Aegis AI</span></td></tr></table></td></tr>
+<tr><td style="background:rgba(30,41,59,0.9);border-radius:20px;padding:36px 32px;border:1px solid rgba(255,255,255,0.08);">
+<h1 style="margin:0 0 8px;font-size:20px;font-weight:800;color:#f1f5f9;">Hi ${(vendorName || 'Vendor').replace(/</g, '&lt;')},</h1>
+<p style="margin:0 0 24px;font-size:15px;color:#94a3b8;">This is a reminder from <strong style="color:#e2e8f0;">${(companyName || 'the company').replace(/</g, '&lt;')}</strong> to upload the following pending documents:</p>
+${docList ? `<div style="background:rgba(245,158,11,0.1);border-radius:14px;border:1px solid rgba(245,158,11,0.2);padding:18px 20px;margin-bottom:24px;">
+<p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#fbbf24;text-transform:uppercase;">Missing Documents</p>
+<ul style="margin:0;padding-left:20px;color:#94a3b8;font-size:14px;line-height:1.6;">${docList}</ul>
+</div>` : ''}
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+<tr><td align="center"><a href="${portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;padding:14px 28px;text-decoration:none;font-weight:700;font-size:14px;border-radius:12px;">Upload Documents</a></td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:20px 0;text-align:center;color:#64748b;font-size:12px;">&copy; ${year} Aegis AI</td></tr>
+</table></body></html>`,
+      text: `Hi ${vendorName},\n\nReminder from ${companyName} to upload pending documents:\n${missingDocuments.map(d => `- ${d.label || d.type}`).join('\n')}\n\nUpload: ${portalUrl}`,
+    });
+    console.log(`✅ Vendor reminder email sent to ${vendorEmail}`);
+  } catch (error) {
+    logEmailError('vendor reminder email', error);
+  }
+}
+
+/**
+ * Generic notification email for any action.
+ */
+export async function sendNotificationEmail(
+  toEmail: string,
+  subject: string,
+  heading: string,
+  body: string,
+  ctaText?: string,
+  ctaUrl?: string
+): Promise<void> {
+  if (!isEmailConfigured()) return;
+  try {
+    const transporter = getTransporter();
+    const year = new Date().getFullYear();
+
+    await transporter.sendMail({
+      from: `"Aegis AI" <${config.smtp.fromEmail}>`,
+      to: toEmail,
+      subject,
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:linear-gradient(145deg,#0f172a,#1e293b);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 20px;">
+<tr><td style="text-align:center;padding-bottom:24px;"><table align="center" cellpadding="0" cellspacing="0"><tr>
+<td style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);padding:12px 18px;border-radius:12px;">
+<span style="font-size:18px;font-weight:800;color:#fff;">&#x1f6e1;&#xfe0f; Aegis AI</span></td></tr></table></td></tr>
+<tr><td style="background:rgba(30,41,59,0.9);border-radius:20px;padding:36px 32px;border:1px solid rgba(255,255,255,0.08);">
+<h1 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#f1f5f9;">${heading.replace(/</g, '&lt;')}</h1>
+<p style="margin:0 0 24px;font-size:15px;color:#94a3b8;line-height:1.6;">${body.replace(/</g, '&lt;').replace(/\n/g, '<br/>')}</p>
+${ctaText && ctaUrl ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+<tr><td align="center"><a href="${ctaUrl}" style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;padding:14px 28px;text-decoration:none;font-weight:700;font-size:14px;border-radius:12px;">${ctaText.replace(/</g, '&lt;')}</a></td></tr>
+</table>` : ''}
+</td></tr>
+<tr><td style="padding:20px 0;text-align:center;color:#64748b;font-size:12px;">&copy; ${year} Aegis AI</td></tr>
+</table></body></html>`,
+      text: `${heading}\n\n${body}${ctaUrl ? `\n\n${ctaText}: ${ctaUrl}` : ''}`,
+    });
+    console.log(`✅ Notification email sent to ${toEmail}`);
+  } catch (error) {
+    logEmailError('notification email', error);
+  }
+}
+
+/**
  * Verify SMTP connection (useful at startup or for health checks).
  * Logs clearly if not configured or if connection fails.
  */

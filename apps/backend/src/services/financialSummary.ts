@@ -57,8 +57,8 @@ Filename: ${filename}
 Extracted JSON:
 ${JSON.stringify(extracted)}
 
-Document content (first 3500 chars):
-${text.slice(0, 3500)}
+Document content (first 5000 chars):
+${text.slice(0, 5000)}
 `;
 
   const resp = await llm.invoke(prompt);

@@ -3,8 +3,13 @@ import { config } from '../config/env.js';
 
 const { Pool } = pg;
 
+const isProduction = config.server.nodeEnv === 'production';
+const dbUrl = config.database.url;
+const needsSsl = isProduction || dbUrl.includes('sslmode=require') || dbUrl.includes('.render.com');
+
 export const pool = new Pool({
-  connectionString: config.database.url,
+  connectionString: dbUrl,
+  ssl: needsSsl ? { rejectUnauthorized: false } : false,
 });
 
 export interface DocumentChunk {

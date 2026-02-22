@@ -218,6 +218,33 @@ async function setApprovalStatus(params: {
       ['soc2', 'gdpr']
     );
 
+    // Send email notification for approval actions (best-effort, non-blocking)
+    try {
+      const doc = docs[0];
+      const docFilename = (doc as any).filename || 'Document';
+      const createdBy = (doc as any).created_by;
+      const reviewerName = authReq.user?.name || authReq.user?.email || 'Reviewer';
+
+      if (createdBy && createdBy !== reviewerId) {
+        const userResult = await pool.query('SELECT email, name FROM users WHERE id::text = $1', [createdBy]);
+        const uploaderEmail = (userResult.rows[0] as any)?.email;
+        const uploaderName = (userResult.rows[0] as any)?.name || 'User';
+
+        if (uploaderEmail) {
+          const { sendApprovalEmail, sendRejectionEmail, sendInfoRequestEmail } = await import('../services/emailService.js');
+          if (desiredStatus === 'approved') {
+            sendApprovalEmail(uploaderEmail, uploaderName, docFilename, documentId, reviewerName, notes || undefined).catch(() => {});
+          } else if (desiredStatus === 'rejected') {
+            sendRejectionEmail(uploaderEmail, uploaderName, docFilename, documentId, reviewerName, notes || 'No reason provided').catch(() => {});
+          } else if (desiredStatus === 'info_requested') {
+            sendInfoRequestEmail(uploaderEmail, uploaderName, docFilename, documentId, reviewerName, notes || 'Please provide additional details.').catch(() => {});
+          }
+        }
+      }
+    } catch (emailErr) {
+      console.warn('Email notification failed (non-blocking):', emailErr);
+    }
+
     res.json({
       status: updated.status,
       document_id: updated.document_id,

@@ -82,6 +82,7 @@ function safeIsoDateOnly(input: unknown): string {
 
 function apiDocToRecord(doc: ApiDocument, workspaceId: string): DocumentRecord {
   const extracted = doc.extractedData || {};
+  const meta = doc.metadata || {};
   const vendor =
     (doc.vendorName as string | null | undefined) ||
     (extracted.vendorName as string | undefined) ||
@@ -95,12 +96,38 @@ function apiDocToRecord(doc: ApiDocument, workspaceId: string): DocumentRecord {
     (extracted.date as string | undefined) ||
     safeIsoDateOnly(doc.uploadedAt);
 
+  const rawRecs: unknown =
+    (meta as any).recommendations ?? (extracted as any).recommendations ?? [];
+  const recommendations: DocumentRecord['recommendations'] = Array.isArray(rawRecs)
+    ? rawRecs.map((r: unknown, i: number) =>
+        typeof r === 'string'
+          ? { id: `rec-${i}`, text: r }
+          : typeof r === 'object' && r && 'text' in (r as any)
+            ? { id: (r as any).id || `rec-${i}`, text: (r as any).text }
+            : { id: `rec-${i}`, text: String(r) }
+      )
+    : [];
+
+  const rawIssues: unknown = (meta as any).issues ?? [];
+  const issues: DocumentRecord['issues'] = Array.isArray(rawIssues)
+    ? rawIssues.map((issue: any, i: number) => ({
+        id: issue.id || `issue-${i}`,
+        severity: issue.severity || 'Medium',
+        title: issue.title || 'Issue detected',
+        explanation: issue.explanation || issue.description || '',
+        recommendation: issue.recommendation || '',
+      }))
+    : [];
+
+  const docType = (meta as any).documentType ?? (extracted as any).documentType ?? undefined;
+
   return {
     id: doc.id,
     workspaceId,
     name: doc.filename,
     vendor,
     amount,
+    docType,
     riskLevel: mapRiskLevel(doc.riskLevel),
     riskScore: typeof doc.riskScore === 'number' ? doc.riskScore : Number(doc.riskScore) || 0,
     risk_level: undefined,
@@ -109,8 +136,8 @@ function apiDocToRecord(doc: ApiDocument, workspaceId: string): DocumentRecord {
     date,
     gst: (extracted.vendorGstin as string | undefined) || 'NA',
     summary: doc.summary || '',
-    issues: [],
-    recommendations: [],
+    issues,
+    recommendations,
     mismatches: [],
     patternAlerts: [],
   };

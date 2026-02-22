@@ -7,7 +7,6 @@ import {
   BarChart3,
   Play,
   ChevronRight,
-  ShieldCheck,
   Zap,
   CheckCircle2,
   FileText

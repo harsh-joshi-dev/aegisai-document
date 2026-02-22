@@ -270,12 +270,13 @@ export default function VendorLinkDetailPage() {
           <ScoreCard label="Health" value={analysis.vendorHealthScore} suffix="/100" color={analysis.vendorHealthScore >= 70 ? 'emerald' : 'amber'} icon={TrendingDown} />
           <ScoreCard label="Documents" value={analysis.totalDocuments} color="indigo" icon={FileText} />
           <ScoreCard label="Issues" value={analysis.issuesCount} color={analysis.issuesCount > 0 ? 'amber' : 'emerald'} icon={AlertTriangle} />
-          <div className="rounded-xl border border-subtle bg-card-hover p-4">
-            <div className="flex items-center gap-2 mb-1"><Clock size={14} className="text-blue-400" /><span className="text-xs text-dim font-medium">Progress</span></div>
+          <div className="rounded-xl p-4 transition-all duration-200 hover:translate-y-[-2px]"
+            style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.18)', boxShadow: '0 4px 16px rgba(59,130,246,0.08)' }}>
+            <div className="flex items-center gap-2 mb-1"><Clock size={14} style={{ color: '#60a5fa' }} /><span className="text-xs text-dim font-medium">Progress</span></div>
             <p className="text-xl font-bold text-main">{progress?.percentage ?? 0}%</p>
             <div className="flex items-center gap-2 mt-1">
-              <div className="flex-1 h-1.5 bg-subtle rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${(progress?.percentage ?? 0) >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} style={{ width: `${progress?.percentage ?? 0}%` }} />
+              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progress?.percentage ?? 0}%`, background: (progress?.percentage ?? 0) >= 100 ? '#10b981' : '#6366f1' }} />
               </div>
               <span className="text-[10px] text-dim">{progress?.uploaded ?? 0}/{progress?.total ?? 0}</span>
             </div>
@@ -654,10 +655,23 @@ export default function VendorLinkDetailPage() {
   );
 }
 
+const SCORE_COLORS: Record<string, { icon: string; bg: string; border: string; glow: string }> = {
+  emerald: { icon: '#34d399', bg: 'rgba(16,185,129,0.06)', border: 'rgba(16,185,129,0.18)', glow: 'rgba(16,185,129,0.08)' },
+  amber:   { icon: '#fbbf24', bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.18)', glow: 'rgba(245,158,11,0.08)' },
+  red:     { icon: '#f87171', bg: 'rgba(239,68,68,0.06)',  border: 'rgba(239,68,68,0.18)',  glow: 'rgba(239,68,68,0.08)' },
+  indigo:  { icon: '#818cf8', bg: 'rgba(99,102,241,0.06)', border: 'rgba(99,102,241,0.18)', glow: 'rgba(99,102,241,0.08)' },
+  blue:    { icon: '#60a5fa', bg: 'rgba(59,130,246,0.06)', border: 'rgba(59,130,246,0.18)', glow: 'rgba(59,130,246,0.08)' },
+};
+
 function ScoreCard({ label, value, suffix, color, icon: Icon }: { label: string; value: number; suffix?: string; color: string; icon: any }) {
+  const c = SCORE_COLORS[color] || SCORE_COLORS.indigo;
   return (
-    <div className="rounded-xl border border-subtle bg-card-hover p-4">
-      <div className="flex items-center gap-2 mb-1"><Icon size={14} className={`text-${color}-400`} /><span className="text-xs text-dim font-medium">{label}</span></div>
+    <div className="rounded-xl p-4 transition-all duration-200 hover:translate-y-[-2px]"
+      style={{ background: c.bg, border: `1px solid ${c.border}`, boxShadow: `0 4px 16px ${c.glow}` }}>
+      <div className="flex items-center gap-2 mb-1">
+        <Icon size={14} style={{ color: c.icon }} />
+        <span className="text-xs text-dim font-medium">{label}</span>
+      </div>
       <p className="text-xl font-bold text-main">{value}{suffix && <span className="text-sm text-dim font-normal">{suffix}</span>}</p>
     </div>
   );

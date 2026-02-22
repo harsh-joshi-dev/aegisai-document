@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Share2, Download, Maximize2, Flag, CheckCircle, XCircle, AlertTriangle, FileText, Activity, Upload, Cpu, ShieldCheck, Eye, Clock, Zap } from 'lucide-react';
+import { ArrowLeft, Share2, Download, Maximize2, Flag, CheckCircle, XCircle, AlertTriangle, FileText, Activity, Upload, Cpu, ShieldCheck, Eye, Clock, Zap, Loader2 } from 'lucide-react';
 import { RiskBadge } from '../ui/RiskBadge';
 import { IssueCard } from '../ui/IssueCard';
 import { RecommendationCard } from '../ui/RecommendationCard';
@@ -13,7 +13,7 @@ import { useToast } from '../state/toast';
 import { useAuth } from '../state/auth';
 import { computeApprovalRequirements } from '../services/approvalRequirements';
 import { format } from 'date-fns';
-import { fetchDocumentFile, getDocumentRisk, getDocumentTimeline, analyzeWhatIf, type TimelineEvent, type WhatIfResponse } from '../api/client';
+import { fetchDocumentFile, getDocumentRisk, getDocumentTimeline, analyzeWhatIf, requestInfo, type TimelineEvent, type WhatIfResponse } from '../api/client';
 
 export default function DocumentDetailPage() {
   const { id } = useParams();
@@ -31,7 +31,7 @@ export default function DocumentDetailPage() {
   const [whatIfResult, setWhatIfResult] = useState<WhatIfResponse | null>(null);
   const [whatIfLoading, setWhatIfLoading] = useState(false);
   const { activeWorkspace } = useWorkspace();
-  const { documents, users, activity, updateDocument, approveDocument, rejectDocument } = useStore();
+  const { documents, users, activity, updateDocument, approveDocument, rejectDocument, refreshDocuments } = useStore();
   const { push } = useToast();
   const { user } = useAuth();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -137,11 +137,35 @@ export default function DocumentDetailPage() {
     return users.find((u) => u.email.toLowerCase() === email)?.role ?? null;
   }, [user?.email, users]);
 
+  const [loadingDoc, setLoadingDoc] = useState(false);
+  const fetchedDocRef = useRef(false);
+
   const doc = useMemo(() => {
     const workspaceDocs = documents.filter((d) => d.workspaceId === activeWorkspace.id);
     const found = workspaceDocs.find((d) => d.id === id);
-    return found ?? workspaceDocs[0] ?? documents[0] ?? null;
+    return found ?? null;
   }, [documents, id, activeWorkspace.id]);
+
+  useEffect(() => {
+    if (doc || !id || fetchedDocRef.current) return;
+    fetchedDocRef.current = true;
+    setLoadingDoc(true);
+    (async () => {
+      try {
+        await refreshDocuments();
+      } catch { /* best-effort */ }
+      finally { setLoadingDoc(false); }
+    })();
+  }, [doc, id, refreshDocuments]);
+
+  if (loadingDoc) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-4 animate-in fade-in">
+        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+        <p className="text-sm text-zinc-400">Loading document...</p>
+      </div>
+    );
+  }
 
   if (!doc) {
     return (
@@ -150,12 +174,14 @@ export default function DocumentDetailPage() {
           <FileText className="w-10 h-10 text-zinc-600" />
         </div>
         <h2 className="text-xl font-semibold text-white">Document Not Found</h2>
+        <p className="text-sm text-zinc-500 max-w-md text-center">The document you're looking for doesn't exist or you may not have access to it.</p>
         <Link to="/documents" className="btn-primary">Return to Documents</Link>
       </div>
     );
   }
 
-  const auditEvents = useMemo(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _auditEvents = useMemo(() => {
     return (activity || [])
       .filter((a) => a.workspaceId === activeWorkspace.id)
       .filter((a) => a.docId === doc.id)
@@ -807,7 +833,16 @@ export default function DocumentDetailPage() {
       <SubmitInfoModal
         open={submitInfoOpen}
         onClose={() => setSubmitInfoOpen(false)}
-        onSubmit={() => { /* ... */ }}
+        onSubmit={async (info) => {
+          try {
+            await requestInfo(doc.id, typeof info === 'string' ? info : 'Additional information submitted');
+            updateDocument(doc.id, { status: 'pending' });
+            push({ kind: 'success', title: 'Info Submitted', message: 'Your response has been submitted.' });
+            setSubmitInfoOpen(false);
+          } catch {
+            push({ kind: 'error', title: 'Failed', message: 'Could not submit info.' });
+          }
+        }}
       />
     </div>
   );

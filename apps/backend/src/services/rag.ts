@@ -112,10 +112,8 @@ export async function queryRAG(
       };
     }
     
-    // Calculate overall confidence based on similarity scores (show 99% when low so UI shows high accuracy)
     const avgSimilarity = similarChunks.reduce((sum: number, chunk: { similarity: number }) => sum + chunk.similarity, 0) / similarChunks.length;
-    let overallConfidence = Math.round(avgSimilarity * 100);
-    if (overallConfidence >= 1 && overallConfidence <= 20) overallConfidence = 99;
+    const overallConfidence = Math.round(avgSimilarity * 100);
 
     // Combine context from similar chunks
     const context = similarChunks
@@ -133,13 +131,12 @@ export async function queryRAG(
       ? response.content 
       : JSON.stringify(response.content);
     
-    const toDisplayConfidence = (c: number) => { const p = Math.round(c * 100); return (p >= 1 && p <= 20) ? 99 : p; };
     const citations = similarChunks.map((chunk: { documentId: string; filename: string; content: string; similarity: number; metadata?: Record<string, unknown> }) => ({
       documentId: chunk.documentId,
       filename: chunk.filename,
-      content: chunk.content.substring(0, 200) + '...', // Truncate for display
+      content: chunk.content.substring(0, 300) + (chunk.content.length > 300 ? '...' : ''),
       similarity: chunk.similarity,
-      confidence: toDisplayConfidence(chunk.similarity),
+      confidence: Math.round(chunk.similarity * 100),
       metadata: chunk.metadata,
     }));
 

@@ -267,6 +267,7 @@ router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['ow
           extracted,
           riskHighlights: riskScore.highlights,
         },
+        recommendations: riskAnalysis.recommendations || [],
       });
     } catch (finErr) {
       console.warn('Financial extraction/summary failed (document still uploaded):', finErr);

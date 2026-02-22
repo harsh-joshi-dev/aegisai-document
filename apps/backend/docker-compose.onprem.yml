@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL with pgvector
   postgres:
     image: pgvector/pgvector:pg16
     environment:
@@ -18,7 +17,18 @@ services:
       timeout: 5s
       retries: 5
 
-  # Ollama for local LLM
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   ollama:
     image: ollama/ollama:latest
     ports:
@@ -33,7 +43,6 @@ services:
       timeout: 10s
       retries: 3
 
-  # Backend API (on-premise mode)
   backend:
     build:
       context: .
@@ -41,31 +50,37 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://aegis:aegis_password@postgres:5432/aegis_ai
+      - REDIS_URL=redis://redis:6379
       - OLLAMA_URL=http://ollama:11434
       - USE_LOCAL_LLM=true
-      - OPENAI_API_KEY=  # Optional, for fallback
+      - OPENAI_API_KEY=
+      - FRONTEND_URL=http://localhost
+      - CORS_ORIGIN=http://localhost
+      - SESSION_SECRET=change-me-in-production
     ports:
       - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       ollama:
         condition: service_healthy
     volumes:
-      - ./models:/app/models  # Local model storage
+      - ./models:/app/models
 
-  # Frontend
   frontend:
     build:
       context: ../web
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ""
     ports:
       - "80:80"
     depends_on:
       - backend
-    environment:
-      - VITE_API_URL=http://localhost:3001
 
 volumes:
   postgres_data:
+  redis_data:
   ollama_data:

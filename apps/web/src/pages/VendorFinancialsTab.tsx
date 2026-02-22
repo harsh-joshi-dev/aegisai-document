@@ -369,10 +369,26 @@ export default function VendorFinancialsTab({ linkId, vendorName }: Props) {
 const CHART_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#e0e7ff', '#818cf8'];
 const EXPENSE_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#fb923c', '#fca5a5', '#fecaca'];
 
+const C: Record<string, { icon: string; fill: string; bg: string; border: string; glow: string }> = {
+  emerald: { icon: '#34d399', fill: '#10b981', bg: 'rgba(16,185,129,0.06)', border: 'rgba(16,185,129,0.18)', glow: 'rgba(16,185,129,0.08)' },
+  amber:   { icon: '#fbbf24', fill: '#f59e0b', bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.18)', glow: 'rgba(245,158,11,0.08)' },
+  red:     { icon: '#f87171', fill: '#ef4444', bg: 'rgba(239,68,68,0.06)',  border: 'rgba(239,68,68,0.18)',  glow: 'rgba(239,68,68,0.08)' },
+  indigo:  { icon: '#818cf8', fill: '#6366f1', bg: 'rgba(99,102,241,0.06)', border: 'rgba(99,102,241,0.18)', glow: 'rgba(99,102,241,0.08)' },
+  blue:    { icon: '#60a5fa', fill: '#3b82f6', bg: 'rgba(59,130,246,0.06)', border: 'rgba(59,130,246,0.18)', glow: 'rgba(59,130,246,0.08)' },
+  purple:  { icon: '#a78bfa', fill: '#8b5cf6', bg: 'rgba(139,92,246,0.06)', border: 'rgba(139,92,246,0.18)', glow: 'rgba(139,92,246,0.08)' },
+  cyan:    { icon: '#22d3ee', fill: '#06b6d4', bg: 'rgba(6,182,212,0.06)',  border: 'rgba(6,182,212,0.18)',  glow: 'rgba(6,182,212,0.08)' },
+};
+
 function KPICard({ label, value, icon: Icon, color, sub, highlight }: { label: string; value: string; icon: any; color: string; sub?: string; highlight?: boolean }) {
+  const c = C[color] || C.indigo;
+  const hc = highlight ? (C[color === 'amber' ? 'amber' : 'red'] || C.red) : c;
   return (
-    <div className={`rounded-xl border p-4 ${highlight ? `border-${color === 'amber' ? 'amber' : 'red'}-500/20 bg-${color === 'amber' ? 'amber' : 'red'}-500/[0.03]` : 'border-subtle bg-card-hover'}`}>
-      <div className="flex items-center gap-2 mb-1"><Icon size={14} className={`text-${color}-400`} /><span className="text-xs text-dim font-medium">{label}</span></div>
+    <div className="rounded-xl p-4 transition-all duration-200 hover:translate-y-[-2px]"
+      style={{ background: hc.bg, border: `1px solid ${hc.border}`, boxShadow: `0 4px 16px ${hc.glow}` }}>
+      <div className="flex items-center gap-2 mb-1">
+        <Icon size={14} style={{ color: c.icon }} />
+        <span className="text-xs text-dim font-medium">{label}</span>
+      </div>
       <p className="text-xl font-bold text-main">{value}</p>
       {sub && <p className="text-[10px] text-dim mt-0.5">{sub}</p>}
     </div>
@@ -380,28 +396,30 @@ function KPICard({ label, value, icon: Icon, color, sub, highlight }: { label: s
 }
 
 function BarRow({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  const pctVal = max > 0 ? Math.round((value / max) * 100) : 0;
+  const c = C[color] || C.indigo;
   return (
     <div>
       <div className="flex justify-between items-center mb-1">
         <span className="text-xs text-muted">{label}</span>
-        <span className={`text-sm font-medium text-${color}-400`}>{fmt(value)}</span>
+        <span className="text-sm font-medium" style={{ color: c.icon }}>{fmt(value)}</span>
       </div>
-      <div className="w-full h-2 bg-subtle rounded-full overflow-hidden">
-        <div className={`h-full rounded-full bg-${color}-500 transition-all duration-700`} style={{ width: `${Math.min(100, pct)}%` }} />
+      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, pctVal)}%`, background: c.fill }} />
       </div>
     </div>
   );
 }
 
 function TaxRow({ label, value, color, sub }: { label: string; value: number; color: string; sub?: string }) {
+  const c = C[color] || C.indigo;
   return (
     <div className="flex items-center justify-between">
       <div>
         <span className="text-xs text-muted">{label}</span>
         {sub && <span className="text-[10px] text-dim ml-1">({sub})</span>}
       </div>
-      <span className={`text-sm font-medium text-${color}-400`}>{fmt(value)}</span>
+      <span className="text-sm font-medium" style={{ color: c.icon }}>{fmt(value)}</span>
     </div>
   );
 }
@@ -473,11 +491,11 @@ function TrendChart({ data }: { data: any[] }) {
 }
 
 const CATEGORY_META: Record<string, { label: string; color: string; icon: string }> = {
-  operating: { label: 'Operating', color: 'emerald', icon: '📊' },
-  financing: { label: 'Financing / Cash Flow', color: 'blue', icon: '🏦' },
-  investing: { label: 'Investing / Balance Sheet', color: 'violet', icon: '📈' },
-  tax: { label: 'Tax / Compliance', color: 'amber', icon: '🧾' },
-  info: { label: 'Other', color: 'zinc', icon: '📄' },
+  operating: { label: 'Operating', color: '#34d399', icon: '📊' },
+  financing: { label: 'Financing / Cash Flow', color: '#60a5fa', icon: '🏦' },
+  investing: { label: 'Investing / Balance Sheet', color: '#a78bfa', icon: '📈' },
+  tax: { label: 'Tax / Compliance', color: '#fbbf24', icon: '🧾' },
+  info: { label: 'Other', color: '#a0aec0', icon: '📄' },
 };
 
 function FinancialItemsGrouped({ items }: { items: any[] }) {
@@ -491,7 +509,7 @@ function FinancialItemsGrouped({ items }: { items: any[] }) {
 
   return (
     <div className="rounded-xl border border-subtle bg-card-hover p-5 space-y-5">
-      <h4 className="text-sm font-medium text-main flex items-center gap-2"><BarChart3 size={14} className="text-indigo-400" /> Financial Line Items</h4>
+      <h4 className="text-sm font-medium text-main flex items-center gap-2" style={{ color: '#818cf8' }}><BarChart3 size={14} /> Financial Line Items</h4>
       {order.filter(k => groups[k]?.length > 0).map(cat => {
         const meta = CATEGORY_META[cat] || CATEGORY_META.info;
         const sorted = groups[cat].sort((a: any, b: any) => Math.abs(b.amount) - Math.abs(a.amount)).slice(0, 8);
@@ -499,14 +517,14 @@ function FinancialItemsGrouped({ items }: { items: any[] }) {
           <div key={cat}>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs">{meta.icon}</span>
-              <span className={`text-xs font-semibold text-${meta.color}-400 uppercase tracking-wider`}>{meta.label}</span>
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: meta.color }}>{meta.label}</span>
               <span className="text-[10px] text-dim">{groups[cat].length} items</span>
             </div>
             <div className="space-y-1">
               {sorted.map((item: any, i: number) => (
                 <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card-hover">
                   <span className="text-xs text-muted flex-1 truncate">{item.description}</span>
-                  <span className={`text-xs font-medium shrink-0 ${item.amount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmt(Math.abs(item.amount))}</span>
+                  <span className="text-xs font-medium shrink-0" style={{ color: item.amount >= 0 ? '#34d399' : '#f87171' }}>{fmt(Math.abs(item.amount))}</span>
                 </div>
               ))}
             </div>

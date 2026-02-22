@@ -6,6 +6,7 @@ import OnboardingPage from './pages/OnboardingPage';
 import DecisionDashboardPage from './pages/DecisionDashboardPage';
 import DocumentsPage from './pages/DocumentsPage';
 import DocumentDetailPage from './pages/DocumentDetailPage';
+import UploadPage from './pages/upload';
 import RulesPage from './pages/RulesPage';
 import UsersPage from './pages/UsersPage';
 import SettingsPage from './pages/SettingsPage';
@@ -51,6 +52,7 @@ function ProtectedAppShell() {
     <AppLayout>
       <Routes>
         <Route path="/dashboard" element={<DecisionDashboardPage />} />
+        <Route path="/upload" element={<UploadPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/document/:id" element={<DocumentDetailPage />} />
         <Route path="/rules" element={<RulesPage />} />

@@ -1,17 +1,20 @@
-import { ReactNode, useMemo, useState } from 'react';
-import { Gauge, Settings, ShieldAlert, Users, ClipboardList, Menu, X, ChevronDown, LogOut, Search, Link2, IndianRupee } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { ReactNode, useMemo, useState, useCallback } from 'react';
+import { Gauge, Settings, ShieldAlert, Users, ClipboardList, Menu, X, ChevronDown, LogOut, Search, Link2, IndianRupee, FileText, ScrollText } from 'lucide-react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../state/auth';
 import { useWorkspace } from '../state/workspace';
+import { useStore } from '../state/store';
 import { NotificationsDropdown } from '../ui/NotificationsDropdown';
 import { Logo } from '../components/ui/Logo';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: Gauge },
+  { to: '/documents', label: 'Documents', icon: FileText },
   { to: '/gst-compliance', label: 'GST & Compliance', icon: IndianRupee },
   { to: '/vendor-links', label: 'Vendor Portal', icon: Link2 },
   { to: '/rules', label: 'Rules', icon: ShieldAlert },
   { to: '/reports', label: 'Reports', icon: ClipboardList },
+  { to: '/audit-log', label: 'Audit Log', icon: ScrollText },
   { to: '/users', label: 'Users', icon: Users },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -19,10 +22,28 @@ const navItems = [
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { workspaces, activeWorkspace, setActiveWorkspaceId, role } = useWorkspace();
+  const { documents } = useStore();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [confirmSwitch, setConfirmSwitch] = useState<{ id: string; name: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return documents
+      .filter(d => d.name.toLowerCase().includes(q) || d.vendor.toLowerCase().includes(q) || d.id.includes(q))
+      .slice(0, 8);
+  }, [searchQuery, documents]);
+
+  const handleSearchSelect = useCallback((docId: string) => {
+    setSearchQuery('');
+    setSearchOpen(false);
+    navigate(`/document/${docId}`);
+  }, [navigate]);
 
   const userRole = useMemo(() => {
     if (!role) return null;
@@ -234,16 +255,52 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Search Bar (Fake) */}
-            <div className="hidden md:flex items-center bg-white/5 border border-white/5 rounded-full px-3 py-1.5 w-64 focus-within:ring-1 focus-within:ring-indigo-500/50 transition-all group">
-              <Search size={14} className="text-zinc-500 group-focus-within:text-indigo-400" />
-              <input
-                className="bg-transparent border-none outline-none text-sm text-white px-2 w-full placeholder-zinc-600"
-                placeholder="Search documents..."
-              />
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-zinc-600 font-mono border border-zinc-700 rounded px-1">⌘K</span>
+            <div className="hidden md:block relative">
+              <div className="flex items-center bg-white/5 border border-white/5 rounded-full px-3 py-1.5 w-72 focus-within:ring-1 focus-within:ring-indigo-500/50 transition-all group">
+                <Search size={14} className="text-zinc-500 group-focus-within:text-indigo-400" />
+                <input
+                  className="bg-transparent border-none outline-none text-sm text-white px-2 w-full placeholder-zinc-600"
+                  placeholder="Search documents..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+                  onFocus={() => setSearchOpen(true)}
+                  onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') { setSearchQuery(''); setSearchOpen(false); }
+                    if (e.key === 'Enter' && searchResults.length > 0) handleSearchSelect(searchResults[0].id);
+                  }}
+                />
+                {!searchQuery && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-zinc-600 font-mono border border-zinc-700 rounded px-1">⌘K</span>
+                  </div>
+                )}
               </div>
+              {searchOpen && searchQuery.trim() && (
+                <div className="absolute top-full left-0 right-0 mt-2 rounded-xl border border-white/10 bg-[#0e0e11] shadow-2xl z-50 overflow-hidden max-h-80 overflow-y-auto">
+                  {searchResults.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-sm text-zinc-500">No documents match "{searchQuery}"</div>
+                  ) : searchResults.map((doc) => (
+                    <button
+                      key={doc.id}
+                      type="button"
+                      onMouseDown={() => handleSearchSelect(doc.id)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
+                    >
+                      <FileText size={16} className="text-zinc-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{doc.name}</p>
+                        <p className="text-xs text-zinc-500 truncate">{doc.vendor} · {doc.riskLevel}</p>
+                      </div>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+                        doc.riskLevel === 'Critical' ? 'bg-red-500/20 text-red-400' :
+                        doc.riskLevel === 'High' ? 'bg-orange-500/20 text-orange-400' :
+                        'bg-emerald-500/20 text-emerald-400'
+                      }`}>{doc.riskLevel}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <NotificationsDropdown />

@@ -1,46 +1,54 @@
 export function createClassificationPrompt(text: string): string {
-  return `Analyze the following document text and classify its risk level. Return a JSON object with the following structure:
+  const docLength = text.length;
+  const truncatedText = text.substring(0, 6000);
 
+  return `You are an expert financial document risk analyst. Analyze the following document thoroughly and return a JSON classification.
+
+RESPONSE FORMAT (strict JSON only):
 {
   "riskLevel": "Critical" | "Warning" | "Normal",
   "riskCategory": "Legal" | "Financial" | "Compliance" | "Operational" | "None",
   "confidence": 0.0-1.0,
-  "explanation": "Brief explanation of why this risk level was assigned (2-3 sentences)",
-  "recommendations": ["Action item 1", "Action item 2", "Action item 3"]
+  "explanation": "Detailed explanation of risk assessment (3-5 sentences covering what the document is, what was found, and why the risk level is assigned)",
+  "recommendations": ["Specific action item 1", "Specific action item 2", "Specific action item 3"],
+  "documentType": "The detected document type (e.g., Invoice, Bank Statement, PAN Card, GST Return, Contract, etc.)",
+  "keyFindings": ["Finding 1", "Finding 2"]
 }
 
-IMPORTANT — DOCUMENT TYPE CONTEXT:
-First identify the document type. Standard business/vendor documents should be classified based on their CONTENT QUALITY, not just the presence of sensitive data:
+DOCUMENT TYPE CLASSIFICATION — first identify what this document is:
+- Cancelled Cheque → bank verification doc, PII is EXPECTED → "Normal" unless tampered
+- PAN Card / Aadhaar → identity document, PII is EXPECTED → "Normal" unless data inconsistent
+- KYC / Vendor Registration → onboarding form → "Normal" unless incomplete
+- Certificate of Incorporation / GST Certificate → registration → "Normal"
+- Bank Statement → "Normal" if complete; "Warning" if gaps, unusual transactions, or periods missing
+- P&L / Balance Sheet → "Normal" if audited; "Warning" if inconsistencies or unaudited
+- Invoice → "Normal" if amounts/dates/GST consistent; "Warning" if mismatches
+- ITR → "Normal" if filed and complete; "Warning" if discrepancies in income/tax figures
+- Contract / Agreement → check for unfavorable terms, missing clauses, unlimited liability
+- Credit Note → verify against original invoice, check for round-amount adjustments
+- Salary Slip → verify components match statutory requirements
 
-- Cancelled Cheque: A standard bank verification document. Having bank details is EXPECTED and normal — classify as "Normal" unless the cheque appears tampered or inconsistent.
-- PAN Card: A standard identity document. Having PAN number is EXPECTED — classify as "Normal" unless data looks inconsistent.
-- KYC / Vendor Registration Form: Standard onboarding document — classify as "Normal" unless information is incomplete or suspicious.
-- Certificate of Incorporation / GST Certificate: Standard registration documents — classify as "Normal".
-- Bank Statement: Financial document — "Normal" if complete, "Warning" if data gaps exist.
-- P&L / Balance Sheet: Financial document — "Normal" if audited/complete, "Warning" if inconsistencies found.
-- Invoice: Financial document — "Warning" if amounts/dates mismatch, "Normal" if complete.
-- ITR: Tax document — "Normal" if filed and verified, "Warning" if discrepancies.
-- Auditor's Report: Professional opinion — "Normal" if unqualified, "Warning" if qualified.
+RISK LEVEL CRITERIA:
+- Critical: Fraud indicators (forged signatures, tampered amounts, duplicate invoices with different amounts), major compliance violations, documents with severe legal liability, or genuinely suspicious patterns. NOT merely because PII exists.
+- Warning: Missing mandatory fields for that document type, minor data inconsistencies, qualified audit opinions, amounts that don't reconcile, expired documents, or items needing follow-up verification.
+- Normal: Standard documents with expected information present, internally consistent data, and no red flags.
 
-Classification criteria:
-- Critical: Actual fraud indicators (tampered documents, forged signatures), major compliance violations, or genuinely suspicious content. NOT just because a document contains PII or bank details (those are expected in business documents).
-- Warning: Incomplete data that should be present for that document type, minor inconsistencies, qualified audit opinions, or documents requiring follow-up.
-- Normal: Standard business documents with expected information present and consistent.
+RISK CATEGORIES:
+- Legal: Contracts, NDAs, agreements, liability, termination, dispute-related
+- Financial: Statements, invoices, payment terms, revenue/expense data, tax documents
+- Compliance: GST returns, regulatory filings, audit reports, certification documents
+- Operational: Vendor KYC, process documents, internal forms
+- None: Standard documents with no elevated risk
 
-Risk Categories:
-- Legal: Contracts, NDAs, legal agreements, liability clauses, termination terms
-- Financial: Financial statements, payment terms, pricing, revenue data
-- Compliance: Regulatory requirements, tax filing, audit trails
-- Operational: Business processes, verification documents
-- None: Standard documents with no specific risk
+ACCURACY REQUIREMENTS:
+- Read the ENTIRE document text carefully before classifying
+- Cross-check numbers: do line items sum to totals? Does CGST+SGST=Total GST?
+- Check dates: are they in valid ranges? Is invoice date before due date?
+- Check for completeness: are all required fields present for this document type?
+- Confidence should reflect your actual certainty (0.5 = uncertain, 0.9+ = very sure)
 
-Recommendations should be contextually appropriate:
-- For a Cancelled Cheque: "Verify account details match vendor records" (not "Encrypt sensitive data")
-- For a PAN Card: "Cross-verify PAN with GSTIN records" (not "Notify compliance team")
-- For Financial Documents: Relevant financial checks
-
-Document text (first 3000 characters):
-${text.substring(0, 3000)}
+Document text (${docLength} total characters, showing first 6000):
+${truncatedText}
 
 Respond with ONLY valid JSON, no additional text:`;
 }

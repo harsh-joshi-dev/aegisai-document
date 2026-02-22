@@ -694,24 +694,6 @@
   background: var(--bg-elevated);
   color: var(--text-muted);
 }
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-base);
-  white-space: nowrap;
-  box-shadow: var(--shadow-sm);
-  font-size: 0.9375rem;
-}
-
-.send-button:hover:not(:disabled) {
-  background: var(--primary-hover);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-.send-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 
 /* Service Providers in Chat */
 .service-providers-in-chat {

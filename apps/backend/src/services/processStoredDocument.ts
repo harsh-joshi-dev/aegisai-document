@@ -108,6 +108,7 @@ export async function processStoredDocument(params: { tenantId: string; document
         extracted,
         riskHighlights: riskScore.highlights,
       },
+      recommendations: (riskAnalysis as any).recommendations || [],
     });
   } catch {
     // ignore
