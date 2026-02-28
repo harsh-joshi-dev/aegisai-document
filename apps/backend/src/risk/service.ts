@@ -5,7 +5,9 @@
 
 import type { RiskSignal, RiskSignalInput, RiskResult } from './types.js';
 import { 
+  createDynamicRule,
   getDynamicRulesByTenant,
+  updateDynamicRule,
   insertRiskSignals,
   deleteRiskSignalsByDocument,
   upsertRiskResult,
@@ -190,19 +192,56 @@ export async function getDocumentRiskSignals(
 // ============================================================================
 
 export async function ensureDefaultRules(tenantId: string): Promise<void> {
-  const existing = await getDynamicRulesByTenant(tenantId);
-  
-  if (existing.length === 0) {
-    // Import createDynamicRule from db
-    const { createDynamicRule } = await import('./db.js');
-    const defaultRules = getDefaultRules(tenantId);
-    
-    for (const rule of defaultRules) {
-      await createDynamicRule(rule);
-    }
-    
-    console.log(`[Risk Engine] Created ${defaultRules.length} default rules for tenant ${tenantId}`);
+  const sync = await syncDefaultRules(tenantId);
+  if (sync.created > 0 || sync.updated > 0) {
+    console.log(
+      `[Risk Engine] Default rule sync for tenant ${tenantId}: created=${sync.created}, updated=${sync.updated}, skipped=${sync.skipped}`
+    );
   }
+}
+
+export async function syncDefaultRules(tenantId: string): Promise<{ created: number; updated: number; skipped: number }> {
+  const existing = await getDynamicRulesByTenant(tenantId);
+  const defaults = getDefaultRules(tenantId);
+  const existingByName = new Map(existing.map((rule) => [normalizeRuleName(rule.name), rule]));
+
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  for (const defaultRule of defaults) {
+    const key = normalizeRuleName(defaultRule.name);
+    const existingRule = existingByName.get(key);
+
+    if (!existingRule) {
+      const createdRule = await createDynamicRule(defaultRule);
+      if (createdRule) {
+        created++;
+      } else {
+        skipped++;
+      }
+      continue;
+    }
+
+    if (
+      isManagedSystemDefault(existingRule.config as Record<string, any>) &&
+      shouldRefreshDefaultRule(existingRule.config as Record<string, any>, defaultRule.config as Record<string, any>)
+    ) {
+      const updatedRule = await updateDynamicRule(tenantId, existingRule.id, {
+        config: mergeDefaultConfig(existingRule.config as Record<string, any>, defaultRule.config as Record<string, any>) as any,
+      });
+      if (updatedRule) {
+        updated++;
+      } else {
+        skipped++;
+      }
+      continue;
+    }
+
+    skipped++;
+  }
+
+  return { created, updated, skipped };
 }
 
 // ============================================================================
@@ -267,4 +306,61 @@ export async function recomputeTenantRisk(tenantId: string): Promise<{ recompute
   }
   
   return { recomputed, failed };
+}
+
+function normalizeRuleName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+function shouldRefreshDefaultRule(
+  currentConfig: Record<string, any>,
+  defaultConfig: Record<string, any>
+): boolean {
+  const defaultDocTypes = normalizeDocumentTypes(defaultConfig.document_types);
+  const currentDocTypes = normalizeDocumentTypes(currentConfig.document_types);
+  const scopeChanged =
+    defaultDocTypes.length > 0 && !areSameStringSets(currentDocTypes, defaultDocTypes);
+  const versionChanged = getRuleVersion(currentConfig) !== getRuleVersion(defaultConfig);
+  return scopeChanged || versionChanged;
+}
+
+function mergeDefaultConfig(
+  currentConfig: Record<string, any>,
+  defaultConfig: Record<string, any>
+): Record<string, any> {
+  const merged = { ...currentConfig };
+  const defaultDocTypes = normalizeDocumentTypes(defaultConfig.document_types);
+  if (defaultDocTypes.length > 0) {
+    merged.document_types = defaultDocTypes;
+  }
+  if (defaultConfig.rule_metadata) {
+    merged.rule_metadata = defaultConfig.rule_metadata;
+  }
+  return merged;
+}
+
+function normalizeDocumentTypes(documentTypes: unknown): string[] {
+  if (!Array.isArray(documentTypes)) return [];
+  const normalized = documentTypes
+    .map((value) => String(value).trim().toLowerCase())
+    .filter(Boolean);
+  return Array.from(new Set(normalized));
+}
+
+function areSameStringSets(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const bSet = new Set(b);
+  return a.every((value) => bSet.has(value));
+}
+
+function isManagedSystemDefault(config: Record<string, any>): boolean {
+  const meta = config.rule_metadata as Record<string, unknown> | undefined;
+  const managedBy = typeof meta?.managed_by === 'string' ? meta.managed_by : '';
+  // Backward compatible: if metadata was never set, treat as managed default so scope metadata can be backfilled.
+  return managedBy === '' || managedBy === 'system_default';
+}
+
+function getRuleVersion(config: Record<string, any>): string {
+  const meta = config.rule_metadata as Record<string, unknown> | undefined;
+  return typeof meta?.version === 'string' ? meta.version : '';
 }

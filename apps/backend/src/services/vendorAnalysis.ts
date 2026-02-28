@@ -26,54 +26,71 @@ export const DOCUMENT_TEMPLATES: Record<string, DocumentTemplate> = {
   contractor: {
     id: 'contractor',
     name: 'Contractor',
-    description: 'Documents required for contractor onboarding and compliance verification',
+    description: 'Core mandatory documents for contractor onboarding',
     requiredDocuments: [
       { type: 'pan_card', label: 'PAN Card', mandatory: true, requiresAnalysis: false, description: 'Permanent Account Number card' },
-      { type: 'gst_certificate', label: 'GST Certificate', mandatory: true, requiresAnalysis: false, description: 'GST registration certificate' },
-      { type: 'invoice', label: 'Invoice', mandatory: true, requiresAnalysis: true, description: 'Service/work invoice' },
       { type: 'agreement', label: 'Agreement / Contract', mandatory: true, requiresAnalysis: true, description: 'Signed work agreement or contract' },
       { type: 'bank_details', label: 'Bank Account Details', mandatory: true, requiresAnalysis: false, description: 'Cancelled cheque or bank statement' },
-      { type: 'tds_certificate', label: 'TDS Certificate', mandatory: false, requiresAnalysis: true, description: 'Form 16A or TDS certificate' },
-      { type: 'address_proof', label: 'Address Proof', mandatory: false, requiresAnalysis: false, description: 'Utility bill or address document' },
     ],
   },
   vendor: {
     id: 'vendor',
     name: 'Vendor',
-    description: 'Documents required for vendor registration and procurement compliance',
+    description: 'Core mandatory documents for vendor registration',
     requiredDocuments: [
       { type: 'pan_card', label: 'PAN Card', mandatory: true, requiresAnalysis: false, description: 'Permanent Account Number card' },
-      { type: 'gst_certificate', label: 'GST Certificate', mandatory: true, requiresAnalysis: false, description: 'GST registration certificate' },
       { type: 'tax_invoice', label: 'Tax Invoice', mandatory: true, requiresAnalysis: true, description: 'Tax invoice for goods/services' },
-      { type: 'purchase_order', label: 'Purchase Order', mandatory: true, requiresAnalysis: true, description: 'PO document' },
-      { type: 'delivery_challan', label: 'Delivery Challan', mandatory: false, requiresAnalysis: false, description: 'Proof of delivery' },
       { type: 'bank_details', label: 'Bank Account Details', mandatory: true, requiresAnalysis: false, description: 'Cancelled cheque or bank statement' },
-      { type: 'msme_certificate', label: 'MSME Certificate', mandatory: false, requiresAnalysis: false, description: 'MSME/Udyam registration' },
-      { type: 'credit_note', label: 'Credit Note / Debit Note', mandatory: false, requiresAnalysis: true, description: 'If applicable' },
     ],
   },
   employee: {
     id: 'employee',
     name: 'Employee',
-    description: 'Documents required for employee onboarding and HR compliance',
+    description: 'Core mandatory employee KYC and payroll documents',
     requiredDocuments: [
       { type: 'pan_card', label: 'PAN Card', mandatory: true, requiresAnalysis: false, description: 'Permanent Account Number card' },
       { type: 'aadhar_card', label: 'Aadhar Card', mandatory: true, requiresAnalysis: false, description: 'Aadhar identification' },
       { type: 'bank_details', label: 'Bank Account Details', mandatory: true, requiresAnalysis: false, description: 'Cancelled cheque or passbook' },
-      { type: 'address_proof', label: 'Address Proof', mandatory: true, requiresAnalysis: false, description: 'Utility bill, rent agreement, etc.' },
-      { type: 'photo_id', label: 'Photo ID', mandatory: true, requiresAnalysis: false, description: 'Passport, Voter ID, or Driving License' },
-      { type: 'education_cert', label: 'Education Certificate', mandatory: false, requiresAnalysis: false, description: 'Degree or diploma certificate' },
-      { type: 'experience_letter', label: 'Experience Letter', mandatory: false, requiresAnalysis: false, description: 'From previous employer' },
-      { type: 'offer_letter', label: 'Offer / Joining Letter', mandatory: false, requiresAnalysis: false, description: 'Signed offer letter' },
     ],
   },
-  custom: {
-    id: 'custom',
-    name: 'Custom',
-    description: 'Custom document requirements',
-    requiredDocuments: [],
+  consultant: {
+    id: 'consultant',
+    name: 'Consultant',
+    description: 'Mandatory documents for independent consultants',
+    requiredDocuments: [
+      { type: 'pan_card', label: 'PAN Card', mandatory: true, requiresAnalysis: false, description: 'Permanent Account Number card' },
+      { type: 'agreement', label: 'Consulting Agreement', mandatory: true, requiresAnalysis: true, description: 'Signed consulting contract/SOW' },
+      { type: 'bank_details', label: 'Bank Account Details', mandatory: true, requiresAnalysis: false, description: 'Cancelled cheque or bank proof' },
+    ],
+  },
+  logistics: {
+    id: 'logistics',
+    name: 'Logistics',
+    description: 'Mandatory documents for transport/logistics partners',
+    requiredDocuments: [
+      { type: 'pan_card', label: 'PAN Card', mandatory: true, requiresAnalysis: false, description: 'Permanent Account Number card' },
+      { type: 'transport_contract', label: 'Transport Contract', mandatory: true, requiresAnalysis: true, description: 'Signed transport/service contract' },
+      { type: 'bank_details', label: 'Bank Account Details', mandatory: true, requiresAnalysis: false, description: 'Cancelled cheque or bank proof' },
+    ],
+  },
+  manufacturer: {
+    id: 'manufacturer',
+    name: 'Manufacturer',
+    description: 'Mandatory documents for manufacturing vendors',
+    requiredDocuments: [
+      { type: 'pan_card', label: 'PAN Card', mandatory: true, requiresAnalysis: false, description: 'Permanent Account Number card' },
+      { type: 'gst_certificate', label: 'GST Certificate', mandatory: true, requiresAnalysis: false, description: 'GST registration certificate' },
+      { type: 'tax_invoice', label: 'Tax Invoice', mandatory: true, requiresAnalysis: true, description: 'Tax invoice for supplied goods' },
+      { type: 'bank_details', label: 'Bank Account Details', mandatory: true, requiresAnalysis: false, description: 'Cancelled cheque or bank statement' },
+    ],
   },
 };
+
+export function getDefaultRequiredDocumentsForTemplate(templateId?: string): RequiredDocument[] {
+  const selected = (templateId && DOCUMENT_TEMPLATES[templateId]) ? DOCUMENT_TEMPLATES[templateId] : DOCUMENT_TEMPLATES.vendor;
+  const mandatoryDocs = selected.requiredDocuments.filter((doc) => doc.mandatory);
+  return mandatoryDocs.length > 0 ? mandatoryDocs : selected.requiredDocuments;
+}
 
 // ============================================================
 // Issue Types

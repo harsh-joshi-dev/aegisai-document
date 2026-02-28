@@ -4,38 +4,28 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import {
   Shield,
   Brain,
-  FileSearch,
   AlertTriangle,
   CheckCircle,
   Zap,
   BarChart3,
-  Eye,
   Play,
-  Sparkles,
   Database,
   GitBranch,
   Clock,
-  Award,
-  Users,
+  Building2,
   Globe,
-  Server,
   ArrowRight,
-  Star,
   Quote,
   ChevronDown,
   X,
-  User,
   Lock,
   Layers,
   Activity,
-  Search,
   Check,
-  Building2,
   FileText,
   Workflow,
   ShieldCheck,
   ChevronRight,
-  Mail,
   Linkedin,
   Twitter,
   Github
@@ -69,25 +59,6 @@ function AnimatedCounter({ end, duration = 2, suffix = '' }: { end: number; dura
   return <span ref={nodeRef}>{count.toLocaleString()}{suffix}</span>;
 }
 
-// Feature Card Component
-function FeatureCard({ icon: Icon, title, description, color, delay }: any) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay }}
-      whileHover={{ y: -8, scale: 1.02 }}
-      className="feature-card-modern"
-    >
-      <div className={`feature-icon-wrapper ${color}`}>
-        <Icon size={28} strokeWidth={1.5} />
-      </div>
-      <h3 className="feature-title">{title}</h3>
-      <p className="feature-description">{description}</p>
-    </motion.div>
-  );
-}
 
 // Risk Signal Demo Component
 function RiskSignalDemo() {
@@ -252,6 +223,109 @@ function VideoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
         </motion.div>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+// Image Carousel Component
+function ImageCarousel() {
+  const [activeSlide, setActiveSlide] = useState(0);
+  const slides = [
+    { url: "/assets/finance_dash_1_1772160747450.png", title: "Real-time Metrics", desc: "Monitor compliance scores and risk alerts on one unified pane of glass." },
+    { url: "/assets/finance_dash_2_1772160922003.png", title: "Neural Network Validation", desc: "Deep learning models cross-check millions of data points instantly." },
+    { url: "/assets/finance_dash_3_1772160948254.png", title: "Global Compliance Map", desc: "Oversee node activity and threat detection across all operational regions." }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slides.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="image-carousel-container">
+      <div className="carousel-view">
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={activeSlide}
+            src={slides[activeSlide].url}
+            initial={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="carousel-image"
+            alt={slides[activeSlide].title}
+          />
+        </AnimatePresence>
+        <div className="carousel-caption">
+          <h4>{slides[activeSlide].title}</h4>
+          <p>{slides[activeSlide].desc}</p>
+        </div>
+      </div>
+      <div className="carousel-indicators">
+        {slides.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setActiveSlide(idx)}
+            className={`indicator-dot ${idx === activeSlide ? 'active' : ''}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Testimonial Slider Component
+function TestimonialSlider() {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const testimonials = [
+    { text: "CA.Dynamix revolutionized our audit process. We've seen a 40% increase in fraud detection accuracy since implementation.", author: "Sarah Jenkins", role: "Director of Audit", company: "Fortis Group" },
+    { text: "The explainable AI feature is a game-changer for our compliance team. Every flag is actionable and transparent.", author: "Marcus Chen", role: "VP of Risk", company: "Nexis Financial" },
+    { text: "Scaling our document review was a bottleneck until we integrated CA.Dynamix. Now we process millions of documents monthly.", author: "Elena Rossi", role: "CFO", company: "Global Logistics" },
+    { text: "The neural network validation reduced our false positives by 60%. It seamlessly matched our internal compliance nodes.", author: "David Wallace", role: "VP of Finance", company: "Acme Corp" },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveIdx((prev) => (prev + 1) % testimonials.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="testimonial-slider-container">
+      <div className="testimonial-slider-viewport">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeIdx}
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className="testimonial-card-premium slider-mode"
+          >
+            <Quote className="quote-icon-large" size={48} />
+            <p className="t-text-large">"{testimonials[activeIdx].text}"</p>
+            <div className="testimonial-footer">
+              <div className="t-avatar">{testimonials[activeIdx].author[0]}</div>
+              <div className="t-meta">
+                <span className="t-name">{testimonials[activeIdx].author}</span>
+                <span className="t-comp">{testimonials[activeIdx].role}, {testimonials[activeIdx].company}</span>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      <div className="carousel-indicators">
+        {testimonials.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setActiveIdx(idx)}
+            className={`indicator-dot ${idx === activeIdx ? 'active' : ''}`}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -545,23 +619,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="features-visual">
-              <div className="visual-stack">
-                <div className="v-card v-card-1">
-                  <Activity size={32} className="v-icon" />
-                  <div className="v-graph"></div>
-                </div>
-                <div className="v-card v-card-2">
-                  <BrandIcon size={32} />
-                  <div className="v-text-cols">
-                    <div className="v-col"></div>
-                    <div className="v-col"></div>
-                  </div>
-                </div>
-                <div className="v-card v-card-3">
-                  <Database size={32} className="v-icon" />
-                  <div className="v-nodes"></div>
-                </div>
-              </div>
+              <ImageCarousel />
             </div>
           </div>
         </div>
@@ -611,38 +669,7 @@ export default function LandingPage() {
           </div>
 
           <div className="testimonials-river">
-            {[
-              {
-                text: "CA.Dynamix revolutionized our audit process. We've seen a 40% increase in fraud detection accuracy since implementation.",
-                author: "Sarah Jenkins",
-                role: "Director of Audit",
-                company: "Fortis Group"
-              },
-              {
-                text: "The explainable AI feature is a game-changer for our compliance team. Every flag is actionable and transparent.",
-                author: "Marcus Chen",
-                role: "VP of Risk",
-                company: "Nexis Financial"
-              },
-              {
-                text: "Scaling our document review was a bottleneck until we integrated CA.Dynamix. Now we process millions of documents monthly.",
-                author: "Elena Rossi",
-                role: "CFO",
-                company: "Global Logistics"
-              }
-            ].map((t, i) => (
-              <div key={i} className="testimonial-card-premium">
-                <Quote className="quote-icon" />
-                <p>{t.text}</p>
-                <div className="testimonial-footer">
-                  <div className="t-avatar">{t.author[0]}</div>
-                  <div className="t-meta">
-                    <span className="t-name">{t.author}</span>
-                    <span className="t-comp">{t.role}, {t.company}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+            <TestimonialSlider />
           </div>
         </div>
       </section>

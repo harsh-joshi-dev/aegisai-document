@@ -239,25 +239,27 @@ export function aggregateRisk(
     tenantId?: string;
   }
 ): AggregationResult {
+  const effectiveSignals = sanitizeSignalsForScoring(signals);
+
   // Calculate score
-  const risk_score = calculateRiskScore(signals);
+  const risk_score = calculateRiskScore(effectiveSignals);
   
   // Determine level
   const risk_level = determineRiskLevel(risk_score);
   
   // Aggregate recommendations
-  const recommendations = aggregateRecommendations(signals);
+  const recommendations = aggregateRecommendations(effectiveSignals);
   
   // Generate summary
-  const summary = generateSummary(risk_score, risk_level, signals);
+  const summary = generateSummary(risk_score, risk_level, effectiveSignals);
 
   // Generate plain English explanations
-  const plain_english_explanations = generatePlainEnglishExplanations(signals);
+  const plain_english_explanations = generatePlainEnglishExplanations(effectiveSignals);
   
   return {
     risk_score,
     risk_level,
-    factors: signals,
+    factors: effectiveSignals,
     summary,
     recommendations,
     plain_english_explanations,
@@ -283,4 +285,32 @@ export function isRiskAcceptable(
   threshold: number = 60
 ): boolean {
   return score <= threshold;
+}
+
+function sanitizeSignalsForScoring(signals: RiskSignal[]): RiskSignal[] {
+  if (signals.length === 0) return [];
+
+  const dedup = new Map<string, RiskSignal>();
+
+  for (const signal of signals) {
+    // Ignore weak/noisy signals for scoring; keep confidence floor.
+    if (signal.confidence < 0.55) continue;
+
+    const key = `${signal.type}:${signal.subtype}:${(signal.explanation || '').trim().toLowerCase()}`;
+    const existing = dedup.get(key);
+    if (!existing || signal.confidence > existing.confidence) {
+      dedup.set(key, signal);
+    }
+  }
+
+  return Array.from(dedup.values()).map((signal) => {
+    // Conservative weighting so low-severity noise does not dominate score.
+    const cappedWeight =
+      signal.severity === 'low'
+        ? Math.min(signal.weight, 1.0)
+        : signal.severity === 'medium'
+        ? Math.min(signal.weight, 2.0)
+        : signal.weight;
+    return { ...signal, weight: cappedWeight };
+  });
 }

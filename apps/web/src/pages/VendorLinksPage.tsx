@@ -357,25 +357,27 @@ function CreateModal({ templates, onClose, onCreated }: { templates: DocumentTem
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Custom documents — initialized from template, user can add/remove
+  // Editable required documents list (starts with mandatory docs from selected template)
   const [customDocs, setCustomDocs] = useState<Array<{ type: string; label: string; mandatory: boolean; requiresAnalysis?: boolean }>>([]);
   const [newDocLabel, setNewDocLabel] = useState('');
   const [newDocMandatory, setNewDocMandatory] = useState(true);
   const [newDocAI, setNewDocAI] = useState(true);
-  const [isCustom, setIsCustom] = useState(false);
+  const [isEditingDocs, setIsEditingDocs] = useState(false);
 
   const selectedTemplate = templates.find(t => t.id === form.template);
 
+  const getTemplateMandatoryDocs = useCallback((tid: string) => {
+    const tmpl = templates.find(t => t.id === tid);
+    const source = tmpl?.requiredDocuments || [];
+    const mandatoryOnly = source.filter(d => d.mandatory);
+    const baseline = mandatoryOnly.length > 0 ? mandatoryOnly : source;
+    return baseline.map(d => ({ type: d.type, label: d.label, mandatory: d.mandatory !== false, requiresAnalysis: d.requiresAnalysis }));
+  }, [templates]);
+
   const selectTemplate = (tid: string) => {
     setForm({ ...form, template: tid });
-    if (tid === 'custom') {
-      setIsCustom(true);
-      setCustomDocs([]);
-    } else {
-      setIsCustom(false);
-      const tmpl = templates.find(t => t.id === tid);
-      setCustomDocs(tmpl?.requiredDocuments?.map(d => ({ type: d.type, label: d.label, mandatory: d.mandatory })) || []);
-    }
+    setCustomDocs(getTemplateMandatoryDocs(tid));
+    setIsEditingDocs(false);
   };
 
   const addDoc = () => {
@@ -388,9 +390,14 @@ function CreateModal({ templates, onClose, onCreated }: { templates: DocumentTem
 
   const removeDoc = (type: string) => setCustomDocs(customDocs.filter(d => d.type !== type));
 
-  // Initialize customDocs when templates load
+  // Initialize docs when templates load
+  useEffect(() => {
+    if (templates.length === 0) return;
+    setCustomDocs(prev => prev.length > 0 ? prev : getTemplateMandatoryDocs(form.template || 'vendor'));
+  }, [templates, form.template, getTemplateMandatoryDocs]);
+
   const templatesList = templates.length > 0
-    ? templates.filter(t => t.id !== 'custom')
+    ? templates
     : [{ id: 'vendor', name: 'Vendor', description: '', requiredDocuments: [] }, { id: 'contractor', name: 'Contractor', description: '', requiredDocuments: [] }, { id: 'employee', name: 'Employee', description: '', requiredDocuments: [] }] as DocumentTemplate[];
 
   const handleCreate = async () => {
@@ -426,7 +433,7 @@ function CreateModal({ templates, onClose, onCreated }: { templates: DocumentTem
                   key={t.id}
                   type="button"
                   onClick={() => selectTemplate(t.id)}
-                  className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${form.template === t.id && !isCustom
+                  className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${form.template === t.id
                     ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
                     : 'border-white/5 bg-[var(--bg-subtle)] text-zinc-500 hover:text-zinc-300 hover:border-white/10'
                     }`}
@@ -434,27 +441,17 @@ function CreateModal({ templates, onClose, onCreated }: { templates: DocumentTem
                   {t.name}
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={() => selectTemplate('custom')}
-                className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${isCustom
-                  ? 'border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-400 shadow-[0_0_15px_rgba(217,70,239,0.1)]'
-                  : 'border-white/5 bg-[var(--bg-subtle)] text-zinc-500 hover:text-zinc-300 hover:border-white/10'
-                  }`}
-              >
-                + Custom
-              </button>
             </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Vendor Name *</label>
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Client Name *</label>
               <input
                 type="text"
                 value={form.vendorName}
                 onChange={e => setForm({ ...form, vendorName: e.target.value })}
-                placeholder="Acme Corporation"
+                placeholder="Acme Client Pvt Ltd"
                 className="w-full px-4 py-3 rounded-xl bg-[var(--bg-subtle)] border border-white/5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-[var(--bg-card-hover)] transition-all"
               />
             </div>
@@ -470,35 +467,10 @@ function CreateModal({ templates, onClose, onCreated }: { templates: DocumentTem
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">PAN (India)</label>
-              <input
-                type="text"
-                value={form.vendorPan}
-                onChange={e => setForm({ ...form, vendorPan: e.target.value.toUpperCase() })}
-                placeholder="ABCDE1234F"
-                maxLength={10}
-                className="w-full px-4 py-3 rounded-xl bg-[var(--bg-subtle)] border border-white/5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-[var(--bg-card-hover)] transition-all uppercase font-mono"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">GSTIN</label>
-              <input
-                type="text"
-                value={form.vendorGstin}
-                onChange={e => setForm({ ...form, vendorGstin: e.target.value.toUpperCase() })}
-                placeholder="22AAAAA0000A1Z5"
-                maxLength={15}
-                className="w-full px-4 py-3 rounded-xl bg-[var(--bg-subtle)] border border-white/5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-[var(--bg-card-hover)] transition-all uppercase font-mono"
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
             <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Required Documents</label>
             <div className="p-4 rounded-2xl bg-[var(--bg-subtle)] border border-white/5 space-y-4">
-              {(isCustom || !selectedTemplate) ? (
+              {isEditingDocs ? (
                 <>
                   <div className="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-2">
                     {customDocs.map((d, i) => (
@@ -528,16 +500,28 @@ function CreateModal({ templates, onClose, onCreated }: { templates: DocumentTem
                     />
                     <button type="button" onClick={addDoc} disabled={!newDocLabel.trim()} className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 disabled:opacity-30 transition-all"><Plus size={16} /></button>
                   </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingDocs(false)}
+                      className="text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest transition-colors"
+                    >
+                      Done
+                    </button>
+                  </div>
                 </>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {selectedTemplate.requiredDocuments.map(d => (
+                  {customDocs.map(d => (
                     <div key={d.type} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/5 border border-indigo-500/10 group">
                       <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">{d.label} {d.mandatory && '*'}</span>
                       {d.requiresAnalysis !== false && <span className="w-1 h-1 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]" />}
                     </div>
                   ))}
-                  <button type="button" onClick={() => { setIsCustom(true); setCustomDocs(selectedTemplate.requiredDocuments.map(d => ({ type: d.type, label: d.label, mandatory: d.mandatory }))); }} className="text-[10px] font-black text-zinc-500 hover:text-zinc-300 uppercase tracking-widest ml-1 transition-colors">Edit List</button>
+                  {customDocs.length === 0 && (
+                    <span className="text-[11px] text-zinc-500">No required documents selected.</span>
+                  )}
+                  <button type="button" onClick={() => setIsEditingDocs(true)} className="text-[10px] font-black text-zinc-500 hover:text-zinc-300 uppercase tracking-widest ml-1 transition-colors">Edit List</button>
                 </div>
               )}
             </div>

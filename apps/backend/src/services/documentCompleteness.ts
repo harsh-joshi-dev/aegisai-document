@@ -53,6 +53,8 @@ export async function analyzeDocumentCompleteness(
   try {
     const llm = getLLM();
     const prompt = `You are a document completeness analyst. Analyze the following document for missing elements.
+Only report an element as missing when there is clear evidence it is absent from the provided text.
+Do not guess. If unsure, do not mark it missing.
 
 Document Type: ${inferredType}
 Filename: ${filename}
@@ -68,6 +70,7 @@ Analyze the document and identify:
 2. Priority level for each missing element (Critical, High, Medium, Low)
 3. Why each element is important
 4. Suggestions for what should be included
+5. A short "evidence" snippet explaining why it appears missing
 
 Respond in JSON format:
 {
@@ -80,7 +83,8 @@ Respond in JSON format:
       "description": "what this item should contain",
       "priority": "Critical" | "High" | "Medium" | "Low",
       "reason": "why this is important",
-      "suggestion": "what should be included (optional)"
+      "suggestion": "what should be included (optional)",
+      "evidence": "brief text explaining the missing signal"
     }
   ],
   "summary": "brief summary of completeness status",
@@ -105,12 +109,7 @@ If the document appears complete, return empty missingElements array and "Comple
     }
 
     // Validate and normalize response
-    const completenessScore = Math.max(0, Math.min(100, parsed.completenessScore || calculateScore(parsed.missingElements || [])));
-    const overallStatus = ['Complete', 'Mostly Complete', 'Incomplete', 'Very Incomplete'].includes(parsed.overallStatus)
-      ? parsed.overallStatus as CompletenessAnalysis['overallStatus']
-      : getStatusFromScore(completenessScore);
-
-    const missingElements: MissingElement[] = (parsed.missingElements || []).map((el: any) => ({
+    const llmMissingElements: MissingElement[] = (parsed.missingElements || []).map((el: any) => ({
       category: el.category || 'General',
       item: el.item || 'Unknown',
       description: el.description || '',
@@ -120,6 +119,13 @@ If the document appears complete, return empty missingElements array and "Comple
       reason: el.reason || '',
       suggestion: el.suggestion,
     }));
+
+    // Reduce false positives: drop "missing" items that appear present in text.
+    const missingElements = llmMissingElements.filter((el) =>
+      isElementLikelyMissing(documentContent, el.item, el.description, el.priority)
+    );
+    const completenessScore = calculateScore(missingElements);
+    const overallStatus = getStatusFromScore(completenessScore);
 
     return {
       completenessScore,
@@ -300,21 +306,18 @@ function performFallbackAnalysis(
   expectedElements: Array<{ name: string; description: string }>
 ): CompletenessAnalysis {
   const missingElements: MissingElement[] = [];
-  const lowerContent = content.toLowerCase();
 
   for (const element of expectedElements) {
-    const elementLower = element.name.toLowerCase();
-    const found = lowerContent.includes(elementLower) || 
-                  element.description.toLowerCase().split(' ').some(word => 
-                    word.length > 3 && lowerContent.includes(word)
-                  );
+    const inferredPriority: MissingElement['priority'] =
+      element.name.includes('Date') || element.name.includes('Signature') ? 'Critical' : 'Medium';
+    const found = !isElementLikelyMissing(content, element.name, element.description, inferredPriority);
 
     if (!found) {
       missingElements.push({
         category: 'Required',
         item: element.name,
         description: element.description,
-        priority: element.name.includes('Date') || element.name.includes('Signature') ? 'Critical' : 'Medium',
+        priority: inferredPriority,
         reason: `This is a standard element for ${documentType} documents`,
       });
     }
@@ -394,3 +397,107 @@ function generateRecommendations(missingElements: MissingElement[]): string[] {
 
   return recommendations.length > 0 ? recommendations : ['Document appears complete'];
 }
+
+function isElementLikelyMissing(
+  content: string,
+  item: string,
+  description?: string,
+  priority: MissingElement['priority'] = 'Medium'
+): boolean {
+  const lowerContent = normalizeText(content);
+  const directTerms = buildElementTerms(item, description);
+  const matchCount = countTermMatches(lowerContent, directTerms);
+
+  // Stricter signal requirement for high-priority claims.
+  // Critical/High: require >=2 independent present signals to treat as present.
+  // Medium/Low: a single strong present signal is enough.
+  const minEvidenceForPresence = priority === 'Critical' || priority === 'High' ? 2 : 1;
+  if (matchCount >= minEvidenceForPresence) {
+    return false;
+  }
+
+  // Secondary token check to avoid false positives when direct aliases are sparse.
+  const tokens = tokenize(item);
+  if (tokens.length > 0) {
+    const matched = tokens.filter((token) => lowerContent.includes(token)).length;
+    if (matched >= Math.max(minEvidenceForPresence, Math.ceil(tokens.length * 0.6))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function buildElementTerms(item: string, description?: string): string[] {
+  const base = normalizeText(item);
+  const terms = new Set<string>([base]);
+  const aliases: Record<string, string[]> = {
+    'invoice number': ['invoice no', 'inv no', 'bill no'],
+    'invoice date': ['bill date', 'date of invoice'],
+    'due date': ['payment due', 'due on'],
+    'bill to': ['billing address', 'billed to'],
+    'itemized charges': ['line items', 'item details', 'description', 'qty', 'quantity'],
+    subtotal: ['sub total'],
+    'tax amount': ['tax', 'gst', 'vat', 'cgst', 'sgst', 'igst'],
+    'total amount': ['grand total', 'amount due', 'total'],
+    signatures: ['signed by', 'signature', 'authorized signatory'],
+    approval: ['approved by', 'approval signature'],
+    parties: ['party a', 'party b', 'between'],
+    'effective date': ['effective from', 'commencement date'],
+    'payment terms': ['terms of payment', 'net 30', 'payment condition'],
+    'termination clause': ['termination', 'terminate'],
+  };
+
+  for (const [key, values] of Object.entries(aliases)) {
+    if (base.includes(key)) {
+      for (const value of values) terms.add(normalizeText(value));
+    }
+  }
+
+  if (description) {
+    for (const token of tokenize(description)) terms.add(token);
+  }
+
+  return Array.from(terms).filter(Boolean);
+}
+
+function tokenize(text: string): string[] {
+  return normalizeText(text)
+    .split(/\s+/)
+    .filter((w) => w.length > 3 && !STOP_WORDS.has(w));
+}
+
+function countTermMatches(content: string, terms: string[]): number {
+  const uniqueTerms = new Set(terms.map((t) => t.trim()).filter((t) => t.length >= 3));
+  let count = 0;
+  for (const term of uniqueTerms) {
+    if (content.includes(term)) count++;
+  }
+  return count;
+}
+
+function normalizeText(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+const STOP_WORDS = new Set([
+  'this',
+  'that',
+  'with',
+  'from',
+  'have',
+  'your',
+  'when',
+  'what',
+  'where',
+  'which',
+  'should',
+  'would',
+  'could',
+  'into',
+  'between',
+  'details',
+  'document',
+  'information',
+  'required',
+]);

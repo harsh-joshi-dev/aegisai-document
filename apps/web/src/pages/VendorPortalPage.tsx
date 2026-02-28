@@ -173,6 +173,11 @@ export default function VendorPortalPage() {
         {requiredDocs.length > 0 && (
           <div className="rounded-2xl border border-subtle bg-card-hover p-5 mb-6">
             <h3 className="text-sm font-medium text-main mb-3 flex items-center gap-2"><FileText size={14} className="text-indigo-400" /> Required Documents</h3>
+            <div className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2">
+              <p className="text-[11px] text-indigo-300">
+                Only mandatory documents are pre-selected. Add optional/supporting documents only if requested by your reviewer.
+              </p>
+            </div>
             <div className="space-y-2">
               {requiredDocs.map((doc, i) => {
                 const isUploaded = matchedTypes.has(doc.type);

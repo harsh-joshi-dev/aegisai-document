@@ -9,7 +9,7 @@ import { Logo } from '../components/ui/Logo';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: Gauge },
-  { to: '/documents', label: 'Documents', icon: FileText },
+  { to: '/documents', label: 'Internal Upload', icon: FileText },
   { to: '/gst-compliance', label: 'GST & Compliance', icon: IndianRupee },
   { to: '/vendor-links', label: 'Vendor Portal', icon: Link2 },
   { to: '/rules', label: 'Rules', icon: ShieldAlert },
@@ -292,11 +292,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
                         <p className="text-sm font-medium text-white truncate">{doc.name}</p>
                         <p className="text-xs text-zinc-500 truncate">{doc.vendor} · {doc.riskLevel}</p>
                       </div>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
-                        doc.riskLevel === 'Critical' ? 'bg-red-500/20 text-red-400' :
-                        doc.riskLevel === 'High' ? 'bg-orange-500/20 text-orange-400' :
-                        'bg-emerald-500/20 text-emerald-400'
-                      }`}>{doc.riskLevel}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${doc.riskLevel === 'Critical' ? 'bg-red-500/20 text-red-400' :
+                          c.riskLevel === 'High' ? 'bg-orange-500/20 text-orange-400' :
+                            'bemerald-500/20 text-emerald-400'
+                        }`}>{doc.riskLevel}</span>
                     </button>
                   ))}
                 </div>

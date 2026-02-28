@@ -49,8 +49,16 @@ router.post('/analyze-ai', async (req: Request, res: Response) => {
 
   try {
     const model = getLLM();
-    const prompt = `Analyze this financial document excerpt and identify risks, inconsistencies, missing fields, or fraud signals.
-Return ONLY a JSON object with a key "findings" that is an array. Each finding must have: title (string), description (string), severity (one of: LOW, MEDIUM, HIGH, CRITICAL), recommendation (string), confidenceScore (number 0-100).
+    const prompt = `Analyze this financial document excerpt and identify ONLY substantiated risks.
+Do not generate generic checks. Raise a finding only when there is clear, document-specific evidence in the provided text.
+GST-related findings are allowed only when the document is clearly GST/tax/invoice related and evidence mentions GST/tax context.
+Return ONLY a JSON object with a key "findings" that is an array. Each finding must have:
+- title (string)
+- description (string)
+- severity (one of: LOW, MEDIUM, HIGH, CRITICAL)
+- recommendation (string)
+- confidenceScore (number 0-100)
+- evidence (array of exact short quotes copied from the document text)
 If no risks found, return {"findings":[]}.
 
 Document type: ${(metadata?.docType as string) || 'unknown'}
@@ -64,7 +72,14 @@ ${text.slice(0, 6000)}`;
     const raw = (typeof response.content === 'string' ? response.content : '').trim();
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     const rawJson = jsonMatch ? jsonMatch[0] : '{}';
-    let findings: Array<{ title: string; description: string; severity: string; recommendation: string; confidenceScore?: number }> = [];
+    let findings: Array<{
+      title: string;
+      description: string;
+      severity: string;
+      recommendation: string;
+      confidenceScore?: number;
+      evidence?: string[];
+    }> = [];
     try {
       const parsed = JSON.parse(rawJson);
       findings = Array.isArray(parsed.findings) ? parsed.findings : Array.isArray(parsed) ? parsed : [];
@@ -72,7 +87,32 @@ ${text.slice(0, 6000)}`;
       findings = [];
     }
 
-    const signals = findings.map((f, i) => ({
+    const lowerText = text.toLowerCase();
+    const lowerDocType = String((metadata?.docType as string) || '').toLowerCase();
+    const isGstRelevantDocument =
+      /gst|tax|invoice/.test(lowerDocType) || /gst|gstin|tax invoice|cgst|sgst|igst/.test(lowerText);
+
+    const filteredFindings = findings.filter((f) => {
+      const confidence = typeof f.confidenceScore === 'number' ? f.confidenceScore : 0;
+      if (confidence < 65) {
+        return false;
+      }
+
+      const evidence = Array.isArray(f.evidence) ? f.evidence.filter((e) => typeof e === 'string' && e.trim().length > 0) : [];
+      const hasValidEvidence = evidence.some((snippet) => lowerText.includes(snippet.toLowerCase()));
+      if (!hasValidEvidence) {
+        return false;
+      }
+
+      const findingText = `${f.title || ''} ${f.description || ''}`.toLowerCase();
+      if (/gst|gstin|tax/.test(findingText) && !isGstRelevantDocument) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const signals = filteredFindings.map((f, i) => ({
       id: `ai-${documentId}-${Date.now()}-${i}`,
       documentId,
       tenantId,

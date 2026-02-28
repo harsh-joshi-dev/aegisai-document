@@ -142,11 +142,17 @@ export default function AuditLogPage() {
             disabled={refreshing}
           >
             <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+            <div className="ml-2">
             Refresh
+              
+            </div>
           </button>
           <button onClick={exportCSV} className="btn-secondary h-10 px-4">
             <Download size={16} />
+            <div className="ml-2">
             Export CSV
+            </div>
+     
           </button>
         </div>
       </div>

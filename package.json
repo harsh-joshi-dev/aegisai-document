@@ -9,6 +9,10 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace=apps/backend\" \"npm run dev --workspace=apps/web\"",
     "build": "npm run build --workspace=apps/backend && npm run build --workspace=apps/web",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "build:web": "npm run build --workspace=apps/web",
+    "start": "node apps/backend/dist/index.js",
+    "start:worker": "node apps/backend/dist/workers/documentProcessorWorker.js",
     "install:all": "npm install && npm install --workspace=apps/backend && npm install --workspace=apps/web"
   },
   "devDependencies": {

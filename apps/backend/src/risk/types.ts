@@ -76,25 +76,42 @@ export type RuleConfig =
   | ConsistencyRuleConfig 
   | TimeRuleConfig;
 
-export interface ThresholdRuleConfig {
+interface RuleApplicabilityConfig {
+  /**
+   * Optional list of document types this rule applies to (case-insensitive).
+   * When omitted, the rule is considered globally applicable.
+   */
+  document_types?: string[];
+  /**
+   * Optional system metadata for default-rule governance and auditability.
+   */
+  rule_metadata?: {
+    managed_by?: 'system_default' | 'tenant_custom';
+    version?: string;
+    effective_from?: string; // ISO date (YYYY-MM-DD)
+    changelog?: string[];
+  };
+}
+
+export interface ThresholdRuleConfig extends RuleApplicabilityConfig {
   field: string;
   operator: '>' | '<' | '>=' | '<=' | '=' | '!=';
   value: number;
   unit?: string;
 }
 
-export interface RequiredFieldRuleConfig {
+export interface RequiredFieldRuleConfig extends RuleApplicabilityConfig {
   field: string;
   allow_empty?: boolean;
 }
 
-export interface ConsistencyRuleConfig {
+export interface ConsistencyRuleConfig extends RuleApplicabilityConfig {
   fields: string[];
   tolerance: number; // percentage
   comparison_type?: 'exact' | 'percentage' | 'absolute';
 }
 
-export interface TimeRuleConfig {
+export interface TimeRuleConfig extends RuleApplicabilityConfig {
   max_gap_days: number;
   field?: string;
   reference_date?: 'today' | 'document_date' | 'upload_date';

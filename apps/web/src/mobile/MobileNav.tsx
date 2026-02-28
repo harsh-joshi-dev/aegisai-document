@@ -55,7 +55,7 @@ export default function MobileNav() {
         {({ isActive }) => (
           <>
             <TabIcon name="docs" isActive={isActive} />
-            <span>Docs</span>
+            <span>Internal Upload</span>
           </>
         )}
       </NavLink>

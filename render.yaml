@@ -1,0 +1,106 @@
+databases:
+  - name: aegis-db
+    plan: starter
+    databaseName: aegis_ai
+    user: aegis
+    ipAllowList: []
+    postgresMajorVersion: "16"
+
+services:
+  # ── Backend API ───────────────────────────────────────────────
+  - type: web
+    name: aegis-backend
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build --workspace=apps/backend
+    startCommand: node apps/backend/dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aegis-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: aegis-redis
+          type: redis
+          property: connectionString
+      - key: FRONTEND_URL
+        fromService:
+          name: aegis-frontend
+          type: web
+          property: url
+      - key: CORS_ORIGIN
+        fromService:
+          name: aegis-frontend
+          type: web
+          property: url
+      - key: BACKEND_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: FIELD_ENCRYPTION_KEY
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+  # ── Background Worker (BullMQ document processor) ─────────────
+  - type: worker
+    name: aegis-worker
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build --workspace=apps/backend
+    startCommand: node apps/backend/dist/workers/documentProcessorWorker.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aegis-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: aegis-redis
+          type: redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+
+  # ── Frontend (React SPA via Vite) ────────────────────────────
+  - type: web
+    name: aegis-frontend
+    runtime: static
+    buildCommand: npm install && npm run build --workspace=apps/web
+    staticPublishPath: apps/web/dist
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://aegis-backend.onrender.com/api/*
+      - type: rewrite
+        source: /health
+        destination: https://aegis-backend.onrender.com/health
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: ""
+
+  # ── Redis ─────────────────────────────────────────────────────
+  - type: redis
+    name: aegis-redis
+    plan: starter
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru

@@ -5,7 +5,7 @@ import { requireAuth } from '../auth/middleware.js';
 import { requireWorkspaceContext, requireWorkspaceRole, type WorkspaceRequest } from '../workspace/middleware.js';
 import { pool, getOrCreateFolderByTenant, setDocumentFolderByTenant, insertDocument } from '../db/pgvector.js';
 import { logAuditEvent } from '../compliance/auditLog.js';
-import { analyzeVendorDocuments, DOCUMENT_TEMPLATES } from '../services/vendorAnalysis.js';
+import { analyzeVendorDocuments, DOCUMENT_TEMPLATES, getDefaultRequiredDocumentsForTemplate } from '../services/vendorAnalysis.js';
 import { parseDocument, isSupportedFileType } from '../services/documentParser.js';
 import { chunkText } from '../services/chunker.js';
 import { generateEmbeddings } from '../services/embeddings.js';
@@ -305,10 +305,9 @@ router.post('/', requireAuth, requireWorkspaceContext, requireWorkspaceRole(['ow
     const expiresAt = expiresInDays ? new Date(Date.now() + Number(expiresInDays) * 24 * 60 * 60 * 1000) : null;
 
     const templateId = template || 'vendor';
-    const templateDef = DOCUMENT_TEMPLATES[templateId] || DOCUMENT_TEMPLATES.vendor;
     const requiredDocs = customRequiredDocuments && Array.isArray(customRequiredDocuments) && customRequiredDocuments.length > 0
       ? customRequiredDocuments
-      : templateDef.requiredDocuments;
+      : getDefaultRequiredDocumentsForTemplate(templateId);
 
     const result = await pool.query(
       `INSERT INTO vendor_links (tenant_id, created_by, token, vendor_name, vendor_email, vendor_phone, vendor_pan, vendor_gstin, folder_id, description, template, required_documents, max_uploads, expires_at)
@@ -352,7 +351,6 @@ router.post('/bulk', requireAuth, requireWorkspaceContext, requireWorkspaceRole(
   }
 
   const templateId = template || 'vendor';
-  const templateDef = DOCUMENT_TEMPLATES[templateId] || DOCUMENT_TEMPLATES.vendor;
   const expiresAt = expiresInDays ? new Date(Date.now() + Number(expiresInDays) * 24 * 60 * 60 * 1000) : null;
 
   try {
@@ -369,7 +367,7 @@ router.post('/bulk', requireAuth, requireWorkspaceContext, requireWorkspaceRole(
         `INSERT INTO vendor_links (tenant_id, created_by, token, vendor_name, vendor_email, vendor_phone, vendor_pan, vendor_gstin, folder_id, template, required_documents, max_uploads, expires_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
          RETURNING id, vendor_name, token`,
-        [tenantId, userId, token, name, v.email || null, v.phone || null, v.pan?.toUpperCase() || null, v.gstin?.toUpperCase() || null, folderId, templateId, JSON.stringify(templateDef.requiredDocuments), 50, expiresAt]
+        [tenantId, userId, token, name, v.email || null, v.phone || null, v.pan?.toUpperCase() || null, v.gstin?.toUpperCase() || null, folderId, templateId, JSON.stringify(getDefaultRequiredDocumentsForTemplate(templateId)), 50, expiresAt]
       );
       if (result.rows[0]) {
         created.push(result.rows[0]);

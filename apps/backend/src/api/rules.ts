@@ -18,8 +18,9 @@ import {
   updateDynamicRule,
   deleteDynamicRule,
 } from '../risk/db.js';
-import { ensureDefaultRules } from '../risk/service.js';
+import { ensureDefaultRules, syncDefaultRules } from '../risk/service.js';
 import type { RuleType, Severity } from '../risk/types.js';
+import { getDefaultRuleChangelog } from '../risk/ruleEngine.js';
 
 const router = Router();
 
@@ -329,23 +330,31 @@ const thresholdConfigSchema = z.object({
   operator: z.enum(['>', '<', '>=', '<=', '=', '!=']),
   value: z.number(),
   unit: z.string().optional(),
+  document_types: z.array(z.string().min(1)).optional(),
+  rule_metadata: z.record(z.unknown()).optional(),
 });
 
 const requiredConfigSchema = z.object({
   field: z.string(),
   allow_empty: z.boolean().optional(),
+  document_types: z.array(z.string().min(1)).optional(),
+  rule_metadata: z.record(z.unknown()).optional(),
 });
 
 const consistencyConfigSchema = z.object({
   fields: z.array(z.string()).min(2),
   tolerance: z.number(),
   comparison_type: z.enum(['exact', 'percentage', 'absolute']).optional(),
+  document_types: z.array(z.string().min(1)).optional(),
+  rule_metadata: z.record(z.unknown()).optional(),
 });
 
 const timeConfigSchema = z.object({
   max_gap_days: z.number().int().positive(),
   field: z.string().optional(),
   reference_date: z.enum(['today', 'document_date', 'upload_date']).optional(),
+  document_types: z.array(z.string().min(1)).optional(),
+  rule_metadata: z.record(z.unknown()).optional(),
 });
 
 const createDynamicRuleSchema = z.object({
@@ -588,6 +597,69 @@ router.delete(
       console.error('Delete dynamic rule error:', error);
       res.status(500).json({
         error: 'Failed to delete dynamic rule',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
+ * Sync tenant defaults to latest safe baseline (V2)
+ * POST /api/rules/v2/sync-defaults
+ */
+router.post(
+  '/v2/sync-defaults',
+  requireAuth,
+  requireWorkspaceContext,
+  requireWorkspaceRole(['owner', 'admin']),
+  async (req: Request, res: Response) => {
+    try {
+      const authReq = req as WorkspaceRequest;
+      if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+        return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+      }
+
+      const sync = await syncDefaultRules(authReq.workspace.tenantId);
+      const rules = await getDynamicRulesByTenant(authReq.workspace.tenantId);
+
+      res.json({
+        success: true,
+        sync,
+        count: rules.length,
+      });
+    } catch (error) {
+      console.error('Sync default rules error:', error);
+      res.status(500).json({
+        error: 'Failed to sync default rules',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
+ * Default rules changelog for governance (V2)
+ * GET /api/rules/v2/default-changelog
+ */
+router.get(
+  '/v2/default-changelog',
+  requireAuth,
+  requireWorkspaceContext,
+  async (req: Request, res: Response) => {
+    try {
+      const authReq = req as WorkspaceRequest;
+      if (!authReq.user?.id || !authReq.workspace?.tenantId) {
+        return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+      }
+
+      res.json({
+        success: true,
+        ruleset: getDefaultRuleChangelog(),
+      });
+    } catch (error) {
+      console.error('Default changelog error:', error);
+      res.status(500).json({
+        error: 'Failed to fetch default changelog',
         message: error instanceof Error ? error.message : 'Unknown error',
       });
     }

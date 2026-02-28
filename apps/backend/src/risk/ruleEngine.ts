@@ -14,6 +14,39 @@ import type {
   Severity
 } from './types.js';
 
+const DEFAULT_RULESET_VERSION = '2026.02.28';
+const DEFAULT_RULESET_EFFECTIVE_FROM = '2026-02-28';
+
+function buildDefaultRuleMetadata(changelog: string[]): {
+  managed_by: 'system_default';
+  version: string;
+  effective_from: string;
+  changelog: string[];
+} {
+  return {
+    managed_by: 'system_default',
+    version: DEFAULT_RULESET_VERSION,
+    effective_from: DEFAULT_RULESET_EFFECTIVE_FROM,
+    changelog,
+  };
+}
+
+export function getDefaultRuleChangelog(): {
+  version: string;
+  effective_from: string;
+  changes: string[];
+} {
+  return {
+    version: DEFAULT_RULESET_VERSION,
+    effective_from: DEFAULT_RULESET_EFFECTIVE_FROM,
+    changes: [
+      'Scoped defaults by document type to reduce false positives.',
+      'Added GST relevance gating to avoid non-GST document misflags.',
+      'Aligned default rules with evidence-first risk scoring strategy.',
+    ],
+  };
+}
+
 // ============================================================================
 // Rule Execution Functions
 // ============================================================================
@@ -299,6 +332,10 @@ export function executeRule(
   if (!rule.is_active) {
     return null;
   }
+
+  if (!isRuleApplicableToDocument(rule, extractedData)) {
+    return null;
+  }
   
   switch (rule.rule_type) {
     case 'threshold':
@@ -375,6 +412,10 @@ export function getDefaultRules(tenantId: string): Omit<DynamicRule, 'id' | 'cre
         operator: '>',
         value: 100000,
         unit: 'INR',
+        document_types: ['invoice'],
+        rule_metadata: buildDefaultRuleMetadata([
+          'Applied invoice-only scope for high-value threshold checks.',
+        ]),
       } as ThresholdRuleConfig,
       severity: 'medium',
       weight: 1.5,
@@ -387,6 +428,10 @@ export function getDefaultRules(tenantId: string): Omit<DynamicRule, 'id' | 'cre
       config: {
         field: 'vendorGstin',
         allow_empty: false,
+        document_types: ['invoice', 'gst', 'tax invoice'],
+        rule_metadata: buildDefaultRuleMetadata([
+          'Limited GSTIN requirement to GST/tax/invoice documents.',
+        ]),
       } as RequiredFieldRuleConfig,
       severity: 'high',
       weight: 2.0,
@@ -400,6 +445,10 @@ export function getDefaultRules(tenantId: string): Omit<DynamicRule, 'id' | 'cre
         fields: ['totalAmount', 'bankAmount'],
         tolerance: 1,
         comparison_type: 'percentage',
+        document_types: ['invoice', 'bank statement'],
+        rule_metadata: buildDefaultRuleMetadata([
+          'Restricted amount consistency rule to invoice/bank contexts.',
+        ]),
       } as ConsistencyRuleConfig,
       severity: 'high',
       weight: 2.5,
@@ -413,10 +462,65 @@ export function getDefaultRules(tenantId: string): Omit<DynamicRule, 'id' | 'cre
         field: 'invoice_date',
         max_gap_days: 90,
         reference_date: 'today',
+        document_types: ['invoice'],
+        rule_metadata: buildDefaultRuleMetadata([
+          'Restricted recency check to invoice date fields.',
+        ]),
       } as TimeRuleConfig,
       severity: 'low',
       weight: 1.0,
       is_active: true,
     },
   ];
+}
+
+function isRuleApplicableToDocument(
+  rule: DynamicRule,
+  extractedData: Record<string, any>
+): boolean {
+  const context = getDocumentContextText(extractedData);
+  const config = rule.config as {
+    document_types?: string[];
+    field?: string;
+    fields?: string[];
+  };
+
+  // Explicit document-type scope from rule config.
+  if (Array.isArray(config.document_types) && config.document_types.length > 0) {
+    const normalizedTypes = config.document_types
+      .map((t) => String(t).trim().toLowerCase())
+      .filter(Boolean);
+    if (
+      normalizedTypes.length > 0 &&
+      !normalizedTypes.some((type) => context.includes(type))
+    ) {
+      return false;
+    }
+  }
+
+  // Defensive fallback: skip GST-centric checks for non-GST/non-invoice docs.
+  const fieldText = [config.field, ...(config.fields || [])]
+    .map((v) => String(v || '').toLowerCase())
+    .join(' ');
+  const ruleText = `${rule.name} ${fieldText}`.toLowerCase();
+  const gstCentric = /gst|gstin|tax/.test(ruleText);
+  const gstRelevantDoc = /gst|tax|invoice/.test(context);
+  if (gstCentric && !gstRelevantDoc) {
+    return false;
+  }
+
+  return true;
+}
+
+function getDocumentContextText(extractedData: Record<string, any>): string {
+  return [
+    extractedData.documentType,
+    extractedData.docType,
+    extractedData.type,
+    extractedData.document_type,
+    extractedData.filename,
+    extractedData.name,
+  ]
+    .map((v) => String(v || '').toLowerCase())
+    .join(' ');
 }

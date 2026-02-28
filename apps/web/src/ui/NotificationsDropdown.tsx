@@ -84,18 +84,16 @@ export function NotificationsDropdown() {
                     <div
                       key={n.id}
                       onClick={() => handleNotificationClick(n.id, !!n.read)}
-                      className={`flex gap-3 px-4 py-3 hover:bg-subtle transition-colors cursor-pointer ${
-                        !n.read ? 'bg-indigo-500/5' : ''
-                      }`}
+                      className={`flex gap-3 px-4 py-3 hover:bg-subtle transition-colors cursor-pointer ${!n.read ? 'bg-indigo-500/5' : ''
+                        }`}
                     >
                       <div
-                        className={`shrink-0 mt-0.5 p-2 rounded-lg ${
-                          isEscalation
+                        className={`shrink-0 mt-0.5 p-2 rounded-lg ${isEscalation
                             ? 'bg-amber-500/10 text-amber-400'
                             : isAssign
-                            ? 'bg-indigo-500/10 text-indigo-400'
-                            : 'bg-subtle text-muted'
-                        }`}
+                              ? 'bg-indigo-500/10 text-indigo-400'
+                              : 'bg-subtle text-muted'
+                          }`}
                       >
                         {isEscalation ? (
                           <AlertTriangle size={14} />

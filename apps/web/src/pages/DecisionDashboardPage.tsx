@@ -227,7 +227,7 @@ export default function DecisionDashboardPage() {
           >
             <UploadCloud size={18} />
             <div className="ml-2">
-            Upload Document
+              Upload Document
             </div>
           </button>
         </div>
