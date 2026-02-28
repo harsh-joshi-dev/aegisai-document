@@ -364,8 +364,6 @@ function CreateModal({ templates, onClose, onCreated }: { templates: DocumentTem
   const [newDocAI, setNewDocAI] = useState(true);
   const [isEditingDocs, setIsEditingDocs] = useState(false);
 
-  const selectedTemplate = templates.find(t => t.id === form.template);
-
   const getTemplateMandatoryDocs = useCallback((tid: string) => {
     const tmpl = templates.find(t => t.id === tid);
     const source = tmpl?.requiredDocuments || [];

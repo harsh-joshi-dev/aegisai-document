@@ -31,7 +31,7 @@ export default function DocumentDetailPage() {
   const [whatIfResult, setWhatIfResult] = useState<WhatIfResponse | null>(null);
   const [whatIfLoading, setWhatIfLoading] = useState(false);
   const { activeWorkspace } = useWorkspace();
-  const { documents, users, activity, updateDocument, approveDocument, rejectDocument, refreshDocuments } = useStore();
+  const { documents, users, updateDocument, approveDocument, rejectDocument, refreshDocuments } = useStore();
   const { push } = useToast();
   const { user } = useAuth();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -179,14 +179,6 @@ export default function DocumentDetailPage() {
       </div>
     );
   }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _auditEvents = useMemo(() => {
-    return (activity || [])
-      .filter((a) => a.workspaceId === activeWorkspace.id)
-      .filter((a) => a.docId === doc.id)
-      .slice(0, 12);
-  }, [activity, activeWorkspace.id, doc.id]);
 
   const issueItems = useMemo(() => {
     if (doc.issues.length > 0) return doc.issues;

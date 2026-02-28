@@ -11,6 +11,21 @@ import { pool } from '../db/pgvector.js';
 
 const router = express.Router();
 
+type NumericLike = number | string | null | undefined;
+
+function toNumber(value: NumericLike): number {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function asRecord(value: unknown): Record<string, any> {
+  return value && typeof value === 'object' ? (value as Record<string, any>) : {};
+}
+
 // ============================================================================
 // Vendor 360° Profile
 // ============================================================================
@@ -32,7 +47,7 @@ router.get(
          FROM vendor_memory WHERE tenant_id = $1 AND vendor_key = $2`,
         [tenantId, vendorKey]
       );
-      const memory = memResult.rows[0] || null;
+      const memory = (memResult.rows[0] as Record<string, any> | undefined) || null;
 
       // All documents for this vendor
       const docsResult = await pool.query(
@@ -47,7 +62,7 @@ router.get(
          ORDER BY uploaded_at DESC LIMIT 200`,
         [tenantId, vendorKey]
       );
-      const documents = docsResult.rows;
+      const documents = docsResult.rows as Array<Record<string, any>>;
 
       // Pattern events for this vendor
       const patternsResult = await pool.query(
@@ -57,7 +72,7 @@ router.get(
          ORDER BY created_at DESC LIMIT 50`,
         [tenantId, vendorKey]
       );
-      const patternEvents = patternsResult.rows;
+      const patternEvents = patternsResult.rows as Array<Record<string, any>>;
 
       // Risk signals for vendor's documents
       const docIds = documents.map((d: any) => d.id);
@@ -85,9 +100,10 @@ router.get(
       // Risk heatmap (by month and category)
       const heatmap = buildRiskHeatmap(riskSignals, documents);
 
+      const firstExtracted = asRecord(documents[0]?.extracted_data);
       const vendorName = memory?.vendor_name
-        || documents[0]?.extracted_data?.vendorName
-        || documents[0]?.extracted_data?.vendor
+        || firstExtracted.vendorName
+        || firstExtracted.vendor
         || vendorKey;
 
       res.json({
@@ -95,20 +111,20 @@ router.get(
         vendor: {
           key: vendorKey,
           name: vendorName,
-          gstin: memory?.vendor_gstin || documents[0]?.extracted_data?.vendorGstin || null,
+          gstin: memory?.vendor_gstin || firstExtracted.vendorGstin || null,
           firstTransaction: documents.length ? documents[documents.length - 1].uploaded_at : null,
           lastTransaction: documents.length ? documents[0].uploaded_at : null,
           totalDocuments: documents.length,
           stats: memory ? {
-            count: memory.count,
-            meanAmount: parseFloat(memory.mean_amount) || 0,
-            variance: memory.count > 1
-              ? parseFloat(memory.m2_amount) / (memory.count - 1)
+            count: toNumber(memory.count),
+            meanAmount: toNumber(memory.mean_amount),
+            variance: toNumber(memory.count) > 1
+              ? toNumber(memory.m2_amount) / (toNumber(memory.count) - 1)
               : 0,
-            stdDev: memory.count > 1
-              ? Math.sqrt(parseFloat(memory.m2_amount) / (memory.count - 1))
+            stdDev: toNumber(memory.count) > 1
+              ? Math.sqrt(toNumber(memory.m2_amount) / (toNumber(memory.count) - 1))
               : 0,
-            lastAmount: parseFloat(memory.last_amount) || 0,
+            lastAmount: toNumber(memory.last_amount),
           } : null,
         },
         financials,

@@ -7,9 +7,9 @@ import { useToast } from '../state/toast';
 import { useTheme } from '../state/theme';
 import {
   Settings, Clock, Zap, Users, Save, ShieldCheck, RotateCcw,
-  User, Bell, Palette, Shield, Key, Monitor, Moon, Sun,
-  ChevronRight, AlertTriangle, Check, Building2, Mail, Globe,
-  Lock, Eye, EyeOff, Fingerprint, Database,
+  User, Bell, Palette, Shield, Key, Moon, Sun,
+  ChevronRight, AlertTriangle, Check, Building2,
+  Eye, EyeOff, Database,
 } from 'lucide-react';
 
 const AEGIS_KEYS = [

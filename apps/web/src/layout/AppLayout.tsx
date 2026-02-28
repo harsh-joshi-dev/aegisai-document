@@ -293,8 +293,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                         <p className="text-xs text-zinc-500 truncate">{doc.vendor} · {doc.riskLevel}</p>
                       </div>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${doc.riskLevel === 'Critical' ? 'bg-red-500/20 text-red-400' :
-                          c.riskLevel === 'High' ? 'bg-orange-500/20 text-orange-400' :
-                            'bemerald-500/20 text-emerald-400'
+                          doc.riskLevel === 'High' ? 'bg-orange-500/20 text-orange-400' :
+                            'bg-emerald-500/20 text-emerald-400'
                         }`}>{doc.riskLevel}</span>
                     </button>
                   ))}

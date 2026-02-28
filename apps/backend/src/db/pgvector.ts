@@ -7,10 +7,14 @@ const isProduction = config.server.nodeEnv === 'production';
 const dbUrl = config.database.url;
 const needsSsl = isProduction || dbUrl.includes('sslmode=require') || dbUrl.includes('.render.com');
 
-export const pool = new Pool({
+const poolConfig: Record<string, unknown> = {
   connectionString: dbUrl,
-  ssl: needsSsl ? { rejectUnauthorized: false } : false,
-});
+};
+if (needsSsl) {
+  poolConfig.ssl = { rejectUnauthorized: false };
+}
+
+export const pool = new Pool(poolConfig as any);
 
 export interface DocumentChunk {
   id: string;

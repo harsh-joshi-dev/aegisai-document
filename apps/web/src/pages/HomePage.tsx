@@ -4,7 +4,7 @@ import {
   Brain, SearchCode, Database, RefreshCw, BarChart4,
   ArrowUpRight, Quote, ArrowRight, ShieldCheck, Users, Lock,
   BarChart3, BadgeCheck, ShieldAlert, FileSearch,
-  Mail, Phone, MapPin, Send, Layout, Link2, IndianRupee
+  Mail, Phone, MapPin, Send
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -152,37 +152,6 @@ const steps = [
   { num: '04', title: 'Decision ROI', desc: 'Export verified reports and act on intelligently prioritized insights.', icon: TrendingUp },
 ];
 
-const systemModules = [
-  {
-    icon: IndianRupee,
-    title: 'GST & Compliance',
-    path: '/gst-compliance',
-    desc: 'Automated tax reconciliation, GSTR-2B matching, and real-time ITC leakage detection.',
-    color: '#4f46e5'
-  },
-  {
-    icon: Link2,
-    title: 'Vendor Portal',
-    path: '/vendor-links',
-    desc: 'Secure digital handshakes. Let vendors upload their own KYC and invoices directly into your workflow.',
-    color: '#a855f7'
-  },
-  {
-    icon: Layout,
-    title: 'Decision Dashboard',
-    path: '/dashboard',
-    desc: 'A unified operational command center for review, approval, and strategic insights.',
-    color: '#06b6d4'
-  },
-  {
-    icon: ShieldAlert,
-    title: 'Risk Rules Engine',
-    path: '/rules',
-    desc: 'Customizable heuristic and AI-driven rules to enforce firm-wide audit standards.',
-    color: '#f43f5e'
-  }
-];
-
 export default function HomePage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -191,14 +160,6 @@ export default function HomePage() {
   const [scrolled, setScrolled] = useState(false);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const heroRef = useRef<HTMLDivElement | null>(null);
-
-  const handleCTA = () => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    } else {
-      navigate('/auth');
-    }
-  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 30);
