@@ -342,8 +342,11 @@ export default function LandingPage() {
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   const handleLogin = useCallback(() => {
-    const backendOrigin = import.meta.env.VITE_BACKEND_URL ||
+    const backendOriginRaw =
+      import.meta.env.VITE_API_URL ||
+      import.meta.env.VITE_BACKEND_URL ||
       (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
+    const backendOrigin = String(backendOriginRaw).replace(/\/$/, '');
     window.location.href = `${backendOrigin}/api/auth/google`;
   }, []);
 

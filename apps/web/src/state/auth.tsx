@@ -185,8 +185,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(() => {
-    // Start Google OAuth via backend. (Proxy keeps same-origin in dev)
-    window.location.href = '/api/auth/google';
+    // Start Google OAuth via backend origin (supports split deploy: Netlify + Render).
+    const backendOriginRaw =
+      import.meta.env.VITE_API_URL ||
+      import.meta.env.VITE_BACKEND_URL ||
+      (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
+    const backendOrigin = String(backendOriginRaw).replace(/\/$/, '');
+    window.location.href = `${backendOrigin}/api/auth/google`;
   }, []);
 
   const logout = useCallback(async () => {

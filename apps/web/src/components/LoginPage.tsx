@@ -26,8 +26,11 @@ export default function LoginPage() {
 
   const handleLogin = () => {
     // Go directly to backend for Google OAuth (callback URL is registered on backend origin)
-    const backendOrigin = import.meta.env.VITE_BACKEND_URL || 
+    const backendOriginRaw =
+      import.meta.env.VITE_API_URL ||
+      import.meta.env.VITE_BACKEND_URL ||
       (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
+    const backendOrigin = String(backendOriginRaw).replace(/\/$/, '');
     window.location.href = `${backendOrigin}/api/auth/google`;
   };
 
