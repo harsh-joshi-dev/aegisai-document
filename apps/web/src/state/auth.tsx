@@ -1,11 +1,12 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { exchangeAuthToken, getMe, logout as apiLogout, type AuthUser } from '../api/client';
+import { warmBackendAndRedirectToGoogle } from '../utils/oauthWarmup';
 
 type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   /** Starts real login (Google OAuth). */
-  login: () => void;
+  login: () => Promise<void>;
   /** Clears local token and (best-effort) logs out backend session. */
   logout: () => Promise<void>;
   /** Re-fetch current user from backend (if token exists). */
@@ -184,14 +185,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
-  const login = useCallback(() => {
-    // Start Google OAuth via backend origin (supports split deploy: Netlify + Render).
-    const backendOriginRaw =
-      import.meta.env.VITE_API_URL ||
-      import.meta.env.VITE_BACKEND_URL ||
-      (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
-    const backendOrigin = String(backendOriginRaw).replace(/\/$/, '');
-    window.location.href = `${backendOrigin}/api/auth/google`;
+  const login = useCallback(async () => {
+    await warmBackendAndRedirectToGoogle();
   }, []);
 
   const logout = useCallback(async () => {

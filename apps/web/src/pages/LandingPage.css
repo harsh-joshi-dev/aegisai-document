@@ -162,6 +162,31 @@
   box-shadow: 0 10px 20px rgba(255, 255, 255, 0.1);
 }
 
+.login-btn:disabled,
+.btn-primary-modern:disabled,
+.btn-primary-xl:disabled,
+.btn-primary-xxl:disabled,
+.btn-ghost-xxl:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.oauth-wakeup-banner {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1200;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #c7d2fe;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+
 /* Hero Section */
 .hero-section-modern {
   position: relative;

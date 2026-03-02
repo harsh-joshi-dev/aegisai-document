@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './LoginPage.css';
+import { warmBackendAndRedirectToGoogle } from '../utils/oauthWarmup';
 
 const AUTH_ERROR_MESSAGES: Record<string, { title: string; body: string }> = {
   google_not_configured: {
@@ -14,6 +15,8 @@ const AUTH_ERROR_MESSAGES: Record<string, { title: string; body: string }> = {
 
 export default function LoginPage() {
   const [authError, setAuthError] = useState<string | null>(null);
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginStatus, setLoginStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -24,14 +27,13 @@ export default function LoginPage() {
     }
   }, []);
 
-  const handleLogin = () => {
-    // Go directly to backend for Google OAuth (callback URL is registered on backend origin)
-    const backendOriginRaw =
-      import.meta.env.VITE_API_URL ||
-      import.meta.env.VITE_BACKEND_URL ||
-      (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
-    const backendOrigin = String(backendOriginRaw).replace(/\/$/, '');
-    window.location.href = `${backendOrigin}/api/auth/google`;
+  const handleLogin = async () => {
+    if (loginBusy) return;
+    setLoginBusy(true);
+    setLoginStatus('Waking backend...');
+    await warmBackendAndRedirectToGoogle({
+      onStatus: setLoginStatus,
+    });
   };
 
   const errorInfo = authError ? AUTH_ERROR_MESSAGES[authError] : null;
@@ -66,7 +68,7 @@ export default function LoginPage() {
               Sign in with Google to upload financial documents, detect mismatches, and review risk before approval.
             </p>
 
-            <button onClick={handleLogin} className="google-login-button">
+            <button onClick={handleLogin} className="google-login-button" disabled={loginBusy}>
               <svg className="google-icon" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
@@ -85,8 +87,9 @@ export default function LoginPage() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              <span>Continue with Google</span>
+              <span>{loginBusy ? 'Waking backend...' : 'Continue with Google'}</span>
             </button>
+            {loginBusy && <p className="login-warmup-hint">{loginStatus ?? 'Waking backend...'}</p>}
 
             <div className="login-features">
               <div className="feature-item">

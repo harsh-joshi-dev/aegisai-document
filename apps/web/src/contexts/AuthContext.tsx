@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiClient } from '../api/client';
+import { warmBackendAndRedirectToGoogle } from '../utils/oauthWarmup';
 
 interface User {
   id: string;
@@ -13,7 +14,7 @@ interface AuthContextType {
   loading: boolean;
   authError: string | null;
   clearAuthError: () => void;
-  login: () => void;
+  login: () => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -87,16 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  const login = () => {
-    // Go directly to backend for Google OAuth (callback URL is registered on backend origin).
-    // After OAuth, backend redirects to frontend with a one-time token.
-    // The frontend exchanges the token for a session via the Vite proxy.
-    const backendOriginRaw =
-      import.meta.env.VITE_API_URL ||
-      import.meta.env.VITE_BACKEND_URL ||
-      (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
-    const backendOrigin = String(backendOriginRaw).replace(/\/$/, '');
-    window.location.href = `${backendOrigin}/api/auth/google`;
+  const login = async () => {
+    await warmBackendAndRedirectToGoogle();
   };
 
   const logout = async () => {

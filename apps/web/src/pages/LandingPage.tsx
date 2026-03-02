@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import { BrandIcon } from '../components/ui/BrandIcon';
+import { warmBackendAndRedirectToGoogle } from '../utils/oauthWarmup';
 import './LandingPage.css';
 
 // Animated counter component
@@ -332,6 +333,8 @@ function TestimonialSlider() {
 export default function LandingPage() {
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginStatus, setLoginStatus] = useState<string | null>(null);
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -342,13 +345,13 @@ export default function LandingPage() {
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   const handleLogin = useCallback(() => {
-    const backendOriginRaw =
-      import.meta.env.VITE_API_URL ||
-      import.meta.env.VITE_BACKEND_URL ||
-      (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
-    const backendOrigin = String(backendOriginRaw).replace(/\/$/, '');
-    window.location.href = `${backendOrigin}/api/auth/google`;
-  }, []);
+    if (loginBusy) return;
+    setLoginBusy(true);
+    setLoginStatus('Waking backend...');
+    warmBackendAndRedirectToGoogle({
+      onStatus: setLoginStatus,
+    });
+  }, [loginBusy]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -427,9 +430,9 @@ export default function LandingPage() {
           </div>
 
           <div className="landing-nav-actions">
-            <button onClick={handleLogin} className="nav-link-modern login-btn">Log In</button>
-            <button onClick={handleLogin} className="btn-primary-modern">
-              <span>Book a Demo</span>
+            <button onClick={handleLogin} className="nav-link-modern login-btn" disabled={loginBusy}>Log In</button>
+            <button onClick={handleLogin} className="btn-primary-modern" disabled={loginBusy}>
+              <span>{loginBusy ? 'Waking Backend...' : 'Book a Demo'}</span>
               <ArrowRight size={16} />
             </button>
           </div>
@@ -466,8 +469,8 @@ export default function LandingPage() {
             </p>
 
             <div className="hero-cta-group">
-              <button onClick={handleLogin} className="btn-primary-xl">
-                Get Started
+              <button onClick={handleLogin} className="btn-primary-xl" disabled={loginBusy}>
+                {loginBusy ? 'Waking backend...' : 'Get Started'}
                 <ArrowRight size={20} />
               </button>
               <button
@@ -724,8 +727,8 @@ export default function LandingPage() {
             <h2 className="cta-title-xl">Start Your Financial Compliance Transformation</h2>
             <p className="cta-subtitle">Join the leading enterprises securing their future with CA.Dynamix.</p>
             <div className="cta-actions">
-              <button onClick={handleLogin} className="btn-primary-xxl">Schedule a Personal Demo</button>
-              <button onClick={handleLogin} className="btn-ghost-xxl">View Pricing Plans</button>
+              <button onClick={handleLogin} className="btn-primary-xxl" disabled={loginBusy}>{loginBusy ? 'Waking backend...' : 'Schedule a Personal Demo'}</button>
+              <button onClick={handleLogin} className="btn-ghost-xxl" disabled={loginBusy}>{loginBusy ? 'Please wait...' : 'View Pricing Plans'}</button>
             </div>
             <div className="cta-trust">
               <CheckCircle size={14} /> <span>14-Day Free Evaluation</span>
@@ -801,6 +804,11 @@ export default function LandingPage() {
 
       {/* Video Modal */}
       <VideoModal isOpen={isVideoOpen} onClose={() => setIsVideoOpen(false)} />
+      {loginBusy && (
+        <div className="oauth-wakeup-banner" role="status" aria-live="polite">
+          {loginStatus ?? 'Waking backend...'}
+        </div>
+      )}
     </div>
   );
 }

@@ -158,6 +158,12 @@
   transform: translateY(0);
 }
 
+.google-login-button:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .google-login-button:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
@@ -166,6 +172,14 @@
 .google-icon {
   width: 20px;
   height: 20px;
+}
+
+.login-warmup-hint {
+  margin-top: calc(var(--spacing-md) * -1);
+  margin-bottom: var(--spacing-xl);
+  text-align: center;
+  font-size: 0.8125rem;
+  color: #a5b4fc;
 }
 
 .login-features {
