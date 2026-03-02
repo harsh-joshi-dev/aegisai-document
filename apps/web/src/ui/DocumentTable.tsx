@@ -55,17 +55,17 @@ export function DocumentTable({
                   </div>
                 </th>
               )}
-              <th className="px-6 py-4 font-semibold text-zinc-400">Document</th>
-              {showWorkflowColumns && <th className="px-6 py-4 font-semibold text-zinc-400">Type</th>}
-              <th className="px-6 py-4 font-semibold text-zinc-400">Vendor</th>
-              <th className="px-6 py-4 font-semibold text-zinc-400">Amount</th>
-              <th className="px-6 py-4 font-semibold text-zinc-400">Risk Level</th>
-              <th className="px-6 py-4 font-semibold text-zinc-400">Status</th>
-              {showWorkflowColumns && <th className="px-6 py-4 font-semibold text-zinc-400">Assigned To</th>}
-              <th className="px-6 py-4 font-semibold text-zinc-400 text-right">Actions</th>
+              <th className="px-6 py-4 font-semibold text-[var(--text-muted)]">Document</th>
+              {showWorkflowColumns && <th className="px-6 py-4 font-semibold text-[var(--text-muted)]">Type</th>}
+              <th className="px-6 py-4 font-semibold text-[var(--text-muted)]">Vendor</th>
+              <th className="px-6 py-4 font-semibold text-[var(--text-muted)]">Amount</th>
+              <th className="px-6 py-4 font-semibold text-[var(--text-muted)]">Risk Level</th>
+              <th className="px-6 py-4 font-semibold text-[var(--text-muted)]">Status</th>
+              {showWorkflowColumns && <th className="px-6 py-4 font-semibold text-[var(--text-muted)]">Assigned To</th>}
+              <th className="px-6 py-4 font-semibold text-[var(--text-muted)] text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-[var(--border-subtle)]">
             {documents.map((doc) => {
               const isOverdue = !doc.escalatedAt && doc.slaDueAt && new Date(doc.slaDueAt).getTime() < now;
               const isEscalated = !!doc.escalatedAt;

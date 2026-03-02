@@ -11,8 +11,10 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 const STORAGE_KEY = 'aegis_theme';
+const FORCE_DARK_THEME = true;
 
 function getInitialTheme(): Theme {
+  if (FORCE_DARK_THEME) return 'dark';
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'light' || stored === 'dark') return stored;
@@ -22,7 +24,7 @@ function getInitialTheme(): Theme {
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
-  if (theme === 'dark') {
+  if (FORCE_DARK_THEME || theme === 'dark') {
     root.classList.add('dark');
     root.classList.remove('light');
   } else {
@@ -35,17 +37,28 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
-    applyTheme(theme);
+    const activeTheme: Theme = FORCE_DARK_THEME ? 'dark' : theme;
+    applyTheme(activeTheme);
     try {
-      localStorage.setItem(STORAGE_KEY, theme);
+      localStorage.setItem(STORAGE_KEY, activeTheme);
     } catch {}
   }, [theme]);
 
   const toggle = useCallback(() => {
+    if (FORCE_DARK_THEME) {
+      setThemeState('dark');
+      return;
+    }
     setThemeState((t) => (t === 'dark' ? 'light' : 'dark'));
   }, []);
 
-  const setTheme = useCallback((t: Theme) => setThemeState(t), []);
+  const setTheme = useCallback((t: Theme) => {
+    if (FORCE_DARK_THEME) {
+      setThemeState('dark');
+      return;
+    }
+    setThemeState(t);
+  }, []);
 
   const value = useMemo(() => ({ theme, toggle, setTheme }), [theme, toggle, setTheme]);
 

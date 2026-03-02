@@ -7,7 +7,7 @@ import { useToast } from '../state/toast';
 import { useTheme } from '../state/theme';
 import {
   Settings, Clock, Zap, Users, Save, ShieldCheck, RotateCcw,
-  User, Bell, Palette, Shield, Key, Moon, Sun,
+  User, Bell, Palette, Shield, Key, Moon,
   ChevronRight, AlertTriangle, Check, Building2,
   Eye, EyeOff, Database,
 } from 'lucide-react';
@@ -137,7 +137,7 @@ export default function SettingsPage() {
   const { activeWorkspace } = useWorkspace();
   const { users, settingsByTenant, upsertWorkspaceSettings, auditLog } = useStore();
   const { push } = useToast();
-  const { theme, toggle: toggleTheme } = useTheme();
+  const { toggle: toggleTheme } = useTheme();
 
   const [activeTab, setActiveTab] = useState<Tab>('general');
 
@@ -474,28 +474,19 @@ export default function SettingsPage() {
           {/* ───── Appearance ───── */}
           {activeTab === 'appearance' && (
             <SectionCard>
-              <SectionHeader icon={Palette} title="Appearance" description="Customize the look and feel of your workspace" color="violet" />
+              <SectionHeader icon={Palette} title="Appearance" description="Dark theme is enabled for consistent UI quality" color="violet" />
               <div className="space-y-0">
-                <SettingRow label="Theme" description="Switch between dark and light mode">
+                <SettingRow label="Theme" description="Dark mode is enforced to keep all dashboard screens visually consistent">
                   <div className="flex items-center gap-2 p-1 rounded-xl" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-subtle)' }}>
-                    {[
-                      { value: 'dark' as const, icon: Moon, label: 'Dark' },
-                      { value: 'light' as const, icon: Sun, label: 'Light' },
-                    ].map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => { if (theme !== opt.value) toggleTheme(); }}
-                        className={`
-                          flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer
-                          ${theme === opt.value ? 'text-main shadow-sm' : 'text-dim hover:text-muted'}
-                        `}
-                        style={theme === opt.value ? { background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' } : { border: '1px solid transparent' }}
-                      >
-                        <opt.icon size={13} />
-                        {opt.label}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      onClick={toggleTheme}
+                      className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-main shadow-sm cursor-default"
+                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}
+                    >
+                      <Moon size={13} />
+                      Dark
+                    </button>
                   </div>
                 </SettingRow>
                 <SettingRow label="Compact Mode" description="Reduce spacing for denser information display">

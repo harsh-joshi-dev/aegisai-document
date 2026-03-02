@@ -184,7 +184,7 @@ export function UploadModal({
               <div>
                 <label className="mb-2 block text-sm font-medium text-main">Type</label>
                 <select
-                  className="input w-full rounded-xl border border-subtle bg-subtle text-main py-2.5 px-4"
+                  className="input w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-main)] py-2.5 px-4 transition-colors focus:border-indigo-500/50 outline-none"
                   value={docType}
                   onChange={(e) => setDocType(e.target.value as UploadDocType)}
                 >
@@ -197,7 +197,7 @@ export function UploadModal({
               <div>
                 <label className="mb-2 block text-sm font-medium text-main">Document name</label>
                 <input
-                  className="input w-full rounded-xl border border-subtle bg-subtle text-main placeholder-zinc-500 py-2.5 px-4"
+                  className="input w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-main)] placeholder:text-[var(--text-dim)] py-2.5 px-4 transition-colors focus:border-indigo-500/50 outline-none"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={file?.name || 'Invoice_Jan_2026.pdf'}
@@ -209,7 +209,7 @@ export function UploadModal({
               <div>
                 <label className="mb-2 block text-sm font-medium text-main">Vendor (optional)</label>
                 <input
-                  className="input w-full rounded-xl border border-subtle bg-subtle text-main placeholder-zinc-500 py-2.5 px-4"
+                  className="input w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-main)] placeholder:text-[var(--text-dim)] py-2.5 px-4 transition-colors focus:border-indigo-500/50 outline-none"
                   value={vendor}
                   onChange={(e) => setVendor(e.target.value)}
                   placeholder="Nova Supplies Pvt Ltd"
@@ -218,7 +218,7 @@ export function UploadModal({
               <div>
                 <label className="mb-2 block text-sm font-medium text-main">Date (optional)</label>
                 <input
-                  className="input w-full rounded-xl border border-subtle bg-subtle text-main py-2.5 px-4"
+                  className="input w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-main)] py-2.5 px-4 transition-colors focus:border-indigo-500/50 outline-none"
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
